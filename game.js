@@ -9,16 +9,16 @@ let path=[],keys={},moving=false,direction='down',walkFrame=0,lastFrame=0,lastHu
 let storedRaw=null,oldRaw=null,previousFocus=null,messageTimer=0,rewardTimer=0,lastAutosave=0;
 let camera={scale:1,ox:0,oy:0,dpr:1,vw:W,vh:H},hitTargets=[],focusedObjectId=null,lastInteractionHint='';
 const images={},imagePromises={};
-DATA.assets.bedDamage='assets/bed-damage-v39.png';
-DATA.assets.storePickups='assets/store-pickups-v39.png';
-DATA.assets.walkFemale='assets/player-female-walk-v39.png';
-DATA.assets.walkMale='assets/player-male-walk-v39.png';
-DATA.assets.inventoryHousehold='assets/inventory-household-v392.png';
-DATA.assets.inventoryCrafts='assets/inventory-crafts-v392.png';
-DATA.assets.gardenStages='assets/garden-stages-v395.png';
-DATA.assets.diningTable='assets/hall-table-v394.png';
-DATA.assets.familyMealFemale='assets/family-meal-female-v394.png';
-DATA.assets.familyMealMale='assets/family-meal-male-v394.png';
+DATA.assets.bedDamage='bed-damage-v39.png';
+DATA.assets.storePickups='store-pickups-v39.png';
+DATA.assets.walkFemale='player-female-walk-v39.png';
+DATA.assets.walkMale='player-male-walk-v39.png';
+DATA.assets.inventoryHousehold='inventory-household-v392.png';
+DATA.assets.inventoryCrafts='inventory-crafts-v392.png';
+DATA.assets.gardenStages='garden-stages-v395.png';
+DATA.assets.diningTable='hall-table-v394.png';
+DATA.assets.familyMealFemale='family-meal-female-v394.png';
+DATA.assets.familyMealMale='family-meal-male-v394.png';
 let gaitBlend=0,lastPoseTime=0;
 function state(){return engine.state;}
 function clean(text){return String(text).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
@@ -327,8 +327,8 @@ function itemSource(id){
   return m[id]||'在已开放地点实际拾取或完成对应动作获得';
 }
 const inventorySheets=[
-  {file:'assets/inventory-household-v392.png',rows:[0,414,805,1254],items:['yardKey','bedroll','repair','rice','ingredient','seed','vegetable','hotMeal','feast']},
-  {file:'assets/inventory-crafts-v392.png',rows:[0,425,800,1254],items:['driedHerb','bambooWare','shellCraft','rope','ledgerOriginal','ledgerCopy','receipt','reply','narrowBasket']}
+  {file:'inventory-household-v392.png',rows:[0,414,805,1254],items:['yardKey','bedroll','repair','rice','ingredient','seed','vegetable','hotMeal','feast']},
+  {file:'inventory-crafts-v392.png',rows:[0,425,800,1254],items:['driedHerb','bambooWare','shellCraft','rope','ledgerOriginal','ledgerCopy','receipt','reply','narrowBasket']}
 ];
 function inventoryArt(id){
   if(resourceTypes.includes(id))return resourceArt(id);
@@ -340,7 +340,7 @@ function inventoryArt(id){
 function toolbarArt(id){
   const ids=['hand','sickle','hoe','basket','water','axe','journal','map','rest'],index=ids.indexOf(id);
   if(index<0)return inventoryArt(id);
-  return '<svg viewBox="'+(index%3*418)+' '+(Math.floor(index/3)*418)+' 418 418" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><image href="assets/toolbar-ming-v394.png" width="1254" height="1254"/></svg>';
+  return '<svg viewBox="'+(index%3*418)+' '+(Math.floor(index/3)*418)+' 418 418" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><image href="toolbar-ming-v394.png" width="1254" height="1254"/></svg>';
 }
 function showBag(){
   const s=state(),keys=Object.keys(N.itemNames).filter(k=>N.quantity(s,k)>0);
@@ -1052,7 +1052,7 @@ async function beginGame(){
   if(storedRaw&&!confirm('开始新的第一卷？当前进度会先保留一份备份，再创建新开局。'))return;
   transitioning=true;$('begin').disabled=true;
   try{
-    if(!await loadImage('gate')){notice('旧宅门前图片未能载入，请稍后再试。',true);return;}
+    if(!await loadImage('gate')){$('loadWarning').hidden=false;$('loadWarning').textContent='开场图片未加载：请确认 gate-v27.webp 与 index.html 在同一目录，再刷新重试。原存档未改变。';return;}
     if(storedRaw&&!engine.memoryOnly)localStorage.setItem('nanlan_v20_previous',storedRaw);
     engine.reset(gender);started=true;active=true;$('start').hidden=true;$('hud').hidden=false;storedRaw=null;
     refreshHud();notice('来到旧宅门前。先和家人交接文书与行李。',true);

@@ -19,11 +19,11 @@ function layer(k,key){
   // Stop both old voices before loading: rapid travel cannot stack landscapes.
   for(const old of l.players){old.pause();old.mix=0;old.volume=0;}
   l.active=1-l.active;const p=l.players[l.active];l.pendingKey=key;l.key='';
-  p.src=''+(k==='music'?'music-':'scape-')+key+'.mp3';
+  p.src='assets/audio/quiet/'+(k==='music'?'music-':'scape-')+key+'.mp3';
   l.pending=(async()=>{try{await p.play();if(token!==l.ticket)return;if(!enabled||document.hidden){p.pause();return;}l.key=key;fade(l,k,p);}finally{if(token===l.ticket){l.pending=null;l.pendingKey='';}}})();return l.pending;
 }
 async function environment(){if(!enabled||!started||document.hidden)return false;init();const ticket=++environmentTicket,p=profile();const results=await Promise.allSettled([layer('music',p.music),layer('ambient',p.ambient)]);if(ticket!==environmentTicket||!enabled||document.hidden)return false;playing=results.every(r=>r.status==='fulfilled');error=playing?'':'音乐或环境音暂未播放，请点击试听重试。';status();return playing;}
-async function play(name='click'){if(!enabled||!started||document.hidden||!names.includes(name))return false;init();if(name==='click'){const now=Date.now();if(now-lastClick<70)return false;lastClick=now;}effect.pause();effect.src=''+name+'.wav';effectGain=name==='step'?.18:1;effect.muted=target('effect')===0;effect.volume=target('effect')*effectGain;try{await effect.play();return true;}catch(e){if(e.name!=='AbortError'){error='操作音效暂未启动，请点击试听重试。';status();}return false;}}
+async function play(name='click'){if(!enabled||!started||document.hidden||!names.includes(name))return false;init();if(name==='click'){const now=Date.now();if(now-lastClick<70)return false;lastClick=now;}effect.pause();effect.src='assets/audio/quiet/'+name+'.wav';effectGain=name==='step'?.18:1;effect.muted=target('effect')===0;effect.volume=target('effect')*effectGain;try{await effect.play();return true;}catch(e){if(e.name!=='AbortError'){error='操作音效暂未启动，请点击试听重试。';status();}return false;}}
 function pause(){environmentTicket++;for(const l of Object.values(layers)){l.ticket++;l.pending=null;l.pendingKey='';clearInterval(l.timer);for(const p of l.players)p.pause();l.players.forEach((p,i)=>p.mix=i===l.active?1:0);}effect?.pause();playing=false;status();}
 async function unlock(){if(!enabled)return false;started=true;init();return environment();}
 async function enable(test=false){enabled=true;started=true;try{localStorage.setItem('nanlan_sound','on');}catch(_){}init();await Promise.all([play(test?'test':'click'),environment()]);status();}

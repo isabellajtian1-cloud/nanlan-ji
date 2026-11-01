@@ -5,18 +5,18 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#20382d">
   <meta name="description" content="南澜记：在明代岭南安顿家人、修整旧宅、采集种植，并与邻里共同过日子的叙事生活游戏。">
-  <title>南澜记 V3.9.11 · 人物与键盘</title>
-  <link rel="stylesheet" href="style.css?v=3911">
+  <title>南澜记 V3.9.18 · 田间劳作</title>
+  <link rel="stylesheet" href="style.css?v=3918">
   <link rel="stylesheet" href="map.css">
-  <link rel="stylesheet" href="journey.css?v=3911">
+  <link rel="stylesheet" href="journey.css?v=3918">
   <style>#audioHint{font-size:11px;color:#756142;line-height:1.8;margin:12px 0}#startSound{padding:5px 9px;font-size:11px;background:#e5d8b4;color:#405b41;border:1px solid #91754a;border-radius:3px}</style>
-<link rel="stylesheet" href="seals.css?v=3911"><link rel="stylesheet" href="production.css?v=3911"><link rel="stylesheet" href="locale.css?v=3911"><script src="locale-en.js?v=3911"></script><script src="locale.js?v=3911"></script></head>
+<link rel="stylesheet" href="seals.css?v=3918"><link rel="stylesheet" href="production.css?v=3918"><link rel="stylesheet" href="locale.css?v=3918"><script src="locale-en.js?v=3918"></script><script src="locale.js?v=3918"></script></head>
 <body>
 <main id="wrap">
   <canvas id="game" width="1100" height="733" aria-label="南澜记可行走场景，点击地面行走，点击标记靠近互动"></canvas>
   <div id="hud" hidden>
     <section class="panel" id="status" aria-label="角色状态">
-      <div class="brand"><span class="seal">李</span><div><strong>南澜记</strong><small id="roleName">李家晚辈</small></div><span class="version">V3.9.11</span></div>
+      <div class="brand"><span class="seal">李</span><div><strong>南澜记</strong><small id="roleName">李家晚辈</small></div><span class="version">V3.9.18</span></div>
       <div id="statusTime"></div>
       <div class="vitals"><span>体力 <b id="energy">100</b></span><span>家用 <b id="coins">80</b> 文</span></div>
       <div class="energy-track"><span id="energyBar"></span></div>
@@ -25,16 +25,16 @@
     <button id="clock" class="panel" aria-label="查看日期、昼夜与潮汐"></button>
     <section id="tasks" class="panel collapsed">
       <button id="taskToggle" aria-expanded="false"><small id="questAct">序章</small><strong id="questHeading"></strong><span>⌄</span></button>
-      <div id="taskBody"><div id="quest"></div><p id="questHint"></p><div class="task-buttons"><button id="questNavigate" class="quiet">直接前往下一步</button><button id="questMap" class="quiet">地图中查看</button><button id="questOpen" class="quiet">任务簿与回报</button></div></div>
+      <div id="taskBody"><div id="quest"></div><p id="questHint"></p><div class="task-buttons"><button id="questMap" class="quiet">打开舆图</button><button id="questOpen" class="quiet">打开记事</button></div></div>
     </section>
     <div id="chapterToast" role="status" hidden></div>
     <div id="message" role="status" aria-live="polite"></div>
     <nav id="actions" aria-label="场景操作">
-      <button id="mapOpen">舆图 · 全部地点 M</button><button id="nearbyOpen">场景互动</button><button id="bagOpen">行囊 B</button><button id="peopleOpen">人物谱</button><button id="galleryOpen">场景图鉴</button>
+      <button id="mapOpen">舆图 · 已知地点 M</button><button id="nearbyOpen">场景互动</button><button id="bagOpen">行囊 B</button><button id="peopleOpen">相识之人</button><button id="galleryOpen">旅途图景</button>
       <button id="save">保存</button><button id="sound" aria-pressed="false">环境音 关</button><button id="helpOpen">玩法</button><button id="languageToggle" data-no-localize aria-label="Switch language / 切换语言">中文 / English</button>
     </nav>
     <div id="navigationStatus" class="panel" hidden><span id="navigationLabel"></span><button id="navigationCancel" aria-label="停止导航">停止 ×</button></div>
-    <button id="interactionHint" class="panel" hidden aria-live="polite"><span id="interactionHintMark">令</span><span><small id="interactionHintKicker">当前任务目标</small><strong id="interactionHintLabel"></strong></span></button>
+    <button id="interactionHint" class="panel" hidden aria-live="polite"><span id="interactionHintMark">令</span><span><small id="interactionHintKicker">眼前要紧的事</small><strong id="interactionHintLabel"></strong></span></button>
     <div id="toolbelt"><div class="belt-title">随 身 什 物</div><nav id="bottom" aria-label="十二格明式工具栏"></nav><div id="toolInfo"></div></div>
     <button id="nightNote" hidden><span>夜已深，时间停在 22:00。</span><strong>带我回卧房（东厢房）床榻</strong></button>
   </div>
@@ -43,21 +43,23 @@
     <div class="start-sheet">
       <div class="language-choice" role="group" aria-label="Language / 语言" data-no-localize><span>语言 / Language</span><button type="button" data-language="zh" lang="zh-CN" aria-pressed="true">中文</button><button type="button" data-language="en" lang="en" aria-pressed="false">English</button></div>
       <p id="languageStatus" role="status" aria-live="polite" data-no-localize></p>
-      <span class="eyebrow">第一卷 · 初抵南澜 李家旧事</span>
+      <span class="eyebrow">岭南雨歇 · 一座久闭的旧宅</span>
       <h1>南澜记</h1><p class="tagline">山海虽远，一家人在一起，便有家。</p>
-      <p class="premise">祖父与父亲因进谏远迁岭南。你随家人来到南澜，带着行李和积蓄，租下这座久无人住的旧宅。先让门能关、床能睡，再做一顿热饭。</p>
+      <p class="premise">长路在一扇旧院门前停下。屋里是什么模样，南澜又住着怎样的人，都要等你亲自推门去看。</p>
       <div class="rules">
-        <p><b>你要做什么</b>走进场景，采集物资、修整房屋、种植制作，靠镇集试摊与邻里互助安顿生活。</p>
-        <p><b>怎样通关</b>第一卷完成 18 段主线与 M20 家宴；回正厅开启第二卷，再经营南街铺面，完成 18 段第二卷剧情。</p>
-        <p><b>做不成怎么办</b>材料或体力不足时补料、休息后重试；错过低潮或集市可等下一轮。没有永久死亡，也不因错过窗口清空进度。</p>
+        <p><b>从眼前开始</b>走近家人，接过文书与行李，再一起看看这座新住处。</p>
+        <p><b>由你发现</b>人物、地点和过日子的办法，会在走动、交谈与选择中逐渐出现。</p>
+        <p><b>慢慢来</b>做不成的事可以补料、休息后再试；错过的时辰，也会再来。</p>
       </div>
       <div class="gender-choice" aria-label="选择主角"><button id="female" aria-pressed="true">女主角</button><button id="male" aria-pressed="false">男主角</button></div>
       <p id="selection">已选择女主角 · 两位主角共享第一卷剧情</p>
       <div class="start-buttons"><button id="continueGame" hidden>继续当前存档</button><button id="begin">启程 · 来到旧宅门前</button></div>
-      <div class="start-links"><button id="startPeople">人物与来处</button><button id="startMap">所有地点与路线</button><button id="startGallery">预览 18 幅场景</button><button id="startImport">导入进度文件</button><button id="oldSaveExport" hidden>备份旧版存档</button></div>
+      <details class="start-more"><summary>设置、存档与操作帮助</summary>
+        <div class="start-links"><button id="startGuide">怎样行走与互动</button><button id="startImport">导入进度文件</button><button id="oldSaveExport" hidden>备份旧版存档</button></div>
+        <p id="audioHint"><button id="startSound" aria-pressed="true">声音 开 · 环境与互动</button> 点击启程后启动环境音；可打开设置试听、调节音量。</p>
+      </details>
       <p id="loadWarning" hidden></p>
-      <p id="audioHint"><button id="startSound" aria-pressed="true">声音 开 · 环境与互动</button> 点击启程后启动环境音；可打开设置试听、调节音量。</p>
-      <small class="version-note">V3.9.11 · 第二卷 · 人物与键盘 · 开发试玩</small>
+      <small class="version-note">V3.9.18 · 田间劳作 · 开发试玩</small>
     </div>
   </section>
   <section id="dialog" role="dialog" aria-modal="true" aria-labelledby="speaker" hidden>
@@ -65,18 +67,18 @@
       <aside id="dialogPortraits" aria-label="对话人物" hidden></aside><h2 id="speaker"></h2><div id="line"></div><div id="panelExtra"></div><div id="choices"></div><button id="next" hidden>继续 ›</button>
     </div>
   </section>
-  <section id="worldMap" role="dialog" aria-modal="true" aria-label="南澜全部地点地图" hidden>
-    <header class="map-header"><div><small>家在山海之间</small><h2>南澜舆图</h2><p id="mapSummary">全部 19 个场景点 · 18 幅场景原画</p></div><button id="mapClose">返回 ×</button></header>
-    <div class="map-toolbar"><input id="mapSearch" type="search" placeholder="查找地点，例如山脚、药圃、县城" aria-label="查找地图地点"><span class="map-legend"><i class="current-dot"></i>当前位置 <i class="open-dot"></i>已开放 <i class="locked-dot"></i>随剧情或第二卷开启</span></div>
+  <section id="worldMap" role="dialog" aria-modal="true" aria-label="南澜已知地点地图" hidden>
+    <header class="map-header"><div><small>家在山海之间</small><h2>南澜舆图</h2><p id="mapSummary">脚步所至，地名与路线才会写入图中。</p></div><button id="mapClose">返回 ×</button></header>
+    <div class="map-toolbar"><input id="mapSearch" type="search" placeholder="查找已经题名的地点" aria-label="查找已知地点"><span class="map-legend"><i class="current-dot"></i>当前位置 <i class="open-dot"></i>已经题名 <i class="locked-dot"></i>尚待探访</span></div>
     <div class="map-shortcuts"><button id="mapObjective">当前任务去哪里</button><button id="mapHome">找回家的路</button><span class="map-view-controls"><button id="mapZoomOut" aria-label="缩小地图">缩小 −</button><button id="mapZoomReset" aria-label="恢复地图原始大小">100%</button><button id="mapZoomIn" aria-label="放大地图">放大 ＋</button><button id="mapMarkers" aria-pressed="false">隐藏地点牌 · 看全景</button></span><span id="mapTime"></span></div>
     <div id="mapSearchResults" role="status" hidden></div>
     <div class="map-layout"><div class="map-scroll" id="mapScroll" tabindex="0" aria-label="全部地点地图，可横向滚动"><div class="map-board" id="mapBoard">
       <svg id="mapLines" viewBox="0 0 1200 820" aria-hidden="true"></svg><div id="mapNodes"></div>
     </div></div><aside id="mapInspector"><h3 id="mapPlaceTitle"></h3><span id="mapPlaceState"></span><img id="mapPlaceImage" alt="" loading="lazy"><p id="mapPlaceDescription"></p><div id="mapPlaceActions"></div><h4>区域内地点</h4><div id="mapPlaceDetails"></div></aside></div>
-    <div id="allPlaceList" aria-label="全部区域与地点清单"></div>
+    <div id="allPlaceList" aria-label="已知区域与地点清单"></div>
   </section>
-  <section id="gallery" role="dialog" aria-modal="true" aria-label="场景图鉴" hidden>
-    <header><div><small>画风与地点一览</small><h2>南澜舆图</h2><p>18 幅既有场景原画。县城与三家店内为第二卷预留；图鉴查看不会推进任务。</p></div><button id="galleryClose">返回 ×</button></header>
+  <section id="gallery" role="dialog" aria-modal="true" aria-label="旅途图景" hidden>
+    <header><div><small>亲自走过，才留在画中</small><h2>旅途图景</h2><p>这里只收录已经到过的地方。随着脚步走远，这册图景也会慢慢变厚。</p></div><button id="galleryClose">返回 ×</button></header>
     <div id="galleryGrid"></div>
   </section>
 </main>
@@ -90,5 +92,5 @@
 <button id="audioMusicOnly">仅听音乐 · 关闭环境与操作声</button><button id="audioMusicTest">播放当前地点音乐</button><button id="audioToggle">开启声音</button><button id="audioTest">试听音效 · 两声提示</button>
 <p>若试听仍无声，请检查浏览器标签页是否静音及设备媒体音量。音乐为本游戏新编旋律，音色、环境音与操作音效由程序合成，未使用第三方录音或游戏原曲。各项音量可单独调至零。</p>
 </section>
-<script src="data.js?v=3911"></script><script src="story2-model.js?v=3911"></script><script src="conversations.js?v=3911"></script><script src="seals-model.js?v=3911"></script><script src="production-model.js?v=3911"></script><script src="engine.js?v=3911"></script><script src="art.js?v=3911"></script><script src="audio.js?v=3911"></script><script src="game.js?v=3911"></script><script src="map.js?v=3911"></script><script src="volume2.js?v=3911"></script><script src="seals.js?v=3911"></script>
-<script src="production.js?v=3911"></script><script src="desktop.js?v=3911"></script></body></html>
+<script src="data.js?v=3918"></script><script src="story2-model.js?v=3918"></script><script src="conversations.js?v=3918"></script><script src="seals-model.js?v=3918"></script><script src="production-model.js?v=3918"></script><script src="engine.js?v=3918"></script><script src="art.js?v=3918"></script><script src="audio.js?v=3918"></script><script src="game.js?v=3918"></script><script src="map.js?v=3918"></script><script src="volume2.js?v=3918"></script><script src="seals.js?v=3918"></script>
+<script src="production.js?v=3918"></script><script src="desktop.js?v=3918"></script></body></html>

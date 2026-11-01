@@ -3,7 +3,7 @@
 const M=window.NanlanSealsModel;
 let draftSerial=0;
 const sealName=k=>k==='stone'?'海磨石印':'坚木铺印';
-function art(kind,cls='seal-art'){if(['sealTimber','sealPebble'].includes(kind))return resourceArt(kind==='sealTimber'?'wood':'stone');const boxes={wood:[0,0,627,627],stone:[627,0,627,627],ink:[0,627,627,627],sealTimber:[627,627,314,627],sealPebble:[941,627,313,627]},b=boxes[kind];return '<svg class="'+cls+'" viewBox="'+b.join(' ')+'" aria-hidden="true"><image href="seals-v398.png" width="1254" height="1254"/></svg>';}
+function art(kind,cls='seal-art'){if(['sealTimber','sealPebble'].includes(kind))return resourceArt(kind==='sealTimber'?'wood':'stone');const boxes={wood:[0,0,627,627],stone:[627,0,627,627],ink:[0,627,627,627],sealTimber:[627,627,314,627],sealPebble:[941,627,313,627]},b=boxes[kind];return '<svg class="'+cls+'" viewBox="'+b.join(' ')+'" aria-hidden="true"><image href="assets/seals-v398.png" width="1254" height="1254"/></svg>';}
 function nav(label,scene,id){button(label,()=>{closeDialog();startNavigation(scene,id);},'seal-nav-'+id,true);}
 function note(text){const el=document.createElement('p');el.className='seal-note';el.textContent=text;$('panelExtra').append(el);}
 function stamp(r,animate=false){const el=document.createElement('div');el.className='seal-impression '+r.seal+(animate?' seal-fall':'');const title=r.shopName||'南澜记';el.textContent=title.slice(0,2)+'\n'+title.slice(2)+'印';el.setAttribute('aria-label',sealName(r.seal)+'印记');return el;}

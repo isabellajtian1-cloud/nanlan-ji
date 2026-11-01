@@ -60,6 +60,7 @@
   };
   const products = ['driedHerb','bambooWare','shellCraft'];
   const prices = {mulberryLeaf:1,pondFish:7,rawSilk:12,fineSilk:22,lychee:4,longan:4,mandarin:3,ginseng:28,agarwood:22,huali:26,driedHerb:14,bambooWare:12,shellCraft:10,rope:5,wood:2,herb:3,bamboo:4,stone:2,mushroom:3,shoot:3,shell:2,seaweed:2,clam:3,vegetable:3};
+  const supplyPrices={rice:3,ingredient:3,seed:4,repair:5,rope:6};
   const rareResources={ginseng:{cooldown:4320,stamina:5,tool:'hoe'},agarwood:{cooldown:2880,stamina:6,tool:'axe'},huali:{cooldown:4320,stamina:8,tool:'axe'}};
   const fruitResources=['lychee','longan','mandarin'];
   function resourceCooldown(type){if(fruitResources.includes(type))return 1440;return rareResources[type]?.cooldown||240;}
@@ -382,12 +383,16 @@
         if(name==='practice'){requireScene(s,'hall');requireThat(done(s,'M04'),'先让家人吃上第一顿热饭。');requireThat(Number.isInteger(p.index)&&p.index>=0&&p.index<6,'请选择字纸。');if(p.index>=2)requireThat(done(s,'M05'),'先认识村里的邻居，孩子们才会来借纸。');return once(s,'practice:'+p.index,()=>{s.practice[p.index]=true;s.journal.push({id:'S01-'+p.index,text:['把空白纸分好，祖父把第一张留给你。','写下一个家字，祖父说落脚处也能慢慢成家。','替借纸的孩子描一笔山字。','孩子认得海字，讲起自家出海的人。','祖父把讲过的草木名抄成字条。','商议明春的课，书案前留下新的约定。'][p.index]});});}
         if(name==='sortPage'){requireScene(s,'study');requireThat(f.ledgerPermission,'先完成 M08 的归属确认与查看许可。');if(f.bookReturned)requireThat(f.copyApproved,'原簿已经交还，等程婉同意留下副本后再回看。');requireThat(Number.isInteger(p.index)&&p.index>=0&&p.index<4,'请选择获准整理的页片。');return once(s,'page:'+p.index,()=>{s.pages[p.index]=true;});}
         if(name==='tidy'){requireScene(s,'store');f.storeTidied=true;return;}
-        if(name==='buy'){requireScene(s,'village');requireThat(done(s,'M04'),'先完成第一顿饭。');const costs={rice:3,ingredient:3,seed:4,repair:5,rope:6};
-          requireThat(Object.hasOwn(costs,p.item),'这里暂时买不到这件物品。');requireThat(s.coins>=costs[p.item],'铜钱不足，先去镇集试摊。');s.coins-=costs[p.item];give(s,{[p.item]:1});log(s,'buy',-costs[p.item],'向乡邻购入 '+itemNames[p.item],p.item);return;}
+        if(name==='buy'){requireScene(s,'village');requireThat(done(s,'M04'),'先完成第一顿饭。');
+          const order=p.items&&typeof p.items==='object'&&!Array.isArray(p.items)?p.items:{[p.item]:p.quantity??1},entries=Object.entries(order);
+          requireThat(entries.length>0,'请先选择要购入的物资。');let total=0;
+          for(const [item,quantity]of entries){requireThat(Object.hasOwn(supplyPrices,item),'这里暂时买不到这件物品。');requireThat(Number.isInteger(quantity)&&quantity>=1&&quantity<=99,'每种物资请选择 1—99 份。');total+=supplyPrices[item]*quantity;}
+          requireThat(s.coins>=total,'铜钱不足，本次合计需要 '+total+' 文。');const goods=Object.fromEntries(entries);s.coins-=total;give(s,goods);
+          const note=entries.map(([item,quantity])=>itemNames[item]+' ×'+quantity).join('、');log(s,'buy',-total,'向乡邻购入 '+note,entries.length===1?entries[0][0]:null);return;}
         fail('这项动作暂未开放。');
       });
     }
   }
   return {Engine,initial,current,done,reached,sceneGate,clock,tide,crop,gardenPlot,quantity,available,normaliseLoaded,
-    rareResources,resourceCooldown,resourceRequirement,daylight,SAVE_KEY,ORDER,V2_ORDER,shopPrice,shopCustomers,story2:storyV2,shopProducts:storyV2.products,titles,steps,rewards,itemNames,products,prices,recipes};
+    rareResources,resourceCooldown,resourceRequirement,daylight,SAVE_KEY,ORDER,V2_ORDER,shopPrice,shopCustomers,story2:storyV2,shopProducts:storyV2.products,titles,steps,rewards,itemNames,products,prices,supplyPrices,recipes};
 });

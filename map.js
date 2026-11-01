@@ -1,4 +1,4 @@
-/* Every planned scene and local place is visible; story gates still apply. */
+/* The whole landscape remains visible, while names and details are written in as the player learns them. */
 const mapPositions={
   gate:[190,535],yard:[190,365],hall:[190,110],study:[65,235],bed:[325,235],store:[325,445],
   village:[520,520],market:[570,735],county:[850,735],pharmacy:[820,575],generalStore:[1075,735],teahouse:[1070,585],
@@ -16,11 +16,12 @@ function mapAccess(id){
   if(id==='tidalflat'&&!N.tide(s).low)return '现在涨潮，下一轮低潮还有 '+Math.ceil(N.tide(s).remaining)+' 游戏分钟。可以先在海边走动，随时可以从滩涂返回。';
   return '';
 }
-function nextObjective(){
-  const s=state(),q=N.current(s),f=s.flags;
-  if(!q)return N.done(s,'M20')&&!s.flags.volume2Started?{scene:'hall',object:'v2Family',label:'新春家议 · 开启第二卷'}:{scene:'yard',object:'herbPlot',label:'回家照料小畦'};
-  if((q==='V2_06'&&f.v2Decorated||q==='V2_09'&&f.v2PriceConfirmed)&&!s.production?.shopName)return {scene:'study',object:'books',label:'请祖父题下自家字号'};
-  const flag=N.steps[q].find(([id])=>!f[id])?.[0];
+function mapKnown(id){
+  const s=state();return id===s.scene||id==='gate'||!!s.visits[id]||!mapAccess(id);
+}
+function objectiveForStep(flag,label){
+  const s=state(),f=s.flags;
+  if(['v2Sign','v2Opened'].includes(flag)&&!s.production?.shopName)return {scene:'study',object:'books',label:'请祖父题下自家字号'};
   const targets={...(typeof window!=='undefined'?window.NanlanV2?.targets:{}),handover:['gate','familyLuggage'],keyTaken:['gate','keyHandover'],gateOpen:['gate','closedGate'],
     windowInspected:['bed','window'],leakInspected:['bed','leak'],firstRepair:['bed','window'],bedReady:['bed','bedRest'],
     farmTools:['store','sickle'],toolsRepaired:['store','workbench'],smallBed:['yard','herbPlot'],stoveClean:['yard','stove'],
@@ -40,7 +41,12 @@ function nextObjective(){
     seatingChosen:['hall','mealTable'],feastCooked:['yard','stove'],festivalLamps:['yard','festivalLantern'],feastShared:['hall','mealTable']};
   if(flag==='pathCleared')targets.pathCleared=['yard',['weed1','weed2','weed3'].find(id=>!s.collected[id])];
   const [scene,object]=targets[flag]||[s.scene,null];
-  return {scene,object,label:q+' · '+(N.steps[q].find(([id])=>id===flag)?.[1]||N.titles[q])};
+  return {scene,object,label:label||flag};
+}
+function nextObjective(){
+  const s=state(),q=N.current(s),f=s.flags;
+  if(!q)return N.done(s,'M20')&&!s.flags.volume2Started?{scene:'hall',object:'v2Family',label:'新春家议 · 开启第二卷'}:{scene:'yard',object:'herbPlot',label:'回家照料小畦'};
+  const entry=N.steps[q].find(([id])=>!f[id]);return objectiveForStep(entry?.[0],entry?.[1]||N.titles[q]);
 }
 function showMap(id=state().scene,objectId=null){
   cancelNavigation();active=false;path=[];keys={};moving=false;mapReturnFocus=document.activeElement;
@@ -75,34 +81,35 @@ function drawMap(){
     else svg+='<path class="map-route" d="'+d+'" fill="none" stroke="#d8c59c" stroke-width="4" stroke-dasharray="7 7" opacity=".72"/><path class="map-route" d="'+d+'" fill="none" stroke="#6d6048" stroke-width="1.4" stroke-dasharray="7 7" opacity=".75"/>';
   }$('mapLines').innerHTML=svg;$('mapNodes').replaceChildren();
   for(const [id,[x,y]] of Object.entries(mapPositions)){
-    const why=mapAccess(id),b=document.createElement('button');
+    const why=mapAccess(id),known=mapKnown(id),b=document.createElement('button');
     b.className='map-node'+(!why?' open':'')+(s.scene===id?' current':'')+(objective.scene===id?' objective':'');
     b.dataset.mapPlace=id;b.style.left=(x/12)+'%';b.style.top=(y/8.2)+'%';
-    b.innerHTML=clean(world[id].name.replace('旧宅 · ','').replace('青岚山 · ','').replace('南澜海湾 · ','').replace('南澜县城 · ',''))+
-      '<small>'+(s.scene===id?'你在这里':deferredPlaces.includes(id)&&why?'开启第二卷后前往':why?'随剧情 / 时机开启':objective.scene===id?'下一步目标':s.visits[id]?'已走过':'可前往')+'</small>';
-    b.setAttribute('aria-label',world[id].name+'，'+(why?'待开放':'已开放')+(objective.scene===id?'，当前任务目标':''));
+    const label=known?world[id].name.replace('旧宅 · ','').replace('青岚山 · ','').replace('南澜海湾 · ','').replace('南澜县城 · ',''):'未题名';
+    b.innerHTML=clean(label)+'<small>'+(s.scene===id?'你在这里':known?(why?'尚未走通':objective.scene===id?'眼前要去':'已经认得'):'亲自走过后写入')+'</small>';
+    b.setAttribute('aria-label',(known?world[id].name:'尚未认识的地点')+'，'+(known&&!why?'已经认得':'等待探索'));
     b.onclick=()=>inspectMapPlace(id);$('mapNodes').append(b);
   }
-  $('mapSummary').textContent='完整山海原画 · 19 个场景点（含门前序章） · '+Object.keys(world).filter(id=>!mapAccess(id)).length+' 处当前可达 · 全部地点均可查看';
+  $('mapSummary').textContent='山海轮廓都在图上 · '+Object.keys(world).filter(mapKnown).length+' 处已经题名 · 其余等待你亲自走到';
   $('mapTime').textContent=timeText().short+' · 查看地图时暂停';
   drawPlaceLists();filterMap();
 }
 function inspectMapPlace(id,objectId=null){
-  selectedMapPlace=id;selectedMapObject=objectId;const s=state(),w=world[id],why=mapAccess(id),historical=id==='gate'&&s.flags.gateOpen;
+  selectedMapPlace=id;selectedMapObject=objectId;const s=state(),w=world[id],why=mapAccess(id),known=mapKnown(id),historical=id==='gate'&&s.flags.gateOpen;
   for(const b of $('mapNodes').children)b.classList.toggle('selected',b.dataset.mapPlace===id);
-  $('mapPlaceTitle').textContent=w.name;$('mapPlaceState').textContent=s.scene===id?'当前位置 · 你在这里':historical?'序章入口 · 现并入庭院':why?'已标出 · 暂未开放':'已开放 · 可以沿路抵达';
+  $('mapPlaceTitle').textContent=known?w.name:'尚未题名的地方';$('mapPlaceState').textContent=s.scene===id?'当前位置 · 你在这里':historical?'来时的旧宅门前':known?(why?'听说过 · 尚未走通':'已经认得 · 可以沿路抵达'):'只看得见山海轮廓';
   $('mapPlaceImage').src=DATA.assets[w.asset];$('mapPlaceImage').alt=w.name+'原画预览';
+  $('mapPlaceImage').classList.toggle('undiscovered',!known);$('mapPlaceActions').replaceChildren();$('mapPlaceDetails').replaceChildren();
+  if(!known){$('mapPlaceDescription').textContent='这处地方还没有进入你的故事。等家人或新认识的人提起它，舆图会写下名字和路线。';return;}
   const target=historical?'yard':id,route=firstRoute(s.scene,target),o=w.objects.find(v=>v.id===objectId);
   let description=historical?'接行李、拿钥匙、开院门的序章入口。现在可回庭院查看门前通路。':why||'沿已开放入口逐段行走，途经物资仍可停下采集。';
   if(o)description='目标：'+o.label+'\n'+description;
   if(!why&&route?.length)description+='\n\n出行路线：'+[world[s.scene].name,...route.map(step=>world[step.to].name)].join(' → ');
   if(!why&&route===null)description+='\n当前通路尚未连通，先完成门前交接或当前修路任务。';
-  $('mapPlaceDescription').textContent=description;$('mapPlaceActions').replaceChildren();
+  $('mapPlaceDescription').textContent=description;
   function add(label,fn,secondary){const b=document.createElement('button');b.textContent=label;b.onclick=fn;if(secondary)b.className='secondary';$('mapPlaceActions').append(b);}
   if(started&&!why&&route!==null)add(s.scene===target?(o?'走近目标 · '+o.label:'查看这里的互动地点'):'沿路前往'+w.name,()=>{closeMap();if(state().scene===target&&!o)showNearby();else startNavigation(target,o?.id);});
   if(!started)add('从旧宅门前启程',()=>{closeMap();$('begin').focus();});
   add('放大场景原画',()=>{closeMap();showGallery();const card=$('galleryGrid').querySelector('[data-scene="'+(id==='gate'?'yard':id)+'"]');if(card){card.classList.add('expanded');card.scrollIntoView({block:'start'});}},true);
-  $('mapPlaceDetails').replaceChildren();
   for(const local of visibleObjects(id,true)){
     const b=document.createElement('button');b.className=local.id===objectId?'local-selected':'';
     const resource=resourceTypes.includes(local.type),last=s.nodes[local.id],cooldown=resource&&last!==undefined&&s.worldTick-last<N.resourceCooldown(local.type);
@@ -120,8 +127,9 @@ function drawPlaceLists(){
   mapGroups.forEach(([title,ids])=>{
     const box=document.createElement('section');box.className='place-list-card';const heading=document.createElement('b');heading.textContent=title;box.append(heading);
     for(const id of ids){
-      const b=document.createElement('button');b.className='directory-scene';b.textContent=world[id].name+' · '+(deferredPlaces.includes(id)?'第二卷':mapAccess(id)?'待开放':'可达');
+      const known=mapKnown(id),b=document.createElement('button');b.className='directory-scene';b.textContent=known?world[id].name+' · '+(mapAccess(id)?'尚未走通':'已经认得'):'未题名 · 等待探索';
       b.onclick=()=>{inspectMapPlace(id);centerMap(id);};box.append(b);
+      if(!known)continue;
       const details=document.createElement('details'),summary=document.createElement('summary');summary.textContent='展开 '+world[id].objects.length+' 处人物、设施与采集点';details.append(summary);
       for(const o of world[id].objects){const local=document.createElement('button');local.textContent=o.label;local.onclick=()=>{inspectMapPlace(id,o.id);centerMap(id);$('mapInspector').scrollIntoView({block:'nearest',behavior:'smooth'});};details.append(local);}
       box.append(details);
@@ -132,9 +140,9 @@ function drawPlaceLists(){
 }
 function filterMap(){
   const query=$('mapSearch').value.trim(),results=$('mapSearchResults');results.replaceChildren();results.hidden=!query;
-  for(const node of $('mapNodes').children){const w=world[node.dataset.mapPlace];node.classList.toggle('dimmed',!!query&&!window.NanlanI18n.matches(w.name+w.objects.map(o=>o.label).join(''),query));}
+  for(const node of $('mapNodes').children){const id=node.dataset.mapPlace,w=world[id],searchable=mapKnown(id)?w.name+w.objects.map(o=>o.label).join(''):'';node.classList.toggle('dimmed',!!query&&!window.NanlanI18n.matches(searchable,query));}
   if(!query)return;
-  const matches=[];for(const [id,w] of Object.entries(world)){
+  const matches=[];for(const [id,w] of Object.entries(world)){if(!mapKnown(id))continue;
     if(window.NanlanI18n.matches(w.name,query))matches.push({id,label:w.name});
     for(const o of w.objects)if(window.NanlanI18n.matches(o.label,query))matches.push({id,object:o.id,label:w.name+' · '+o.label});
   }
@@ -167,11 +175,9 @@ function startNavigation(to,objectId=null){
 }
 function continueNavigation(){if(navigationTarget)startNavigation(navigationTarget,navigationObject);}
 function locateObjective(){const target=nextObjective();inspectMapPlace(target.scene,target.object);centerMap(target.scene);}
-$('mapClose').onclick=closeMap;$('mapSearch').oninput=filterMap;$('startMap').onclick=()=>showMap();$('mapOpen').onclick=()=>showMap();
+$('mapClose').onclick=closeMap;$('mapSearch').oninput=filterMap;$('mapOpen').onclick=()=>showMap();
 function navigateCurrentQuest(){const target=nextObjective();startNavigation(target.scene,target.object);}
-$('questNavigate').onclick=navigateCurrentQuest;
-$('dialogQuestNavigate').onclick=navigateCurrentQuest;
-$('questMap').onclick=()=>{const target=nextObjective();showMap(target.scene,target.object);};
+$('questMap').onclick=()=>showMap();
 $('mapObjective').onclick=locateObjective;$('mapHome').onclick=()=>{const id=state().flags.bedReady?'bed':'yard';inspectMapPlace(id,id==='bed'?'bedRest':null);centerMap(id);};
 $('mapZoomOut').onclick=()=>setMapZoom(mapZoom-.15);$('mapZoomIn').onclick=()=>setMapZoom(mapZoom+.15);$('mapZoomReset').onclick=()=>setMapZoom(1);
 $('mapMarkers').onclick=()=>{const hidden=$('mapBoard').classList.toggle('map-cinematic');$('mapMarkers').setAttribute('aria-pressed',String(hidden));$('mapMarkers').textContent=hidden?'显示地点牌 · 继续导航':'隐藏地点牌 · 看全景';};

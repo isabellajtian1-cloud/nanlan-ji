@@ -8,8 +8,8 @@ const nameEcho={
 '桑榆铺':['祖父：「年轻时读‘失之东隅，收之桑榆’，只觉得是句宽慰人的话。如今在这里种桑、过日子，才知道这话也得一日一日地过。」','母亲：「等桑叶养出好丝，咱们便把这里的花样绣上去。往后客人问起铺名，也好同他说说咱们在南澜的日子。」']};
 const clothesWords='（祖父习惯性地摸向旧衣磨损的袖口，指尖却停在一枝细密的新绣上。他将衣袖迎着晨光抬起。）\n\n祖父：「这是我记在册里的那枝花？你母亲竟将它绣到衣上了。」\n\n「从前总念着京里的绸缎，以为这一走，往后便只有旧衣补旧衣。如今这丝是你亲手养出来的，花样也是咱们在南澜一笔一笔记下的……」\n\n（他慢慢抚平衣襟，眼里有了笑意。）\n\n「好，穿着它出门走走。也叫街坊看看，咱们家的桑树，已经养出好丝来了。」';
 function cell(file,box,cls,w,h){const id='production-crop-'+(++artSerial);return '<svg class="'+cls+'" viewBox="'+box.join(' ')+'" aria-hidden="true"><defs><clipPath id="'+id+'"><rect x="'+box[0]+'" y="'+box[1]+'" width="'+box[2]+'" height="'+box[3]+'"/></clipPath></defs><image clip-path="url(#'+id+')" href="'+file+'" width="'+w+'" height="'+h+'"/></svg>';}
-function art(row,col,cls='production-art'){const ys=[0,370,680,1024];return cell('production-stages-v399.png',[col*384,ys[row],384,ys[row+1]-ys[row]],cls,1536,1024);}
-function itemArt(id){const i=M.itemIds.indexOf(id);if(i<0)return '';const ys=[0,445,805,1254],row=Math.floor(i/3);return cell('production-items-v399.png',[i%3*418,ys[row],418,ys[row+1]-ys[row]],'inventory-art',1254,1254);}
+function art(row,col,cls='production-art'){const ys=[0,370,680,1024];return cell('assets/production-stages-v399.png',[col*384,ys[row],384,ys[row+1]-ys[row]],cls,1536,1024);}
+function itemArt(id){const i=M.itemIds.indexOf(id);if(i<0)return '';const ys=[0,445,805,1254],row=Math.floor(i/3);return cell('assets/production-items-v399.png',[i%3*418,ys[row],418,ys[row+1]-ys[row]],'inventory-art',1254,1254);}
 function paragraph(text,cls='production-note'){const p=document.createElement('p');p.className=cls;p.textContent=text;$('panelExtra').append(p);return p;}
 function nav(label,scene,id){button(label,()=>{closeDialog();startNavigation(scene,id);},'silk-nav-'+id,true);}
 function action(label,name,p={},again=()=>show(selected),ready=true,why='材料尚未备齐。'){const b=actButton(label,name,{sequence:state().revision,...p},again,'silk-'+name);if(!ready){b.disabled=true;paragraph(why);}return b;}

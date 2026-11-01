@@ -19,6 +19,7 @@ function mapAccess(id){
 function nextObjective(){
   const s=state(),q=N.current(s),f=s.flags;
   if(!q)return N.done(s,'M20')&&!s.flags.volume2Started?{scene:'hall',object:'v2Family',label:'新春家议 · 开启第二卷'}:{scene:'yard',object:'herbPlot',label:'回家照料小畦'};
+  if((q==='V2_06'&&f.v2Decorated||q==='V2_09'&&f.v2PriceConfirmed)&&!s.production?.shopName)return {scene:'study',object:'books',label:'请祖父题下自家字号'};
   const flag=N.steps[q].find(([id])=>!f[id])?.[0];
   const targets={...(typeof window!=='undefined'?window.NanlanV2?.targets:{}),handover:['gate','familyLuggage'],keyTaken:['gate','keyHandover'],gateOpen:['gate','closedGate'],
     windowInspected:['bed','window'],leakInspected:['bed','leak'],firstRepair:['bed','window'],bedReady:['bed','bedRest'],
@@ -131,11 +132,11 @@ function drawPlaceLists(){
 }
 function filterMap(){
   const query=$('mapSearch').value.trim(),results=$('mapSearchResults');results.replaceChildren();results.hidden=!query;
-  for(const node of $('mapNodes').children){const w=world[node.dataset.mapPlace];node.classList.toggle('dimmed',!!query&&!(w.name+w.objects.map(o=>o.label).join('')).includes(query));}
+  for(const node of $('mapNodes').children){const w=world[node.dataset.mapPlace];node.classList.toggle('dimmed',!!query&&!window.NanlanI18n.matches(w.name+w.objects.map(o=>o.label).join(''),query));}
   if(!query)return;
   const matches=[];for(const [id,w] of Object.entries(world)){
-    if(w.name.includes(query))matches.push({id,label:w.name});
-    for(const o of w.objects)if(o.label.includes(query))matches.push({id,object:o.id,label:w.name+' · '+o.label});
+    if(window.NanlanI18n.matches(w.name,query))matches.push({id,label:w.name});
+    for(const o of w.objects)if(window.NanlanI18n.matches(o.label,query))matches.push({id,object:o.id,label:w.name+' · '+o.label});
   }
   const note=document.createElement('p');note.textContent=matches.length?'找到 '+matches.length+' 项，点击查看位置与路线。':'没有找到这个地点。可试试「竹林」「灶」「药圃」或「待租」。';results.append(note);
   for(const match of matches){const b=document.createElement('button');b.textContent=match.label;b.onclick=()=>{inspectMapPlace(match.id,match.object);centerMap(match.id);};results.append(b);}
@@ -176,3 +177,5 @@ $('mapZoomOut').onclick=()=>setMapZoom(mapZoom-.15);$('mapZoomIn').onclick=()=>s
 $('mapMarkers').onclick=()=>{const hidden=$('mapBoard').classList.toggle('map-cinematic');$('mapMarkers').setAttribute('aria-pressed',String(hidden));$('mapMarkers').textContent=hidden?'显示地点牌 · 继续导航':'隐藏地点牌 · 看全景';};
 $('navigationCancel').onclick=()=>{cancelNavigation();path=[];notice('已停止导航，可自由走动。');};
 $('nightNote').onclick=()=>startNavigation('bed','bedRest');
+
+document.addEventListener('nanlanlanguagechange',()=>{if(!$('worldMap').hidden)filterMap();});

@@ -41,9 +41,7 @@ function loadImage(id){
 }
 async function loadSceneAssets(scene){
   const required=[scene];
-  if(scene==='yard')required.push('gardenStages','productionStages','productionItems');
-  if(state().actorState?.outfit==='nanlanSilk')required.push('familySilk',state().gender==='male'?'walkMaleSilk':'walkFemaleSilk');
-  if(['mountain','coast'].includes(scene))required.push('seals');
+  if(scene==='yard')required.push('gardenStages');
   if(['foothill','mountain'].includes(scene))required.push('fruitTrees','fruitTreesPicked');
   if(scene==='store')required.push('storePickups','inventoryHousehold','inventoryCrafts');
   if(scene==='bed')required.push('bed','bedDamage','bedPatched');
@@ -54,14 +52,14 @@ function notice(text,sticky=false){
   $('message').textContent=text;$('message').classList.remove('fade');clearTimeout(messageTimer);
   if(!sticky)messageTimer=setTimeout(()=>$('message').classList.add('fade'),8500);
 }
-function reward(id,silent=false){
-  if(!silent)window.NanlanAudio?.play('success');
+function reward(id){
+  window.NanlanAudio?.play('success');
   $('chapterToast').textContent=id+' '+N.titles[id]+' 完成 · '+N.rewards[id][1];
   $('chapterToast').hidden=false;clearTimeout(rewardTimer);
   rewardTimer=setTimeout(()=>$('chapterToast').hidden=true,8500);
 }
 function dialogueCast(title){
-  const people=[['祖父','grandfather'],['父亲','father'],['母亲','mother'],['陈伯','chen'],['许青禾','doctor'],['阿岑','cen'],['程婉','wan'],['沈晚渔','yu'],['邱管事','qiu'],['林师傅','lin'],['郑掌柜','landlord'],['陆掌柜','neighbor'],['茶馆掌柜','tea'],['罗掌柜','tea'],['南街熟客','customer'],['官兵','guard']];
+  const people=[['祖父','grandfather'],['父亲','father'],['母亲','mother'],['陈伯','chen'],['许青禾','doctor'],['阿岑','cen'],['程婉','wan'],['沈晚渔','yu'],['邱管事','qiu'],['林师傅','lin'],['郑掌柜','landlord'],['陆掌柜','neighbor'],['茶馆掌柜','tea'],['官兵','guard']];
   const matched=people.find(([name])=>title.startsWith(name));if(matched)return [matched];
   if(/^(家议|正厅 · 家宴后的铺讯|正厅 · 临时安置|第一卷完成)/.test(title))return [['母亲','mother'],['父亲','father'],['祖父','grandfather']];
   if(title==='旧宅门前 · 交接')return [['官兵','guard'],['祖父','grandfather']];
@@ -74,7 +72,7 @@ function dialogueCast(title){
 function showDialoguePortraits(title){
   const host=$('dialogPortraits'),cast=dialogueCast(title);host.replaceChildren();host.hidden=!cast.length;
   host.className=cast.length>1?'portrait-group':'portrait-single';
-  for(const [name,role]of cast){const src=window.NANLAN_DATA.assets['npc_'+role];if(!src)continue;const figure=document.createElement('figure'),frame=document.createElement('div'),img=document.createElement('img'),caption=document.createElement('figcaption');frame.className='portrait-frame';img.src=src;img.alt=name+'的肖像';if(role==='grandfather')img.style.transformOrigin='85% 0';img.onerror=()=>{figure.hidden=true;};caption.textContent=name;frame.append(window.NanlanProduction?.portraitElement(role,name)||img);figure.append(frame,caption);host.append(figure);}
+  for(const [name,role]of cast){const src=window.NANLAN_DATA.assets['npc_'+role];if(!src)continue;const figure=document.createElement('figure'),frame=document.createElement('div'),img=document.createElement('img'),caption=document.createElement('figcaption');frame.className='portrait-frame';img.src=src;img.alt=name+'的肖像';if(role==='grandfather')img.style.transformOrigin='85% 0';img.onerror=()=>{figure.hidden=true;};caption.textContent=name;frame.append(img);figure.append(frame,caption);host.append(figure);}
   window.NanlanAudio?.setDialogue(cast.length>0);
 }
 function activity(title,text,kind='general'){
@@ -82,6 +80,7 @@ function activity(title,text,kind='general'){
   previousFocus=document.activeElement;active=false;path=[];keys={};moving=false;dialogKind=kind;
   showDialoguePortraits(title);$('speaker').textContent=title;$('line').textContent=text;$('panelExtra').replaceChildren();$('choices').replaceChildren();
   $('dialogKicker').textContent=kind==='quest'?'南澜记 · 任务与回报':'南澜小事';
+  $('dialogQuestNavigate').hidden=!started;
   $('next').hidden=true;$('dialog').hidden=false;$('skip').textContent=started?'返回游戏 ×':'返回启程页 ×';
   $('skip').focus();
 }
@@ -112,15 +111,14 @@ async function perform(name,p={},rerender){
   if(dialogObject&&!nearObject(dialogObject)){notice('请先走到物件旁，再进行操作。',true);closeDialog();return;}
   if(name==='openGate'&&!await loadImage('yard')){notice('庭院图片未能载入，请重试。原有进度已保留。',true);return;}
   if(['shareFirst','shareFeast'].includes(name)&&!await loadImage(state().gender==='male'?'familyMealMale':'familyMealFemale')){notice('用餐画面未加载完成，请再试一次；饭菜尚未扣除。',true);return;}
-  const gathered=['collect','harvest','clearWeed','silkLeaves','silkHarvest','silkHarvestFish','silkKit'].includes(name),beforeBag=gathered?{...state().bag}:null;
+  const gathered=['collect','harvest','clearWeed'].includes(name),beforeBag=gathered?{...state().bag}:null;
   const result=engine.act(name,p);
   if(!result.ok){window.NanlanAudio?.play('blocked');notice(result.message,true);$('saveState').textContent=result.message.startsWith('保存失败')?'本次动作尚未保存':'当前目标尚待完成';return;}
-  if(!result.duplicate)window.NanlanAudio?.play(p.seal?(p.seal==='stone'?'sealStone':'sealWood'):name==='openGate'?'door':/water|Water/.test(name)?'water':/repair|Repair|patch|Patch|craft|Craft/.test(name)?'repair':/nap|sleep/.test(name)?'rest':/collect|harvest|Harvest|gather/.test(name)?'gather':'success');
+  if(!result.duplicate)window.NanlanAudio?.play(name==='openGate'?'door':/water|Water/.test(name)?'water':/repair|Repair|patch|Patch|craft|Craft/.test(name)?'repair':/nap|sleep/.test(name)?'rest':/collect|harvest|Harvest|gather/.test(name)?'gather':'success');
   $('saveState').textContent=engine.memoryOnly?'仅本次试玩 · 关闭网页会丢失':'已保存';
-  if(result.completed)reward(result.completed,!!p.seal);
+  if(result.completed)reward(result.completed);
   refreshHud();
   if(name==='openGate'){closeDialog();render();notice('院门打开了。先去东厢房检查窗格与漏点。');return;}
-  if(name==='v2Sign'&&window.NanlanProduction){window.NanlanProduction.mounted();return;}
   if(rerender)rerender();else notice(result.duplicate?'这件事已经办好了。':actionMessage(name));
   if(gathered&&!result.duplicate){
     const received=Object.entries(state().bag).filter(([id,n])=>n>(beforeBag[id]||0)).map(([id,n])=>(N.itemNames[id]||id)+' ×'+(n-(beforeBag[id]||0)));
@@ -221,7 +219,7 @@ function rowProgress(flag){
 }
 function refreshHud(){
   const s=state(),q=N.current(s),t=timeText();
-  $('where').textContent=s.scene==='generalStore'&&s.story2?.site?'南街 · '+(s.production?.shopName||N.story2.shops[s.story2.site].name):world[s.scene].name;$('roleName').textContent=s.gender==='male'?'李家晚辈 · 男主角':'李家晚辈 · 女主角';
+  $('where').textContent=s.scene==='generalStore'&&s.story2?.site?'南街 · '+N.story2.shops[s.story2.site].name:world[s.scene].name;$('roleName').textContent=s.gender==='male'?'李家晚辈 · 男主角':'李家晚辈 · 女主角';
   $('statusTime').textContent=t.short;$('clock').replaceChildren();
   const text=document.createElement('div');text.style.whiteSpace='pre-line';text.textContent=t.full;
   const small=document.createElement('small');small.textContent=t.extra;$('clock').append(text,small);
@@ -319,10 +317,6 @@ function showTextMap(){
   button('查看所有场景原画',showGallery,'map-gallery',true);
 }
 function itemSource(id){
-  if(['mulberrySapling','silkwormEgg','fishFry','fishFeed'].includes(id))return '第二卷池边初养物资；收获时留回蚕种、鱼苗。';
-  if(['mulberryLeaf','rawSilk','fineSilk','pondFish','silkwormCompost'].includes(id))return '后院桑基生产所得；生丝、桑叶与塘鱼可装车运往南街。';
-  if(id==='sealTimber')return '阿岑指路，在青岚山取下；交林师傅刻木印。';
-  if(id==='sealPebble')return '沈晚渔指路，在海湾旧泊岸拾得；交林师傅磨石印。';
   const m={rice:'村中乡邻余粮可补购',ingredient:'村中乡邻补给，或用自种菜蔬代替',seed:'采收返还一份；村中也可补购',
     repair:'家中带来 2 份；村中可补购',wood:'清草前两处回收；村边、山脚、竹林均可拾',
     lychee:'山脚荔枝树 · 每次 2 份 · 1 游戏日刷新 · 每份 4 文',longan:'山脚龙眼树 · 每次 2 份 · 1 游戏日刷新 · 每份 4 文',mandarin:'山路柑橘树 · 每次 2 份 · 1 游戏日刷新 · 每份 3 文',
@@ -338,8 +332,6 @@ const inventorySheets=[
   {file:'inventory-crafts-v392.png',rows:[0,425,800,1254],items:['driedHerb','bambooWare','shellCraft','rope','ledgerOriginal','ledgerCopy','receipt','reply','narrowBasket']}
 ];
 function inventoryArt(id){
-  if(window.NanlanProductionModel?.itemIds.includes(id))return window.NanlanProduction?.itemArt(id)||'';
-  if(['sealTimber','sealPebble'].includes(id))return window.NanlanSeals?.art(id,'inventory-art')||'';
   if(resourceTypes.includes(id))return resourceArt(id);
   const sheet=inventorySheets.find(sheet=>sheet.items.includes(id));
   if(!sheet)return '';
@@ -361,8 +353,6 @@ function showBag(){
   }$('panelExtra').append(grid);
   if(!keys.length){const empty=document.createElement('p');empty.textContent='行囊暂时没有物资，采集所得会显示在这里。';$('panelExtra').append(empty);}
   if(N.quantity(s,'hotMeal')&&N.done(s,'M04'))actButton('吃一份热饭 · 恢复 35 体力','eat',{},showBag);
-  if(s.flags.volume2Started)button('桑基生产与全家新衣',()=>window.NanlanProduction.progress(),'bag-production',true);
-  if(s.flags.volume2Started)button('查看铺号印匣与留底凭单',()=>window.NanlanSeals.show(),'bag-seals',true);
   button('查看家庭收支与凭单',showAccounts,'accounts',true);
   button('导入进度文件',importSave,'import',true);
   if(localStorage.getItem('nanlan_before_import'))button('下载导入前的进度备份',()=>download('Nanlan_Before_Import.json',localStorage.getItem('nanlan_before_import')),'before-import',true);
@@ -412,7 +402,6 @@ function showArchive(){
     const texts=['纸边写着借灯时日，名字暂缺一角。','一栏记下归还器具，旁边画着小花。','雨痕间留着相助的人名，等当事人核对。','同一件事的几页放在一起，先不把数字都当作欠账。'];
     texts.forEach((line,index)=>button((s.pages[index]?'✓ 回看':'整理')+' · 第 '+(index+1)+' 片',()=>{activity('获准的第 '+(index+1)+' 片',line+(s.flags.historyConfirmed?'\n\n这些记号记着旧时互助，原簿已回到程婉手中。':'\n\n眼下只认出纸页的次序，往事还需当事人说清。'));if(!s.pages[index])actButton('理好页序，记一条笔记','sortPage',{index},showArchive,'sort-'+index);else button('返回书案',showArchive,'archive-back',true);},'page-'+index,true));
   }
-  window.NanlanProduction?.desk();
   button('查看家中的回响',showJournal,'archive-journal',true);
 }
 let selectedPlot=0,pendingSeed=null;
@@ -427,6 +416,10 @@ function plotFrame(index){
 function plotArt(index){const [col,row]=plotFrame(index);return `<svg viewBox="${col*384} ${row*1024/3} 384 ${1024/3}" aria-hidden="true"><image href="${DATA.assets.gardenStages}" width="1536" height="1024"/></svg>`;}
 function plotName(index){return index<4?'菜畦 '+(index+1):'药田 '+(index-3);}
 function plotStatus(index){const s=state(),g=N.gardenPlot(s,index),c=N.crop(s,index);return index>=4&&!s.flags.fullGarden?'M07 扩整后开放':index>0&&!g.tilled?'待翻土':!c.planted?'空畦 · 可播种':!g.watered?'已播种 · 待浇水':c.ready?'成熟 · 可收获':(g.kind==='herb'?'药草':'青菜')+' · 生长中';}
+function equipGardenHoe(){
+  if(!state().tools.hoe){prerequisiteNote('请先去仓房领取长柄锄，再回来翻土。');return false;}
+  state().selected='hoe';refreshToolbar();return true;
+}
 async function gardenAction(name,p){
   await perform(name,p,()=>{
     pendingSeed=null;showGarden(p.plot??selectedPlot);
@@ -453,7 +446,7 @@ function showGarden(index=selectedPlot){
   if(q==='M03'&&f.pathCleared&&!f.smallBed){actButton('整理第一块菜畦','smallBed',{choice:'vegetable'},()=>showGarden(0),'bed-vegetable');actButton('先整理香草小畦','smallBed',{choice:'herb'},()=>showGarden(0),'bed-herb');}
   if(q==='M07'&&!f.fullGarden)actButton('扩整药圃 · 开放两块药田','expandGarden',{},()=>showGarden(4));
   if(f.smallBed&&(selectedPlot<4||f.fullGarden)){
-    if(selectedPlot>0&&!g.tilled)button('拿起长柄锄 · 翻土（体力 2）',()=>{selectTool(2);return gardenAction('tillPlot',{plot:selectedPlot});},'garden-till');
+    if(selectedPlot>0&&!g.tilled)button('拿起长柄锄 · 翻土（体力 2）',()=>{if(!equipGardenHoe())return;return gardenAction('tillPlot',{plot:selectedPlot});},'garden-till');
     else if(!c.planted){
       for(const kind of selectedPlot>=4?['herb']:['vegetable',...(f.fullGarden||s.choices.firstBed==='herb'?['herb']:[])])button('拿起'+(kind==='herb'?'药草':'青菜')+'种子 · 现有 '+N.quantity(s,'seed')+' 份',()=>{pendingSeed=kind;showGarden(selectedPlot);},'seed-'+kind);
     }else if(!g.watered)button('提起木桶 · 浇水（水 '+s.bucketWater+'）',()=>gardenAction('waterCrop',{plot:selectedPlot}),'garden-water');
@@ -479,7 +472,6 @@ function showCook(){
   const s=state(),q=N.current(s);activity('灶边 · 一顿热饭','米粮 ×1 + 食材或菜蔬 ×1 + 枯枝 ×1 + 桶内水 ×1 → 一锅热饭。\n\n米粮 '+N.quantity(s,'rice')+' · 食材 '+N.quantity(s,'ingredient')+' · 菜蔬 '+N.quantity(s,'vegetable')+' · 枯枝 '+N.quantity(s,'wood')+' · 桶内水 '+(s.bucketWater||0)+'\n\nM04 的第一锅饭要带回正厅，在饭桌旁与家人分享。缺粮可在出村后向乡邻补购。');
   if(q==='M04'&&!s.flags.stoveClean)actButton('先把灶边清理干净','cleanStove',{},showCook);
   if(N.reached(s,'M04'))actButton('亲手煮一锅热饭','cookMeal',{},showCook);
-  if(s.flags.volume2Started)actButton('煮一锅鲜鱼饭 · 塘鱼1、枯枝1、桶内水1','silkCookFish',{sequence:s.revision},showCook);
   if(N.reached(s,'M20'))actButton('准备岁末家宴','cookFeast',{},showCook);
 }
 function showBed(){
@@ -526,7 +518,7 @@ function showConversation(o){
   },'chat-choice-'+choice);
   button('今天先不打扰，改日再聊',closeDialog,'chat-leave',true);
 }
-function npc(o){npcStory(o);addConversation(o);window.NanlanSeals?.npc(o);window.NanlanProduction?.npc(o);}
+function npc(o){npcStory(o);addConversation(o);}
 function npcStory(o){
   const s=state(),f=s.flags,q=N.current(s),id=o.id;
   if(f.volume2Started&&['father','motherHall','grandfather'].includes(id)){window.NanlanV2.show('v2Family');return;}
@@ -618,8 +610,6 @@ function objectGate(o){
 function visibleObjects(scene=state().scene,includeCooling=false){
   const s=state(),f=s.flags,q=N.current(s);
   return world[scene].objects.filter(o=>{
-    if(o.id==='sealTimberNode'&&(!s.seals?.woodRoute||s.seals.wood||s.bag.sealTimber))return false;
-    if(o.id==='sealPebbleNode'&&(!s.seals?.stoneRoute||s.seals.stone||s.bag.sealPebble))return false;
     if(o.id==='v2Family'&&!N.done(s,'M20'))return false;
     if(o.id==='doctor'&&f.volume2Started)return false;
     if(o.id==='shenYu'&&f.metYu)return false;
@@ -649,7 +639,7 @@ function visibleObjects(scene=state().scene,includeCooling=false){
   });
 }
 function objectLabel(o){
-  const s=state();if(o.id==='silkPond'){const z=window.NanlanProductionModel.status(s);return !s.flags.volume2Started?'桑基鱼塘 · 第二卷开放':z.careOpen?'蚕匾 · 吐丝前可照料':z.wormReady||z.fishReady||z.mulberryReady?'桑基鱼塘 · 有产物可收':'桑基鱼塘 · 种桑、养蚕、喂鱼';}if(o.id==='v2Family')return s.flags.volume2Started?'家议 · 铺面与下一季':'新春家议 · 开启第二卷';if(['leaseEast','leaseWest'].includes(o.id)&&s.flags.v2Leased&&o.site===s.story2.site)return N.story2.shops[o.site].name+' · 已租用';if(o.id==='herbPlot'){const plots=Array.from({length:s.flags.fullGarden?6:4},(_,i)=>N.crop(s,i)),ready=plots.filter(c=>c.ready).length;return !s.flags.smallBed?'菜畦 · 待整理':ready?'菜圃药圃 · '+ready+' 块可收获':plots.some(c=>c.planted)?'菜圃药圃 · 照料作物':'菜圃药圃 · 可播种';}
+  const s=state();if(o.id==='v2Family')return s.flags.volume2Started?'家议 · 铺面与下一季':'新春家议 · 开启第二卷';if(['leaseEast','leaseWest'].includes(o.id)&&s.flags.v2Leased&&o.site===s.story2.site)return N.story2.shops[o.site].name+' · 已租用';if(o.id==='herbPlot'){const plots=Array.from({length:s.flags.fullGarden?6:4},(_,i)=>N.crop(s,i)),ready=plots.filter(c=>c.ready).length;return !s.flags.smallBed?'菜畦 · 待整理':ready?'菜圃药圃 · '+ready+' 块可收获':plots.some(c=>c.planted)?'菜圃药圃 · 照料作物':'菜圃药圃 · 可播种';}
   if(o.type==='door'&&objectGate(o))return o.label+' · 待开启';
   if(o.id==='window')return s.flags.windowPatched?'窗格 · 已修好':'松动窗格 · 查看';
   if(o.id==='leak')return s.flags.leakPatched?'屋顶 · 已补漏':'屋顶漏雨 · 查看';
@@ -687,9 +677,7 @@ async function interact(o){
     else await perform('collect',{id:o.id});return;
   }
   const s=state(),f=s.flags,q=N.current(s),a=o.action;
-  if(a==='silkProduction'){window.NanlanProduction.show();dialogObject=o;return;}
-  if(a?.startsWith('seal')){window.NanlanSeals.gather(o);return;}
-  if(a?.startsWith('v2')){window.NanlanV2.show(a,o);dialogObject=o;addConversation(o);window.NanlanSeals?.npc(o);window.NanlanProduction?.npc(o);return;}
+  if(a?.startsWith('v2')){window.NanlanV2.show(a,o);dialogObject=o;addConversation(o);return;}
   if(f.volume2Started&&o.id==='goodsCrates'){window.NanlanV2.show('v2Cargo',o);dialogObject=o;return;}
   if(a==='arrival'){
     activity('旧宅门前 · 交接','官兵：「文书与行李都在此。李家远迁岭南，并未籍没家产。我等交接完便返京。」\n\n祖父：「走了这么远，倒到了门口才觉得腿沉。」\n你：「进去坐一坐。」\n\n门还没有开。你先帮谁一把？');
@@ -930,17 +918,15 @@ function npcRole(o){
   return npcRoles[o.id]||null;
 }
 function drawPerson(role,x,y,height=84,flip=false){
-  const costume=window.NanlanProduction?.portrait(role);if(costume&&!images[costume.asset])loadImage(costume.asset);
-  const dressed=costume&&images[costume.asset]?.naturalWidth,im=dressed?images[costume.asset]:images['npc_'+role];if(!im?.naturalWidth){loadImage('npc_'+role);return;}
-  const width=height*(dressed?costume.rect[2]/costume.rect[3]:im.naturalWidth/im.naturalHeight);
+  const im=images['npc_'+role];if(!im?.naturalWidth){loadImage('npc_'+role);return;}
+  const width=height*im.naturalWidth/im.naturalHeight;
   // Soft contact shadow belongs to the actor, rather than a floating marker.
   ctx.save();const shadow=ctx.createRadialGradient(x,y-1,1,x,y-1,16);shadow.addColorStop(0,'#26332255');shadow.addColorStop(1,'#26332200');ctx.fillStyle=shadow;ctx.beginPath();ctx.ellipse(x,y-1,17,5,0,0,Math.PI*2);ctx.fill();
   ctx.translate(x,y);if(flip)ctx.scale(-1,1);
-  ctx.filter='brightness('+(1-N.daylight(state()).darkness*.28)+')';if(dressed)ctx.drawImage(im,...costume.rect,-width/2,-height,width,height);else ctx.drawImage(im,-width/2,-height,width,height);ctx.restore();
+  ctx.filter='brightness('+(1-N.daylight(state()).darkness*.28)+')';ctx.drawImage(im,-width/2,-height,width,height);ctx.restore();
 }
 function renderCharacter(t){
-  const s=state(),p=s.player,oldKey=s.gender==='male'?'walkMale':'walkFemale',key=s.actorState?.outfit==='nanlanSilk'?oldKey+'Silk':oldKey;
-  if(!images[key])loadImage(key);const im=images[key]||images[oldKey];
+  const s=state(),p=s.player,im=images[s.gender==='male'?'walkMale':'walkFemale'];
   const elapsed=Math.min(.1,(t-(lastPoseTime||t))/1000);lastPoseTime=t;
   gaitBlend+=(Number(moving&&active)-gaitBlend)*Math.min(1,elapsed*12);
   if(!im?.naturalWidth){drawPerson(s.gender==='male'?'playerMale':'playerFemale',p.x,p.y,84,direction==='left');return;}
@@ -966,20 +952,12 @@ function render(){
   const left=Math.max(8,-camera.ox/camera.scale+8),right=Math.min(W-8,(camera.vw-camera.ox)/camera.scale-8);
   const time=performance.now(),objective=localObjectiveObject(),destination=path[path.length-1]?.object;
   const people=visibleObjects().filter(o=>npcRole(o));
-  const actors=people.map(o=>({layer:40,y:o.y,draw:()=>drawPerson(npcRole(o),o.x,o.y)}));
-  if(started)actors.push({layer:40,y:s.player.y,draw:()=>renderCharacter(time)});
+  const actors=people.map(o=>({y:o.y,draw:()=>drawPerson(npcRole(o),o.x,o.y)}));
+  if(started)actors.push({y:s.player.y,draw:()=>renderCharacter(time)});
 
   for(const o of visibleObjects()){
     if(o.x<left-70||o.x>right+70)continue;
     const locked=!!objectGate(o)||o.type==='locked'||o.type==='property',selected=o.id===focusedObjectId||o===destination,isObjective=o===objective;
-    if(o.id==='silkPond'){hitTargets.push({o,rect:null,anchor:{x:245,y:385,w:130,h:140}});continue;}
-    if(o.action?.startsWith('sealGather')){
-      const wood=o.action==='sealGatherWood',im=resourceImages[wood?'wood':'stone'],w=wood?44:32,h=im?.naturalWidth?w*im.naturalHeight/im.naturalWidth:35;
-      if(im?.naturalWidth)ctx.drawImage(im,o.x-w/2,o.y-h,w,h);
-      hitTargets.push({o,rect:null,anchor:{x:o.x-24,y:o.y-55,w:48,h:60}});
-      if(selected||nearObject(o)){ctx.save();ctx.strokeStyle='#e8d8a7';ctx.lineWidth=1.2;ctx.beginPath();ctx.ellipse(o.x,o.y-3,18,6,0,0,Math.PI*2);ctx.stroke();ctx.restore();}
-      continue;
-    }
     if(o.action==='garden'){hitTargets.push({o,rect:null,anchor:{x:890,y:365,w:145,h:125}});continue;}
     if(fruitTypes.includes(o.type)){
       const cooling=s.nodes[o.id]!==undefined&&s.worldTick-s.nodes[o.id]<N.resourceCooldown(o.type);
@@ -996,9 +974,9 @@ function render(){
     }
     const pickup=storePickup(o);
     if(pickup!==undefined){
-      const im=images.storePickups,crop=[[0,80,500,780],[590,240,380,570],[1010,450,500,400]][pickup],w=[36,28,46][pickup],h=w*crop[3]/crop[2];
+      const im=images.storePickups,crop=[[0,80,500,780],[590,240,380,570],[1010,450,500,400]][pickup],w=[92,72,100][pickup],h=w*crop[3]/crop[2];
       if(im?.naturalWidth)ctx.drawImage(im,...crop,o.x-w/2,o.y-h,w,h);
-      hitTargets.push({o,rect:null,anchor:{x:o.x-Math.max(44,w)/2,y:o.y-Math.max(44,h),w:Math.max(44,w),h:Math.max(44,h)+8}});
+      hitTargets.push({o,rect:null,anchor:{x:o.x-w/2,y:o.y-h,w,h:h+8}});
       if(selected||isObjective||nearObject(o)){const glow=ctx.createRadialGradient(o.x,o.y-12,1,o.x,o.y-12,18);glow.addColorStop(0,'#ffe7a24d');glow.addColorStop(1,'#ffe7a200');ctx.fillStyle=glow;ctx.fillRect(o.x-18,o.y-30,36,36);}
       continue;
     }
@@ -1040,7 +1018,6 @@ function render(){
 function frame(t){
   const dt=Math.min(.1,(t-(lastFrame||t))/1000);lastFrame=t;
   try{update(dt);render();if(t-lastHud>300){refreshHud();refreshInteractionHint();lastHud=t;}
-    void window.NanlanProduction?.maybeMorning();
     window.NanlanAudio?.setEnvironment(state().scene,N.daylight(state()).darkness>.25,started&&active&&moving);
     if(started&&active&&t-lastAutosave>20000){const r=engine.save();$('saveState').textContent=r.ok?(engine.memoryOnly?'仅本次试玩':'已保存'):'自动保存失败 · 请手动保存';lastAutosave=t;}
   }catch(e){console.error(e);active=false;notice('画面暂停了，请先保存进度，再刷新重试。',true);}
@@ -1075,13 +1052,18 @@ function download(name,text){
 }
 function chooseGender(value){gender=value;for(const id of ['female','male'])$(id).setAttribute('aria-pressed',String(id===gender));$('selection').textContent='已选择'+(gender==='female'?'女主角':'男主角')+' · 两位主角共享第一卷剧情';}
 $('female').onclick=()=>chooseGender('female');$('male').onclick=()=>chooseGender('male');
-async function beginGame(){
+async function beginGame(confirmed=false){
   if(transitioning)return;
-  if(storedRaw&&!confirm('开始新的第一卷？当前进度会先保留一份备份，再创建新开局。'))return;
+  if(storedRaw&&confirmed!==true){
+    activity('另开一段新旅程？','开始新的第一卷？当前进度会先保留一份备份，再创建新开局。','new-journey');
+    button('确认，开始新旅程',()=>{closeDialog();return beginGame(true);},'confirm-new-journey');
+    button('取消，保留当前存档',closeDialog,'cancel-new-journey',true);
+    return;
+  }
   transitioning=true;$('begin').disabled=true;
   try{
     if(!await loadImage('gate')){$('loadWarning').hidden=false;$('loadWarning').textContent='开场图片未加载：请确认 gate-v27.webp 与 index.html 在同一目录，再刷新重试。原存档未改变。';return;}
-    if(storedRaw&&!engine.memoryOnly)localStorage.setItem('nanlan_v20_previous',storedRaw);
+    if(storedRaw&&!engine.memoryOnly)storage.setItem('nanlan_v20_previous',storedRaw);
     engine.reset(gender);started=true;active=true;$('start').hidden=true;$('hud').hidden=false;storedRaw=null;
     refreshHud();notice('来到旧宅门前。先和家人交接文书与行李。',true);
   }catch(e){
@@ -1090,7 +1072,7 @@ async function beginGame(){
     button('返回，稍后重试',closeDialog,'retry-storage',true);
   }finally{transitioning=false;$('begin').disabled=false;}
 }
-$('begin').onclick=beginGame;
+$('begin').onclick=()=>beginGame();
 $('startImport').onclick=importSave;
 $('continueGame').onclick=async()=>{
   if(!storedRaw||transitioning)return;

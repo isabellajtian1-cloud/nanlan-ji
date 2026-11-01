@@ -19,7 +19,6 @@ function mapAccess(id){
 function nextObjective(){
   const s=state(),q=N.current(s),f=s.flags;
   if(!q)return N.done(s,'M20')&&!s.flags.volume2Started?{scene:'hall',object:'v2Family',label:'新春家议 · 开启第二卷'}:{scene:'yard',object:'herbPlot',label:'回家照料小畦'};
-  if((q==='V2_06'&&f.v2Decorated||q==='V2_09'&&f.v2PriceConfirmed)&&!s.production?.shopName)return {scene:'study',object:'books',label:'请祖父题下自家字号'};
   const flag=N.steps[q].find(([id])=>!f[id])?.[0];
   const targets={...(typeof window!=='undefined'?window.NanlanV2?.targets:{}),handover:['gate','familyLuggage'],keyTaken:['gate','keyHandover'],gateOpen:['gate','closedGate'],
     windowInspected:['bed','window'],leakInspected:['bed','leak'],firstRepair:['bed','window'],bedReady:['bed','bedRest'],
@@ -154,6 +153,7 @@ function firstRoute(from,to){
 }
 function cancelNavigation(){navigationTarget=null;navigationObject=null;if($('navigationStatus'))$('navigationStatus').hidden=true;}
 function startNavigation(to,objectId=null){
+  if(started&&!$('dialog').hidden)closeDialog();
   const route=firstRoute(state().scene,to);
   if(route===null){notice(mapAccess(to)||'这条路线还未连通。先完成门前交接或修通小路。',true);cancelNavigation();return;}
   navigationTarget=to;navigationObject=objectId;
@@ -167,7 +167,9 @@ function startNavigation(to,objectId=null){
 function continueNavigation(){if(navigationTarget)startNavigation(navigationTarget,navigationObject);}
 function locateObjective(){const target=nextObjective();inspectMapPlace(target.scene,target.object);centerMap(target.scene);}
 $('mapClose').onclick=closeMap;$('mapSearch').oninput=filterMap;$('startMap').onclick=()=>showMap();$('mapOpen').onclick=()=>showMap();
-$('questNavigate').onclick=()=>{const target=nextObjective();startNavigation(target.scene,target.object);};
+function navigateCurrentQuest(){const target=nextObjective();startNavigation(target.scene,target.object);}
+$('questNavigate').onclick=navigateCurrentQuest;
+$('dialogQuestNavigate').onclick=navigateCurrentQuest;
 $('questMap').onclick=()=>{const target=nextObjective();showMap(target.scene,target.object);};
 $('mapObjective').onclick=locateObjective;$('mapHome').onclick=()=>{const id=state().flags.bedReady?'bed':'yard';inspectMapPlace(id,id==='bed'?'bedRest':null);centerMap(id);};
 $('mapZoomOut').onclick=()=>setMapZoom(mapZoom-.15);$('mapZoomIn').onclick=()=>setMapZoom(mapZoom+.15);$('mapZoomReset').onclick=()=>setMapZoom(1);

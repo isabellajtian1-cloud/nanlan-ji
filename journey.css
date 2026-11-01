@@ -16,3 +16,10 @@
 .shop-story-table th{background:#e3d6b9;font-weight:600}.shop-story-table tbody tr:nth-child(even){background:#eee5d2}
 .v2-note{display:block;line-height:1.7;color:#796548;font-size:12px;margin:4px 0 10px}
 @media(max-width:600px){.shop-story-table th,.shop-story-table td{padding:7px 5px;font-size:11px}.shop-story-copy{font-size:13px}}
+
+/* V3.7: task-first navigation and clearer touch choices. */
+#questNavigate{background:#d3b36f;color:#314634;border-color:#efd99d;box-shadow:inset 0 0 0 1px #7d6338}
+#nightNote{text-align:left;color:#f1dfb7;cursor:pointer;font-family:inherit}#nightNote span,#nightNote strong{display:block}#nightNote strong{margin-top:3px;color:#ffe7a6;font-weight:normal;border-top:1px solid #baa16f55;padding-top:4px}
+#nightNote:hover{background:#365143f5}#nightNote:focus-visible{outline:3px solid #edcb88;outline-offset:3px}
+@media(max-width:900px){.task-buttons button{min-height:38px}.task-buttons #questNavigate{flex-basis:100%}}
+@media(max-width:600px) and (orientation:portrait){.task-buttons button{min-height:36px}.task-buttons #questNavigate{flex-basis:100%}#nightNote{min-height:54px}}

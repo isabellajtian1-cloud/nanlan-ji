@@ -166,8 +166,10 @@ function startNavigation(to,objectId=null){
 function continueNavigation(){if(navigationTarget)startNavigation(navigationTarget,navigationObject);}
 function locateObjective(){const target=nextObjective();inspectMapPlace(target.scene,target.object);centerMap(target.scene);}
 $('mapClose').onclick=closeMap;$('mapSearch').oninput=filterMap;$('startMap').onclick=()=>showMap();$('mapOpen').onclick=()=>showMap();
+$('questNavigate').onclick=()=>{const target=nextObjective();startNavigation(target.scene,target.object);};
 $('questMap').onclick=()=>{const target=nextObjective();showMap(target.scene,target.object);};
 $('mapObjective').onclick=locateObjective;$('mapHome').onclick=()=>{const id=state().flags.bedReady?'bed':'yard';inspectMapPlace(id,id==='bed'?'bedRest':null);centerMap(id);};
 $('mapZoomOut').onclick=()=>setMapZoom(mapZoom-.15);$('mapZoomIn').onclick=()=>setMapZoom(mapZoom+.15);$('mapZoomReset').onclick=()=>setMapZoom(1);
 $('mapMarkers').onclick=()=>{const hidden=$('mapBoard').classList.toggle('map-cinematic');$('mapMarkers').setAttribute('aria-pressed',String(hidden));$('mapMarkers').textContent=hidden?'显示地点牌 · 继续导航':'隐藏地点牌 · 看全景';};
 $('navigationCancel').onclick=()=>{cancelNavigation();path=[];notice('已停止导航，可自由走动。');};
+$('nightNote').onclick=()=>startNavigation('bed','bedRest');

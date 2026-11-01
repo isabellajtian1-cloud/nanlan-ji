@@ -1,4 +1,5 @@
-const resourceTypes = ['herb','wood','weed','stone','bamboo','mushroom','shoot','shell','seaweed','clam','ginseng','agarwood','huali'];
+const resourceTypes = ['herb','wood','weed','stone','bamboo','mushroom','shoot','shell','seaweed','clam','ginseng','agarwood','huali','lychee','longan','mandarin'];
+const fruitTypes=['lychee','longan','mandarin'];
 function toolArt(id){
 const prefix='satchel-'+id;
 const defs=`<defs><linearGradient id="${prefix}-wood" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#d8ac6a"/><stop offset=".48" stop-color="#ac743e"/><stop offset="1" stop-color="#70452b"/></linearGradient><linearGradient id="${prefix}-steel" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#d9e0d5"/><stop offset=".36" stop-color="#8faba4"/><stop offset=".75" stop-color="#56766e"/><stop offset="1" stop-color="#37564f"/></linearGradient><linearGradient id="${prefix}-bamboo" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#e6c381"/><stop offset=".48" stop-color="#bd8d4b"/><stop offset="1" stop-color="#8c6034"/></linearGradient><linearGradient id="${prefix}-skin" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f5dfb6"/><stop offset="1" stop-color="#d2ac7e"/></linearGradient></defs>`;
@@ -14,6 +15,6 @@ water:`<g stroke="#69543c" stroke-linejoin="round" stroke-linecap="round"><path 
 return `<svg viewBox="0 0 64 64" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg">${defs}${art[id]||''}</svg>`;
 }
 function ellipse(x,y,rx,ry,color){ctx.fillStyle=color;ctx.beginPath();ctx.ellipse(x,y,rx,ry,0,0,Math.PI*2);ctx.fill()}
-function resourceSource(type){return type==='weed'?window.NANLAN_DATA.assets.weedPatch:window.NANLAN_DATA.assets['resource_'+type];}
-function resourceArt(type){return '<img width="38" height="38" style="object-fit:contain;flex:none" alt="" src="'+resourceSource(type)+'">';}
+function resourceSource(type){if(fruitTypes.includes(type))return window.NANLAN_DATA.assets.fruitTrees;return type==='weed'?window.NANLAN_DATA.assets.weedPatch:window.NANLAN_DATA.assets['resource_'+type];}
+function resourceArt(type){if(fruitTypes.includes(type))return `<svg width="58" height="58" viewBox="${fruitTypes.indexOf(type)*512} 560 512 464" aria-hidden="true"><image href="${resourceSource(type)}" width="1536" height="1024"/></svg>`;return '<img width="38" height="38" style="object-fit:contain;flex:none" alt="" src="'+resourceSource(type)+'">';}
 const resourceImages={};for(const type of resourceTypes){const im=new Image();im.src=resourceSource(type);resourceImages[type]=im;}

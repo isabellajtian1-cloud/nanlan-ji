@@ -6,6 +6,7 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
   const SAVE_KEY = 'nanlan_v20';
+  const conversations=typeof module==='object'&&module.exports?require('./conversations.js'):globalThis.NanlanConversations;
   const copy = value => JSON.parse(JSON.stringify(value));
   const titles = {
     M01:'门外的行李', M02:'今夜睡在哪里', M03:'后院见光', M04:'南澜的第一顿饭',
@@ -49,15 +50,16 @@
   };
   const itemNames = {
     yardKey:'院门钥匙',bedroll:'床褥',repair:'修补材料',rice:'米粮',ingredient:'食材',seed:'种子',
-    ginseng:'人参',agarwood:'沉香',huali:'海南黄花梨',wood:'枯枝',weed:'杂草',herb:'鲜草药',bamboo:'竹材',stone:'山石',mushroom:'蘑菇',shoot:'竹笋',
+    lychee:'荔枝',longan:'龙眼',mandarin:'柑橘',ginseng:'人参',agarwood:'沉香',huali:'海南黄花梨',wood:'枯枝',weed:'杂草',herb:'鲜草药',bamboo:'竹材',stone:'山石',mushroom:'蘑菇',shoot:'竹笋',
     shell:'贝壳',seaweed:'海藻',clam:'蛤蜊',vegetable:'菜蔬',hotMeal:'一锅热饭',feast:'家宴饭菜',
     driedHerb:'干药草',bambooWare:'竹制小器',shellCraft:'贝壳小饰',rope:'草绳',
     ledgerOriginal:'代管的借灯簿',ledgerCopy:'获准誊写的副本',receipt:'买卖凭单',reply:'家书回信'
   };
   const products = ['driedHerb','bambooWare','shellCraft'];
-  const prices = {ginseng:28,agarwood:22,huali:26,driedHerb:14,bambooWare:12,shellCraft:10,rope:5,wood:2,herb:3,bamboo:4,stone:2,mushroom:3,shoot:3,shell:2,seaweed:2,clam:3,vegetable:3};
+  const prices = {lychee:4,longan:4,mandarin:3,ginseng:28,agarwood:22,huali:26,driedHerb:14,bambooWare:12,shellCraft:10,rope:5,wood:2,herb:3,bamboo:4,stone:2,mushroom:3,shoot:3,shell:2,seaweed:2,clam:3,vegetable:3};
   const rareResources={ginseng:{cooldown:4320,stamina:5,tool:'hoe'},agarwood:{cooldown:2880,stamina:6,tool:'axe'},huali:{cooldown:4320,stamina:8,tool:'axe'}};
-  function resourceCooldown(type){return rareResources[type]?.cooldown||240;}
+  const fruitResources=['lychee','longan','mandarin'];
+  function resourceCooldown(type){if(fruitResources.includes(type))return 1440;return rareResources[type]?.cooldown||240;}
   function resourceRequirement(s,type){const r=rareResources[type];if(!r)return '';if(!s.flags.toolsRepaired)return '请先在 M03「后院见光」修好农具，再采集珍稀物资。';if(!s.tools[r.tool])return '请先到仓房领取木柄斧，再处理这段枯木。';if(s.selected!==r.tool)return '请先在工具栏选中'+(r.tool==='axe'?'木柄斧':'长柄锄')+'，再'+(r.tool==='axe'?'劈取木料。':'挖取人参。');return '';}
   const recipes = {
     driedHerb:{label:'晾晒干药草',cost:{herb:2},out:{driedHerb:1}},
@@ -123,7 +125,7 @@
         s.journal.push({id,tick:s.worldTick,text:description});
         s.lastNotice=id+' 完成 · '+description;
       }
-      if(id==='M04'){s.mode='daily';s.worldTick=1080;s.storyBeat='入夜';if(s.garden.plantedAt!==null)s.garden.plantedAt=1080;}
+      if(id==='M04'){s.mode='daily';s.worldTick=1080;s.storyBeat='入夜';for(const g of [s.garden,...(s.extraPlots||[])])if(g.plantedAt!==null){g.plantedAt=1080;if(g.wateredAt!==undefined)g.wateredAt=1080;}}
       const order=s.flags.volume2Started?V2_ORDER:ORDER;
       const next=order.slice(order.indexOf(id)+1).find(k=>!done(s,k));
       if(next)s.quests[next].status='ACTIVE';
@@ -161,10 +163,12 @@
     const phase=((s.worldTick-(s.tideAnchor||0))%480+480)%480;
     return {low:phase<180,remaining:phase<180?180-phase:480-phase};
   }
-  function crop(s) {
-    const g=s.garden;
-    return {planted:g.plantedAt!==null,ready:g.plantedAt!==null&&g.watered&&s.worldTick-g.plantedAt>=g.duration,
-      remaining:g.plantedAt===null?0:Math.max(0,g.duration-(s.worldTick-g.plantedAt))};
+  function emptyPlot(){return {kind:null,plantedAt:null,watered:false,duration:120,tilled:false};}
+  function gardenPlot(s,index=0){return index===0?s.garden:(s.extraPlots?.[index-1]||emptyPlot());}
+  function crop(s,index=0) {
+    const g=gardenPlot(s,index),elapsed=g.watered?s.worldTick-(g.wateredAt??g.plantedAt):0;
+    return {planted:g.plantedAt!==null,ready:g.plantedAt!==null&&g.watered&&elapsed>=g.duration,
+      remaining:g.plantedAt===null?0:Math.max(0,g.duration-elapsed)};
   }
   function sleepToMorning(s) {
     s.worldTick=(Math.floor(s.worldTick/1440)+1)*1440+360;s.stamina=100;
@@ -179,6 +183,13 @@
     for(const [id,n] of Object.entries(value.bag))requireThat(Object.hasOwn(itemNames,id)&&Number.isInteger(n)&&n>=0&&n<1e6,'存档物品数量无效。');
     requireThat(['prologue','daily'].includes(value.mode)&&value.garden&&Number.isFinite(value.garden.duration)&&value.garden.duration>0,'存档生活状态无效。');
     requireThat(value.garden.plantedAt===null||(Number.isFinite(value.garden.plantedAt)&&value.garden.plantedAt>=0&&value.garden.plantedAt<=value.worldTick),'存档种植时间无效。');
+    if(value.extraPlots===undefined)value.extraPlots=Array.from({length:5},emptyPlot);
+    requireThat(Array.isArray(value.extraPlots)&&value.extraPlots.length===5,'种植地块资料无效。');
+    for(const g of [value.garden,...value.extraPlots]){
+      requireThat(g&&[null,'herb','vegetable'].includes(g.kind)&&Number.isFinite(g.duration)&&g.duration>0&&typeof g.watered==='boolean','地块作物资料无效。');
+      requireThat(g.plantedAt===null||(Number.isFinite(g.plantedAt)&&g.plantedAt>=0&&g.plantedAt<=value.worldTick),'地块种植时间无效。');
+      if(g.wateredAt!==undefined)requireThat(Number.isFinite(g.wateredAt)&&g.wateredAt>=0&&g.wateredAt<=value.worldTick,'地块浇水时间无效。');
+    }
     for(const id of ORDER)requireThat(['ACTIVE','LOCKED','COMPLETED'].includes(value.quests[id]?.status),'存档任务状态无效。');
     storyV2.normalise(value);
     for(const id of V2_ORDER){
@@ -229,6 +240,15 @@
     act(name,p={}) {
       return this.commit(name,(s)=>{
         const f=s.flags, q=current(s), quest=id=>expectQuest(s,id);
+        if(name==='chat'){
+          const role=conversations.roles[p.object],person=conversations.cast[role],o=this.world[s.scene].objects.find(o=>o.id===p.object);
+          requireThat(person&&o&&Math.hypot(o.x-s.player.x,o.y-s.player.y)<=94,'请先走到这位人物身旁。');
+          requireThat(p.choice===0||p.choice===1,'请选择一句回应。');
+          const count=s.choices['chatCount:'+role]||0;
+          requireThat(p.expected===count,'这段话已经记下，请重新打开闲谈。');
+          s.choices['chatCount:'+role]=count+1;s.choices['chatLast:'+role]=p.choice;
+          return;
+        }
         if(name.startsWith('v2'))return volume2Action(s,name,p);
         if(name==='handover'){quest('M01');requireScene(s,'gate');return once(s,'handover',()=>{requireThat(['grandfather','luggage'].includes(p.choice),'先选好怎样帮忙。');f.handover=true;s.choices.arrival=p.choice;});}
         if(name==='takeKey'){quest('M01');requireScene(s,'gate');requireThat(f.handover,'先完成文书与行李交接。');return once(s,'takeKey',()=>{give(s,{yardKey:1});f.keyTaken=true;});}
@@ -236,6 +256,7 @@
         if(name==='inspectWindow'||name==='inspectLeak'){quest('M02');requireScene(s,'bed');f[name==='inspectWindow'?'windowInspected':'leakInspected']=true;return;}
         if(name==='firstRepair'){quest('M02');requireScene(s,'bed');requireThat(f.windowInspected&&f.leakInspected,'先查看窗格和漏点。');return once(s,'firstRepair',()=>{requireThat(['window','leak'].includes(p.choice),'先选一处修补。');spend(s,{repair:1});s.choices.repair=p.choice;f.firstRepair=true;f[p.choice==='window'?'windowPatched':'leakPatched']=true;});}
         if(name==='setBed'){quest('M02');requireScene(s,'bed');requireThat(f.firstRepair,'先修补最急的一处。');return once(s,'setBed',()=>{spend(s,{bedroll:1});f.bedReady=true;});}
+        if(name==='finishRoomRepair'){requireScene(s,'bed');requireThat(done(s,'M04'),'请先完成 M04「灶火与热饭」，再补修剩余部分，先把材料留给农具。');requireThat(f.firstRepair,'请先完成 M02 的首次修缮。');requireThat(['window','leak'].includes(p.part),'请选择修缮位置。');const flag=p.part==='window'?'windowPatched':'leakPatched';requireThat(!f[flag],'这里已经修好了。');spend(s,{repair:1});f[flag]=true;return;}
         if(name==='farmTools'){requireScene(s,'store');requireThat(reached(s,'M03'),'先把卧房安顿好。');return once(s,'farmTools',()=>{f.farmTools=true;s.tools.sickle=true;s.tools.hoe=true;s.tools.basket=true;});}
         if(name==='repairTools'){quest('M03');requireScene(s,'store');requireThat(f.farmTools,'先领取仓房里的农具。');return once(s,'repairTools',()=>{spend(s,{repair:1});f.toolsRepaired=true;});}
         if(name==='takeAxe'){requireScene(s,'store');requireThat(reached(s,'M03'),'请在完成 M02「今夜睡在哪里」后，再来仓房领取木柄斧。');return once(s,'takeAxe',()=>{s.tools.axe=true;});}
@@ -263,23 +284,48 @@
         if(name==='meetCen'){requireScene(s,'foothill');requireThat(reached(s,'M06'),'先认识村里的街坊。');f.metCen=true;return;}
         if(name==='collect'){
           const o=this.world[s.scene]?.objects.find(o=>o.id===p.id);
-          requireThat(o&&['herb','wood','bamboo','stone','mushroom','shoot','shell','seaweed','clam','ginseng','agarwood','huali'].includes(o.type),'这里没有可拾取的物资。');
+          requireThat(o&&['herb','wood','bamboo','stone','mushroom','shoot','shell','seaweed','clam','ginseng','agarwood','huali',...fruitResources].includes(o.type),'这里没有可拾取的物资。');
           if(s.scene==='tidalflat')requireThat(tide(s).low,'潮水已涨，先退回海边，下一轮低潮还会再来。');
           const last=s.nodes[o.id];requireThat(last===undefined||s.worldTick-last>=resourceCooldown(o.type),'这处刚刚采过，可在舆图查看剩余刷新时间。');
           const why=resourceRequirement(s,o.type);requireThat(!why,why);
           const cost=rareResources[o.type]?.stamina||1;requireThat(s.stamina>=cost,'体力不足，本次需要 '+cost+' 点体力，可回卧房休息。');
-          give(s,{[o.type]:1});s.nodes[o.id]=s.worldTick;s.collected[o.id]=true;s.stamina-=cost;
+          give(s,{[o.type]:fruitResources.includes(o.type)?2:1});s.nodes[o.id]=s.worldTick;s.collected[o.id]=true;s.stamina-=cost;
           if(o.type==='bamboo'&&reached(s,'M06'))f.bambooIdentified=true;
           if(s.scene==='tidalflat'&&reached(s,'M09'))f.tidalCollected=true;return;}
         if(name==='bambooChoice'){quest('M06');requireScene(s,'foothill');requireThat(f.metCen&&f.bambooIdentified,'先认识阿岑，再拾一份可用落竹。');return once(s,'bambooChoice',()=>{requireThat(['lend','rack'].includes(p.choice),'先选竹料怎样安排。');spend(s,{bamboo:1});s.choices.bamboo=p.choice;f.bambooChoice=true;if(p.choice==='rack')f.dryRack=true;});}
         if(name==='repairBridge'){quest('M06');requireScene(s,'mountain');requireThat(f.bambooChoice,'先回山脚和阿岑安排竹料。');return once(s,'repairBridge',()=>{spend(s,{wood:1,...(s.choices.bamboo==='rack'?{bamboo:1}:{})});f.bridgeReady=true;});}
         if(name==='expandGarden'){quest('M07');requireScene(s,'yard');f.fullGarden=true;return;}
-        if(name==='plant'){requireScene(s,'yard');requireThat(f.smallBed,'先完成 M03 的小畦整理。');requireThat(s.garden.plantedAt===null,'这畦已有作物，先采收再种。');
-          const kind=f.fullGarden?'herb':s.choices.firstBed;spend(s,{seed:1});s.garden={kind,plantedAt:s.worldTick,watered:false,duration:f.fullGarden?240:120};if(f.fullGarden)f.medicinalPlanted=true;return;}
-        if(name==='waterCrop'){requireScene(s,'yard');requireThat(s.garden.plantedAt!==null,'先播种。');requireThat(!s.garden.watered,'这畦已经浇过水。');requireThat(s.bucketWater>=1,'先去水缸给桶装水。');s.bucketWater--;s.garden.watered=true;if(s.garden.duration===240)f.medicinalWatered=true;return;}
-        if(name==='harvest'){requireScene(s,'yard');requireThat(crop(s).ready,'还未成熟。可以找祖父练字、整理仓房，或在床榻休息。');
-          const herb=s.garden.kind==='herb';give(s,{seed:1,[herb?'herb':'vegetable']:3});if(s.garden.duration===240&&herb)f.medicinalHarvested=true;
-          s.garden={kind:null,plantedAt:null,watered:false,duration:120};return;}
+        if(['tillPlot','plant','waterCrop','harvest'].includes(name)){
+          requireScene(s,'yard');requireThat(f.smallBed,'请先完成 M03「后院见光」，整理第一块菜畦。');
+          const index=p.plot??0;requireThat(Number.isInteger(index)&&index>=0&&index<6,'请选择有效地块。');
+          requireThat(index<4||f.fullGarden,'请在 M07「药圃」扩整完成后，再整理药田。');
+          s.extraPlots??=Array.from({length:5},emptyPlot);
+          const g=gardenPlot(s,index),setPlot=v=>{if(index===0)s.garden=v;else s.extraPlots[index-1]=v;};
+          if(name==='tillPlot'){
+            requireThat(index>0&&!g.tilled&&g.plantedAt===null,'这块地已经松好土了。');
+            requireThat(s.tools.hoe&&s.selected==='hoe','请先选中工具栏的长柄锄，再点击翻土。');
+            requireThat(s.stamina>=2,'体力不足，翻土需要 2 点体力。');g.tilled=true;s.stamina-=2;return;
+          }
+          requireThat(index===0||g.tilled,'请先用长柄锄给这块地翻土。');
+          if(name==='plant'){
+            requireThat(g.plantedAt===null,'这块地已有作物，先采收再种。');
+            const kind=p.kind??(f.fullGarden?'herb':s.choices.firstBed);
+            requireThat(['herb','vegetable'].includes(kind),'请先选择种子。');
+            requireThat(index<4||kind==='herb','药田请播种药草。');
+            requireThat(kind!=='herb'||f.fullGarden||s.choices.firstBed==='herb','请在 M07 扩整药圃后，再播种药草。');
+            spend(s,{seed:1});setPlot({kind,plantedAt:s.worldTick,watered:false,duration:kind==='herb'&&f.fullGarden?240:120,tilled:true});
+            if(kind==='herb'&&f.fullGarden)f.medicinalPlanted=true;return;
+          }
+          if(name==='waterCrop'){
+            requireThat(g.plantedAt!==null,'先选种，再点击土地播种。');requireThat(!g.watered,'泥土仍然湿润，无需重复浇水。');
+            requireThat(s.bucketWater>=1,'木桶没有水了，请先到庭院水缸装水。');s.bucketWater--;g.watered=true;g.wateredAt=s.worldTick;
+            if(g.duration===240&&g.kind==='herb')f.medicinalWatered=true;return;
+          }
+          requireThat(crop(s,index).ready,g.watered?'作物还没长成，回到场景让时间推进，或到卧房休息。':'土还干着，请先浇水，作物才会生长。');
+          const herb=g.kind==='herb';give(s,{seed:1,[herb?'herb':'vegetable']:3});
+          if(g.duration===240&&herb)f.medicinalHarvested=true;
+          setPlot({...emptyPlot(),tilled:true,harvestedKind:g.kind});return;
+        }
         if(name==='craft'){if(p.recipe==='narrowBasket')requireThat(f.volume2Started,'窄口竹篓在第二卷看铺后制作。');requireScene(s,'store');const r=recipes[p.recipe];requireThat(r,'尚未学会这个配方。');
           requireThat(p.recipe==='rack'?reached(s,'M07'):p.recipe==='driedHerb'?done(s,'M07'):p.recipe==='shellCraft'?done(s,'M09'):done(s,'M06'),'这个配方要等对应主线完成。');
           if(r.flag&&f[r.flag])return false;spend(s,r.cost);if(r.out)give(s,r.out);if(r.flag)f[r.flag]=true;log(s,'craft',0,r.label);return;}
@@ -333,6 +379,6 @@
       });
     }
   }
-  return {Engine,initial,current,done,reached,sceneGate,clock,tide,crop,quantity,available,normaliseLoaded,
+  return {Engine,initial,current,done,reached,sceneGate,clock,tide,crop,gardenPlot,quantity,available,normaliseLoaded,
     rareResources,resourceCooldown,resourceRequirement,daylight,SAVE_KEY,ORDER,V2_ORDER,shopPrice,shopCustomers,story2:storyV2,shopProducts:storyV2.products,titles,steps,rewards,itemNames,products,prices,recipes};
 });

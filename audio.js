@@ -1,68 +1,40 @@
-/* Original generated PCM files: synth_audio.py. Media playback avoids suspended
-   WebAudio graphs and works with mobile playback-mode audio sessions. */
-(() => {
-  'use strict';
-  const A=window.NANLAN_DATA?.assets||{},names=['click','blocked','door','water','repair','gather','rest','success','test','step'];
-  let enabled=true,volume=.75,started=false,scene='gate',night=false,playing=false,error='',lastClick=-Infinity,lastStep=0;
-  let ambience,effect,ambientKind='',generation=0;
-  const $=id=>document.getElementById(id);
-  try{enabled=localStorage.getItem('nanlan_sound')!=='off';const v=Number(localStorage.getItem('nanlan_volume'));if(localStorage.getItem('nanlan_volume')!==null&&Number.isFinite(v))volume=Math.max(.1,Math.min(1,v));}catch(_){}
-  function source(name){return A['audio_'+name]||'assets/audio/'+name+'.wav';}
-  function status(){
-    const text=!enabled?'声音已关闭':error?'声音未启动 · 点击试听重试':playing?'声音已启动':'点击开启声音';
-    for(const id of ['sound','startSound'])if($(id)){$(id).textContent=text;$(id).setAttribute('aria-pressed',String(enabled&&playing));}
-    if($('audioToggle'))$('audioToggle').textContent=enabled&&playing?'关闭声音':'开启声音';
-    if($('audioStatus'))$('audioStatus').textContent=error||(!enabled?'声音已关闭，设置会保留。':playing?'环境音正在播放。试听会播放两声清楚的提示音。':'请点击「开启声音」或「试听音效」，允许本页播放声音。');
-    if($('audioVolumeValue'))$('audioVolumeValue').textContent=Math.round(volume*100)+'%';
-  }
-  function init(){
-    if(ambience)return;
-    try{if(navigator.audioSession)navigator.audioSession.type='playback';}catch(_){}
-    ambience=new Audio();ambience.loop=true;ambience.preload='auto';
-    effect=new Audio();effect.preload='auto';
-    ambience.id='ambientAudio';effect.id='effectAudio';ambience.hidden=true;effect.hidden=true;document.body.append(ambience,effect);
-    ambience.volume=volume*.55;effect.volume=volume;
-    ambience.addEventListener('playing',()=>{playing=enabled&&!ambience.paused;error='';status();});
-    ambience.addEventListener('error',()=>{playing=false;error='环境音未能加载，请点击试听重试。';status();});
-    effect.addEventListener('error',()=>{error='音效未能加载，请重新打开页面后试听。';status();});
-  }
-  function kind(){return ['bed','hall','study','store','pharmacy','generalStore','teahouse'].includes(scene)?'room':['coast','tidalflat'].includes(scene)?'sea':night?'night':'day';}
-  async function environment(){
-    if(!enabled||!started||document.hidden)return false;init();
-    const desired=kind(),token=++generation;
-    if(ambientKind!==desired){ambientKind=desired;ambience.src=source('ambient-'+desired);}
-    try{await ambience.play();if(token!==generation||!enabled)return false;playing=true;error='';status();return true;}
-    catch(e){if(token!==generation||!enabled)return false;playing=false;error=e.name==='NotAllowedError'?'浏览器暂停了声音，请点击「开启声音」或「试听音效」。':'环境音未能播放，请点击试听重试。';status();return false;}
-  }
-  async function play(name='click'){
-    if(!enabled||!started||document.hidden||!names.includes(name))return false;init();
-    if(name==='click'){const now=Date.now();if(now-lastClick<70)return false;lastClick=now;}
-    effect.pause();effect.src=source(name);effect.volume=name==='step'?volume*.35:volume;
-    try{await effect.play();return true;}catch(e){if(e.name!=='AbortError'){error='音效暂未播放，请点击「试听音效」重新启动。';status();}return false;}
-  }
-  async function unlock(){if(!enabled)return false;started=true;init();return environment();}
-  async function enable(test=false){enabled=true;started=true;try{localStorage.setItem('nanlan_sound','on');}catch(_){}init();const sound=play(test?'test':'click');const bg=environment();await Promise.all([sound,bg]);status();}
-  async function toggle(){
-    if(!enabled||!playing){await enable();return;}
-    enabled=false;generation++;playing=false;error='';ambience?.pause();effect?.pause();try{localStorage.setItem('nanlan_sound','off');}catch(_){}status();
-  }
-  function setEnvironment(next,isNight,walking){const before=kind();scene=next;night=isNight;if(before!==kind()&&started)void environment();if(walking&&effect?.paused&&Date.now()-lastStep>380){lastStep=Date.now();void play('step');}}
-  function openPanel(){const panel=$('audioPanel');panel.hidden=false;status();$('audioTest').focus();}
-  // Keep the gesture synchronous: the old pointerdown handler could unlock audio
-  // and then the same button's click would immediately mute it.
-  document.addEventListener('click',event=>{
-    const b=event.target.closest?.('button');if(!b||b.disabled||['sound','startSound','audioTest','audioToggle','audioClose'].includes(b.id))return;
-    if(enabled){if(!started||!playing)void unlock();void play('click');}
-  },true);
-  document.addEventListener('keydown',e=>{if(enabled&&!started&&['Enter',' ','w','a','s','d','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)){void unlock();void play('click');}},{capture:true});
-  document.addEventListener('visibilitychange',()=>{if(document.hidden){generation++;ambience?.pause();effect?.pause();playing=false;status();}else if(started&&enabled)void environment();});
-  window.addEventListener('pagehide',()=>{generation++;ambience?.pause();effect?.pause();playing=false;});
-  window.addEventListener('pageshow',()=>{if(started&&enabled)void environment();});
-  for(const id of ['sound','startSound'])if($(id))$(id).onclick=openPanel;
-  $('audioClose').onclick=()=>{$('audioPanel').hidden=true;};
-  $('audioToggle').onclick=toggle;
-  $('audioTest').onclick=()=>enable(true);
-  $('audioVolume').value=Math.round(volume*100);
-  $('audioVolume').oninput=e=>{volume=Number(e.target.value)/100;if(ambience)ambience.volume=volume*.55;if(effect)effect.volume=volume;try{localStorage.setItem('nanlan_volume',String(volume));}catch(_){}status();};
-  window.NanlanAudio={play,setEnvironment,toggle,unlock};status();
+/* Original score and soundscapes: compose_soundscape.py. No third-party recordings. */
+(()=>{'use strict';
+const A=window.NANLAN_DATA?.assets||{},$=id=>document.getElementById(id),names=['click','blocked','door','water','repair','gather','rest','success','test','step'];
+let enabled=true,volume=.75,started=false,scene='gate',night=false,playing=false,error='',lastClick=0,lastStep=0,dialogue=false;
+const levels={music:.65,ambient:.3,effect:.5},tracks={home:'灯下归家',village:'榕荫小路',town:'南街开市',mountain:'青岚寻径',sea:'潮生远帆','home-night':'月过回廊','village-night':'榕月虫声','town-night':'灯市渐阑','mountain-night':'青岚宿云','sea-night':'月照潮痕'};
+const layers={music:{players:[],active:0,key:'',ticket:0},ambient:{players:[],active:0,key:'',ticket:0}};let effect,effectGain=1,environmentTicket=0;
+try{enabled=localStorage.getItem('nanlan_sound')!=='off';const v=localStorage.getItem('nanlan_volume');if(v!==null)volume=Math.max(0,Math.min(1,Number(v)||0));for(const k in levels){const v=localStorage.getItem('nanlan_'+k+'_volume');if(v!==null)levels[k]=Math.max(0,Math.min(1,Number(v)||0));}}catch(_){}
+function profile(s=scene,n=night){const sea=['coast','tidalflat'].includes(s),forest=['foothill','mountain','mountainside','summit','bambooGrove'].includes(s),room=['bed','hall','study','store','pharmacy','generalStore','teahouse'].includes(s),town=['county','market','pharmacy','generalStore','teahouse'].includes(s),family=sea?'sea':forest?'mountain':town?'town':s==='village'?'village':'home';return {music:n?family+'-night':family,ambient:room?'room':n?(sea?'sea-night':forest?'forest-night':'night'):sea?'sea':s==='summit'||s==='mountainside'?'highland':s==='bambooGrove'?'bamboo':forest?'forest':town?'market':s==='village'?'village':'courtyard'};}
+function status(){const text=!enabled?'声音已关闭':error?'声音未启动 · 点击试听重试':playing?'声音已启动':'点击开启声音';for(const id of ['sound','startSound'])if($(id)){$(id).textContent=text;$(id).setAttribute('aria-pressed',String(enabled&&playing));}if($('audioToggle'))$('audioToggle').textContent=enabled&&playing?'关闭声音':'开启声音';if($('audioStatus'))$('audioStatus').textContent=error||(!enabled?'声音已关闭。':playing?'正在播放《'+tracks[profile().music]+'》 · 音乐与当地环境音独立混合。':'点击开启或试听，启动本页声音。');for(const [id,v] of [['audioVolume',volume],['musicVolume',levels.music],['ambientVolume',levels.ambient],['effectVolume',levels.effect]])if($(id+'Value'))$(id+'Value').textContent=Math.round(v*100)+'%';}
+function media(id,loop){const p=new Audio();p.id=id;p.loop=loop;p.preload='auto';p.hidden=true;p.volume=0;document.body.append(p);return p;}
+function init(){if(effect)return;try{if(navigator.audioSession)navigator.audioSession.type='playback';}catch(_){}effect=media('effectAudio',false);for(const [k,l]of Object.entries(layers))l.players=[media(k+'Audio',true),media(k+'AudioAlt',true)];}
+function target(k){return volume*levels[k]*(k==='music'&&dialogue?.55:1);}
+function gains(){for(const [k,l] of Object.entries(layers))for(const p of l.players){p.muted=target(k)===0;p.volume=Math.max(0,Math.min(1,target(k)*(p.mix||0)));}if(effect){effect.muted=target('effect')===0;effect.volume=target('effect')*effectGain;}}
+function fade(l,k,to){clearInterval(l.timer);const ticket=l.ticket;let step=0;to.mix=0;l.timer=setInterval(()=>{if(ticket!==l.ticket||!enabled||document.hidden){clearInterval(l.timer);return;}step++;to.mix=Math.min(1,step/30);gains();if(step>=30){clearInterval(l.timer);l.timer=null;}},40);}
+function layer(k,key){
+  const l=layers[k];if(l.pendingKey===key&&l.pending)return l.pending;
+  if(l.key===key&&!l.pending){return l.players[l.active].play();}
+  const token=++l.ticket;clearInterval(l.timer);l.timer=null;
+  // Stop both old voices before loading: rapid travel cannot stack landscapes.
+  for(const old of l.players){old.pause();old.mix=0;old.volume=0;}
+  l.active=1-l.active;const p=l.players[l.active];l.pendingKey=key;l.key='';
+  p.src='assets/audio/quiet/'+(k==='music'?'music-':'scape-')+key+'.mp3';
+  l.pending=(async()=>{try{await p.play();if(token!==l.ticket)return;if(!enabled||document.hidden){p.pause();return;}l.key=key;fade(l,k,p);}finally{if(token===l.ticket){l.pending=null;l.pendingKey='';}}})();return l.pending;
+}
+async function environment(){if(!enabled||!started||document.hidden)return false;init();const ticket=++environmentTicket,p=profile();const results=await Promise.allSettled([layer('music',p.music),layer('ambient',p.ambient)]);if(ticket!==environmentTicket||!enabled||document.hidden)return false;playing=results.every(r=>r.status==='fulfilled');error=playing?'':'音乐或环境音暂未播放，请点击试听重试。';status();return playing;}
+async function play(name='click'){if(!enabled||!started||document.hidden||!names.includes(name))return false;init();if(name==='click'){const now=Date.now();if(now-lastClick<70)return false;lastClick=now;}effect.pause();effect.src='assets/audio/quiet/'+name+'.wav';effectGain=name==='step'?.18:1;effect.muted=target('effect')===0;effect.volume=target('effect')*effectGain;try{await effect.play();return true;}catch(e){if(e.name!=='AbortError'){error='操作音效暂未启动，请点击试听重试。';status();}return false;}}
+function pause(){environmentTicket++;for(const l of Object.values(layers)){l.ticket++;l.pending=null;l.pendingKey='';clearInterval(l.timer);for(const p of l.players)p.pause();l.players.forEach((p,i)=>p.mix=i===l.active?1:0);}effect?.pause();playing=false;status();}
+async function unlock(){if(!enabled)return false;started=true;init();return environment();}
+async function enable(test=false){enabled=true;started=true;try{localStorage.setItem('nanlan_sound','on');}catch(_){}init();await Promise.all([play(test?'test':'click'),environment()]);status();}
+async function toggle(){if(!enabled||!playing){await enable();return;}enabled=false;error='';pause();try{localStorage.setItem('nanlan_sound','off');}catch(_){}status();}
+function setEnvironment(next,isNight,walking){const before=JSON.stringify(profile());scene=next;night=isNight;if(before!==JSON.stringify(profile())&&started)void environment();if(walking&&effect?.paused&&Date.now()-lastStep>650){lastStep=Date.now();void play('step');}}
+function setDialogue(value){dialogue=value;gains();}
+function openPanel(){$('audioPanel').hidden=false;status();$('audioTest').focus();}
+document.addEventListener('click',e=>{const b=e.target.closest?.('button');if(!b||b.disabled||['sound','startSound','audioTest','audioMusicTest','audioMusicOnly','audioToggle','audioClose'].includes(b.id))return;if(enabled){if(!started||!playing)void unlock();void play('click');}},true);
+document.addEventListener('keydown',e=>{if(enabled&&!started&&['Enter',' ','w','a','s','d','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key))void unlock();},{capture:true});
+document.addEventListener('visibilitychange',()=>{if(document.hidden)pause();else if(started&&enabled){gains();void environment();}});window.addEventListener('pagehide',pause);window.addEventListener('pageshow',()=>{if(started&&enabled)void environment();});
+for(const id of ['sound','startSound'])if($(id))$(id).onclick=openPanel;$('audioClose').onclick=()=>{$('audioPanel').hidden=true;};$('audioToggle').onclick=toggle;$('audioTest').onclick=()=>enable(true);$('audioMusicTest').onclick=()=>enable(false);$('audioMusicOnly').onclick=()=>{levels.ambient=0;levels.effect=0;$('ambientVolume').value=0;$('effectVolume').value=0;try{localStorage.setItem('nanlan_ambient_volume','0');localStorage.setItem('nanlan_effect_volume','0');}catch(_){}gains();void enable(false);};
+for(const [id,key]of [['audioVolume','master'],['musicVolume','music'],['ambientVolume','ambient'],['effectVolume','effect']]){const el=$(id);el.value=Math.round((key==='master'?volume:levels[key])*100);el.oninput=e=>{const v=Math.max(0,Math.min(1,Number(e.target.value)/100));if(key==='master')volume=v;else levels[key]=v;gains();try{localStorage.setItem(key==='master'?'nanlan_volume':'nanlan_'+key+'_volume',String(v));}catch(_){}status();};}
+window.NanlanAudio={play,setEnvironment,setDialogue,toggle,unlock,profile};status();
 })();

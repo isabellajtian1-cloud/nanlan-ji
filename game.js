@@ -83,8 +83,8 @@ function activity(title,text,kind='general'){
   showDialoguePortraits(title);$('speaker').textContent=title;$('line').textContent=text;$('panelExtra').replaceChildren();$('choices').replaceChildren();
   $('dialogKicker').textContent=kind==='quest'?'南澜记 · 任务与回报':'南澜小事';
   $('dialogQuestNavigate').hidden=!started;
-  $('next').hidden=true;$('dialog').hidden=false;$('skip').textContent=started?'返回游戏 ×':'返回启程页 ×';
-  $('skip').focus();
+  $('choices').hidden=false;$('next').hidden=true;$('dialog').hidden=false;$('skip').textContent=started?'返回游戏 ×':'返回启程页 ×';
+  $('skip').focus();window.NanlanDesktop?.dialogue(title,text);
 }
 function button(label,fn,id,secondary=false){
   const b=document.createElement('button');b.textContent=label;b.dataset.action=id||label;
@@ -101,7 +101,8 @@ function button(label,fn,id,secondary=false){
   };
   $('choices').append(b);return b;
 }
-function closeDialog(){
+function closeDialog(force=false){
+  if(force===true)window.NanlanDesktop?.discard();else if(window.NanlanDesktop?.restore())return;
   window.NanlanAudio?.setDialogue(false);
   $('dialog').hidden=true;dialogKind=null;dialogObject=null;path=[];keys={};
   active=started&&!transitioning&&!document.hidden&&$('gallery').hidden&&$('worldMap').hidden;
@@ -358,6 +359,7 @@ function toolbarArt(id){
   return '<svg viewBox="'+(index%3*418)+' '+(Math.floor(index/3)*418)+' 418 418" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><image href="toolbar-ming-v394.png" width="1254" height="1254"/></svg>';
 }
 function showBag(){
+  window.NanlanDesktop?.enterBag();
   const s=state(),keys=Object.keys(N.itemNames).filter(k=>N.quantity(s,k)>0);
   activity('随身行囊','家用 '+s.coins+' 文 · 体力 '+Math.floor(s.stamina)+'/100\n钥匙串：'+(s.keyring.includes('yardKey')?'院门钥匙':'暂无')+' · 水桶：'+(s.bucketWater?'已装水':'空')+'\n'+(s.flags.bedReady?'床褥已搬进卧房。':'床褥仍在行囊。')+'\n\n预留库存仍属于你，但不能散卖。做饭、制作和交付都会实际扣除材料。');
   const grid=document.createElement('div');grid.className='inventory-grid';
@@ -388,7 +390,7 @@ function showPeople(){
   });$('panelExtra').append(grid);
 }
 function showHelp(){
-  activity('在南澜过日子','核心循环\n找到眼前需要 → 亲自走近场景物件 → 采集、修缮、种植或制作 → 把成果带回家人、邻里和摊位 → 获得回报与后续任务。\n\n第一卷胜利条件\n完成 18 段主线，并办成 M20「岁末满庭」家宴。序章 M01—M04 先让门能开、床能睡、后院能用、家人吃上饭。\n\n可重试的失败条件\n体力不足时，无法继续采集或清草；材料不足时，无法制作、修补或交付；涨潮时，不能在滩涂拾物；试摊预约结束时，需要重新预约。这些动作不会扣掉未结算的材料，也不会清空主线。\n\n操作\n点击地面行走；点击标记会先靠近，再互动。键盘 WASD / 方向键移动，E 与近处物件互动，1—0 / − / = 使用十二格栏，J 打开任务簿，M 看舆图，Esc 关闭面板。\n小屏可点「场景互动」选择物件，不必点很小的画面标记。\n\n时间与等待\n序章显示抵达、傍晚、入夜。家宴后日常时钟才开始；对白、面板和后台暂停。小畦首批 2 分钟、完整药圃 4 分钟等效生长；休息过夜也会推进生长。等待时可找祖父练字、整理仓房、回访邻里。\n\n范围\n第一卷只做镇集试摊和转运对账。第二卷在正厅新春家议开启：看铺、租约、陈列、库存、零售与供货。池塘与恋爱暂未开放。');
+  activity('在南澜过日子','核心循环\n找到眼前需要 → 亲自走近场景物件 → 采集、修缮、种植或制作 → 把成果带回家人、邻里和摊位 → 获得回报与后续任务。\n\n第一卷胜利条件\n完成 18 段主线，并办成 M20「岁末满庭」家宴。序章 M01—M04 先让门能开、床能睡、后院能用、家人吃上饭。\n\n可重试的失败条件\n体力不足时，无法继续采集或清草；材料不足时，无法制作、修补或交付；涨潮时，不能在滩涂拾物；试摊预约结束时，需要重新预约。这些动作不会扣掉未结算的材料，也不会清空主线。\n\n操作\n点击地面行走；点击标记会先靠近，再互动。键盘 WASD / 方向键移动，E 与近处物件互动，1—0 / − / = 使用十二格栏，J 打开任务簿，M 看舆图，B 打开行囊，再按 B 返回原界面；空格互动或继续对白，方向键选择，Enter 确认，Esc 返回。\n小屏可点「场景互动」选择物件，不必点很小的画面标记。\n\n时间与等待\n序章显示抵达、傍晚、入夜。家宴后日常时钟才开始；对白、面板和后台暂停。小畦首批 2 分钟、完整药圃 4 分钟等效生长；休息过夜也会推进生长。等待时可找祖父练字、整理仓房、回访邻里。\n\n范围\n第一卷只做镇集试摊和转运对账。第二卷在正厅新春家议开启：看铺、租约、陈列、库存、零售与供货。池塘与恋爱暂未开放。');
 }
 function showGallery(){
   previousFocus=document.activeElement;active=false;path=[];keys={};$('gallery').hidden=false;
@@ -939,6 +941,33 @@ function npcRole(o){
   if(o.id==='v2Repair')return state().flags.v2Leased&&!state().flags.v2Sign?'lin':null;
   return npcRoles[o.id]||null;
 }
+// Per-object orientation and breathing remain transient presentation state.
+const npcFacing=new Map();
+const npcHomeFacing={grandfather:false,father:false,mother:true,motherHall:true,villager:false,doctor:true,aCen:false,shenYu:true,shenYuCoast:true,chengWan:true,qiu:true,v2MotherCounter:true,v2FatherCounter:false,keyHandover:true,familyLuggage:false};
+DATA.assets.npcIdle='npc-idle-v3911.png';loadImage('npcIdle');
+function npcPresentation(o,t){
+ const role=npcRole(o),s=state(),key=s.scene+':'+o.id,dx=s.player.x-o.x,dy=s.player.y-o.y;
+ const seed=[...o.id].reduce((n,c)=>n+c.charCodeAt(0),0),near=Math.hypot(dx,dy)<125;
+ let flip=npcFacing.has(key)?npcFacing.get(key):(npcHomeFacing[o.id]??(seed%2===0));
+ // Dead zone avoids rapid left/right flicker when standing directly in front.
+ if(near&&Math.abs(dx)>22)flip=dx<0;
+ npcFacing.set(key,flip);
+ const reduced=window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+ const phase=t/1000*(.65+seed%5*.08)+seed;
+ return {role,flip,near,lean:reduced?0:Math.sin(phase)*.006,breath:reduced?1:1+Math.sin(phase*.85)*.003};
+}
+function drawNaturalPerson(o,t){
+ const pose=npcPresentation(o,t),col=['grandfather','father','mother','cen'].indexOf(pose.role);
+ const silk=window.NanlanProduction?.portrait(pose.role),sheet=images.npcIdle;
+ ctx.save();ctx.translate(o.x,o.y);ctx.rotate(pose.lean);ctx.scale(1,pose.breath);ctx.translate(-o.x,-o.y);
+ if(col>=0&&!silk&&sheet?.naturalWidth){
+  const cw=sheet.naturalWidth/4,ch=sheet.naturalHeight/2;
+  ctx.save();ctx.translate(o.x,o.y);if(pose.flip)ctx.scale(-1,1);
+  ctx.filter='brightness('+(1-N.daylight(state()).darkness*.28)+')';
+  ctx.drawImage(sheet,col*cw,pose.near?ch:0,cw,ch,-34,-87,68,91);ctx.restore();
+ }else drawPerson(pose.role,o.x,o.y,84,pose.flip);
+ ctx.restore();
+}
 function drawPerson(role,x,y,height=84,flip=false){
   const costume=window.NanlanProduction?.portrait(role);if(costume&&!images[costume.asset])loadImage(costume.asset);
   const dressed=costume&&images[costume.asset]?.naturalWidth,im=dressed?images[costume.asset]:images['npc_'+role];if(!im?.naturalWidth){loadImage('npc_'+role);return;}
@@ -976,7 +1005,7 @@ function render(){
   const left=Math.max(8,-camera.ox/camera.scale+8),right=Math.min(W-8,(camera.vw-camera.ox)/camera.scale-8);
   const time=performance.now(),objective=localObjectiveObject(),destination=path[path.length-1]?.object;
   const people=visibleObjects().filter(o=>npcRole(o));
-  const actors=people.map(o=>({layer:40,y:o.y,draw:()=>drawPerson(npcRole(o),o.x,o.y)}));
+  const actors=people.map(o=>({layer:40,y:o.y,draw:()=>drawNaturalPerson(o,time)}));
   if(started)actors.push({layer:40,y:s.player.y,draw:()=>renderCharacter(time)});
 
   for(const o of visibleObjects()){

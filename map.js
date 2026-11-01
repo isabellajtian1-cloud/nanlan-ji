@@ -154,7 +154,7 @@ function firstRoute(from,to){
 }
 function cancelNavigation(){navigationTarget=null;navigationObject=null;if($('navigationStatus'))$('navigationStatus').hidden=true;}
 function startNavigation(to,objectId=null){
-  if(started&&!$('dialog').hidden)closeDialog();
+  if(started&&!$('dialog').hidden)closeDialog(true);
   const route=firstRoute(state().scene,to);
   if(route===null){notice(mapAccess(to)||'这条路线还未连通。先完成门前交接或修通小路。',true);cancelNavigation();return;}
   navigationTarget=to;navigationObject=objectId;

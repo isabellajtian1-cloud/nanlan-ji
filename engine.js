@@ -7,6 +7,8 @@
   'use strict';
   const SAVE_KEY = 'nanlan_v20';
   const conversations=typeof module==='object'&&module.exports?require('./conversations.js'):globalThis.NanlanConversations;
+  const production=typeof module==='object'&&module.exports?require('./production-model.js'):globalThis.NanlanProductionModel;
+  const seals=typeof module==='object'&&module.exports?require('./seals-model.js'):globalThis.NanlanSealsModel;
   const copy = value => JSON.parse(JSON.stringify(value));
   const titles = {
     M01:'门外的行李', M02:'今夜睡在哪里', M03:'后院见光', M04:'南澜的第一顿饭',
@@ -49,14 +51,15 @@
     M20:[20,'第一卷完成 · 保留全部选择，继续日常生活']
   };
   const itemNames = {
-    yardKey:'院门钥匙',bedroll:'床褥',repair:'修补材料',rice:'米粮',ingredient:'食材',seed:'种子',
+    mulberrySapling:'桑苗',mulberryLeaf:'桑叶',silkwormEgg:'蚕种',fishFry:'鱼苗',fishFeed:'鱼食',pondFish:'塘鱼',rawSilk:'普通生丝',fineSilk:'特级生丝',silkwormCompost:'蚕沙堆肥',
+    sealTimber:'印材坚木',sealPebble:'海磨印石',yardKey:'院门钥匙',bedroll:'床褥',repair:'修补材料',rice:'米粮',ingredient:'食材',seed:'种子',
     lychee:'荔枝',longan:'龙眼',mandarin:'柑橘',ginseng:'人参',agarwood:'沉香',huali:'海南黄花梨',wood:'枯枝',weed:'杂草',herb:'鲜草药',bamboo:'竹材',stone:'山石',mushroom:'蘑菇',shoot:'竹笋',
     shell:'贝壳',seaweed:'海藻',clam:'蛤蜊',vegetable:'菜蔬',hotMeal:'一锅热饭',feast:'家宴饭菜',
     driedHerb:'干药草',bambooWare:'竹制小器',shellCraft:'贝壳小饰',rope:'草绳',
     ledgerOriginal:'代管的借灯簿',ledgerCopy:'获准誊写的副本',receipt:'买卖凭单',reply:'家书回信'
   };
   const products = ['driedHerb','bambooWare','shellCraft'];
-  const prices = {lychee:4,longan:4,mandarin:3,ginseng:28,agarwood:22,huali:26,driedHerb:14,bambooWare:12,shellCraft:10,rope:5,wood:2,herb:3,bamboo:4,stone:2,mushroom:3,shoot:3,shell:2,seaweed:2,clam:3,vegetable:3};
+  const prices = {mulberryLeaf:1,pondFish:7,rawSilk:12,fineSilk:22,lychee:4,longan:4,mandarin:3,ginseng:28,agarwood:22,huali:26,driedHerb:14,bambooWare:12,shellCraft:10,rope:5,wood:2,herb:3,bamboo:4,stone:2,mushroom:3,shoot:3,shell:2,seaweed:2,clam:3,vegetable:3};
   const rareResources={ginseng:{cooldown:4320,stamina:5,tool:'hoe'},agarwood:{cooldown:2880,stamina:6,tool:'axe'},huali:{cooldown:4320,stamina:8,tool:'axe'}};
   const fruitResources=['lychee','longan','mandarin'];
   function resourceCooldown(type){if(fruitResources.includes(type))return 1440;return rareResources[type]?.cooldown||240;}
@@ -76,7 +79,7 @@
   const V2_ORDER=storyV2.order;
   Object.assign(titles,storyV2.titles);Object.assign(steps,storyV2.steps);Object.assign(rewards,storyV2.rewards);
   const shopPrice=storyV2.price,shopCustomers=storyV2.customers;
-  function volume2Action(s,name,p){return storyV2.act(s,name,p);}
+  function volume2Action(s,name,p){return seals.settle(s,name,p,()=>storyV2.act(s,name,p),requireThat);}
 
   function initial(gender='female') {
     const s = {
@@ -85,7 +88,7 @@
       bag:{bedroll:1,repair:2,rice:2,ingredient:1,seed:1,wood:0,weed:0},
       tools:{hand:true},selected:'hand',keyring:[],flags:{},choices:{},collected:{},nodes:{},
       quests:{},claimed:{},actions:{},garden:{kind:null,plantedAt:null,watered:false,duration:120},
-      shop:storyV2.emptyShop(),story2:storyV2.emptyStory(),practice:{},pages:{},visits:{gate:true},familyTalks:{},order:null,transactions:[],journal:[],
+      production:production.fresh(),actorState:production.freshActors(),seals:seals.fresh(),shop:storyV2.emptyShop(),story2:storyV2.emptyStory(),practice:{},pages:{},visits:{gate:true},familyTalks:{},order:null,transactions:[],journal:[],
       tideAnchor:null,tideTutorialUsed:false,stallUntil:null,featured:null,lastNotice:'先和家人完成门前交接。'
     };
     for(const id of Object.keys(titles)) s.quests[id]={status:V2_ORDER.includes(id)?'DEFERRED_V2':id==='M01'?'ACTIVE':'LOCKED'};
@@ -112,6 +115,7 @@
     s.transactions.push({id:'T'+(s.transactions.length+1),tick:s.worldTick,type,amount,note,item:item||null});
   }
   function reconcile(s) {
+    production.reconcile(s);
     storyV2.reconcile(s);
     s.flags.pathCleared=['weed1','weed2','weed3'].every(id=>s.collected[id]);
     s.flags.letterFamily=['grandfather','father','mother'].every(id=>s.familyTalks[id]);
@@ -192,6 +196,8 @@
     }
     for(const id of ORDER)requireThat(['ACTIVE','LOCKED','COMPLETED'].includes(value.quests[id]?.status),'存档任务状态无效。');
     storyV2.normalise(value);
+    seals.normalise(value,requireThat);
+    production.normalise(value,requireThat);
     for(const id of V2_ORDER){
       if(!value.quests[id])value.quests[id]={status:'DEFERRED_V2'};
       requireThat(value.flags.volume2Started?['ACTIVE','LOCKED','COMPLETED'].includes(value.quests[id].status):value.quests[id].status==='DEFERRED_V2','第二卷任务状态无效。');
@@ -220,7 +226,8 @@
     near(object) {return object&&Math.hypot(object.x-this.state.player.x,object.y-this.state.player.y)<=94;}
     move(x,y) {const b=this.world[this.state.scene].bounds;if(x>=b[0]&&x<=b[2]&&y>=b[1]&&y<=b[3]){this.state.player.x=x;this.state.player.y=y;}}
     tick(dt) {if(this.state.mode!=='daily')return;const s=this.state,c=clock(s);if(c.minute>=1320)return;
-      s.worldTick+=Math.min(Math.max(dt,0),.1);if(clock(s).minute>=1320)s.worldTick=Math.floor(s.worldTick/1440)*1440+1320;}
+      s.worldTick+=Math.min(Math.max(dt,0),.1);if(clock(s).minute>=1320)s.worldTick=Math.floor(s.worldTick/1440)*1440+1320;
+      if(s.production?.clothesReadyAt!==null&&s.worldTick>=s.production.clothesReadyAt&&s.actorState.outfit==='old')this.commit('newClothes',()=>{});}
     enter(to) {
       const blocked=sceneGate(this.state,to);if(blocked)return {ok:false,message:blocked};
       return this.commit('enter:'+to,(s)=>{
@@ -249,6 +256,8 @@
           s.choices['chatCount:'+role]=count+1;s.choices['chatLast:'+role]=p.choice;
           return;
         }
+        if(name.startsWith('silk'))return production.act(s,name,p,{requireThat,requireScene,spend,give,log,familyAtShop:storyV2.familyAtShop});
+        if(name.startsWith('seal'))return seals.act(s,name,p,{requireThat,requireScene,spend,give});
         if(name.startsWith('v2'))return volume2Action(s,name,p);
         if(name==='handover'){quest('M01');requireScene(s,'gate');return once(s,'handover',()=>{requireThat(['grandfather','luggage'].includes(p.choice),'先选好怎样帮忙。');f.handover=true;s.choices.arrival=p.choice;});}
         if(name==='takeKey'){quest('M01');requireScene(s,'gate');requireThat(f.handover,'先完成文书与行李交接。');return once(s,'takeKey',()=>{give(s,{yardKey:1});f.keyTaken=true;});}

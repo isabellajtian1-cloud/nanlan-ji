@@ -19,6 +19,7 @@ function mapAccess(id){
 function nextObjective(){
   const s=state(),q=N.current(s),f=s.flags;
   if(!q)return N.done(s,'M20')&&!s.flags.volume2Started?{scene:'hall',object:'v2Family',label:'新春家议 · 开启第二卷'}:{scene:'yard',object:'herbPlot',label:'回家照料小畦'};
+  if((q==='V2_06'&&f.v2Decorated||q==='V2_09'&&f.v2PriceConfirmed)&&!s.production?.shopName)return {scene:'study',object:'books',label:'请祖父题下自家字号'};
   const flag=N.steps[q].find(([id])=>!f[id])?.[0];
   const targets={...(typeof window!=='undefined'?window.NanlanV2?.targets:{}),handover:['gate','familyLuggage'],keyTaken:['gate','keyHandover'],gateOpen:['gate','closedGate'],
     windowInspected:['bed','window'],leakInspected:['bed','leak'],firstRepair:['bed','window'],bedReady:['bed','bedRest'],

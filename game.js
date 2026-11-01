@@ -35,14 +35,17 @@ function loadImage(id){
   const key=world[id]?.asset||id;if(imagePromises[key])return imagePromises[key];
   const source=DATA.assets[key];if(!source)return Promise.resolve(false);
   imagePromises[key]=new Promise(resolve=>{
-    function attempt(retry){
+    const sources=[source,DATA.assets[key+'_fallback']].filter((item,index,list)=>item&&list.indexOf(item)===index);
+    function attempt(index){
+      const candidate=sources[Math.floor(index/2)];
+      if(!candidate){delete imagePromises[key];resolve(false);return;}
       const im=new Image();let finished=false;
-      const timer=setTimeout(()=>finish(false),10000);
+      const timer=setTimeout(()=>finish(false),15000);
       function finish(ok){if(finished)return;finished=true;clearTimeout(timer);im.onload=im.onerror=null;
-        if(ok){images[key]=im;resolve(true);}else if(!retry)attempt(1);else{delete imagePromises[key];resolve(false);}
+        if(ok){images[key]=im;resolve(true);}else attempt(index+1);
       }
       im.onload=()=>finish(im.naturalWidth>0);im.onerror=()=>finish(false);
-      im.src=source+(source.includes('?')?'&':'?')+'build=395'+(retry?'&retry='+Date.now():'');
+      im.src=candidate+(candidate.includes('?')?'&':'?')+'build=396'+(index%2?'&retry='+Date.now():'');
     }
     attempt(0);
   });

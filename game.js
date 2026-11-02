@@ -15,19 +15,19 @@ let completionFx=null;
 let gardenWorkFx=null;
 const pantryDraft={rice:0,ingredient:0,seed:0,repair:0,rope:0};
 const images={},imagePromises={};
-DATA.assets.bedDamage='assets/bed-damage-v39.png';
-DATA.assets.storePickups='assets/store-pickups-v39.png';
-DATA.assets.walkFemale='assets/player-female-walk-v39.png';
-DATA.assets.walkMale='assets/player-male-walk-v39.png';
-DATA.assets.inventoryHousehold='assets/inventory-household-v392.png';
-DATA.assets.inventoryCrafts='assets/inventory-crafts-v392.png';
-DATA.assets.gardenStages='assets/garden-stages-v395.png';
-DATA.assets.diningTable='assets/hall-table-v394.png';
-DATA.assets.familyMealFemale='assets/family-meal-female-v394.png';
-DATA.assets.familyMealMale='assets/family-meal-male-v394.png';
-DATA.assets.workbench='assets/workbench-v3912.webp';
-DATA.assets.waterJar='assets/water-jar-v3912.webp';
-DATA.assets.villageLetter='assets/village-letter-v3915.webp';
+DATA.assets.bedDamage='bed-damage-v39.png';
+DATA.assets.storePickups='store-pickups-v39.png';
+DATA.assets.walkFemale='player-female-walk-v39.png';
+DATA.assets.walkMale='player-male-walk-v39.png';
+DATA.assets.inventoryHousehold='inventory-household-v392.png';
+DATA.assets.inventoryCrafts='inventory-crafts-v392.png';
+DATA.assets.gardenStages='garden-stages-v395.png';
+DATA.assets.diningTable='hall-table-v394.png';
+DATA.assets.familyMealFemale='family-meal-female-v394.png';
+DATA.assets.familyMealMale='family-meal-male-v394.png';
+DATA.assets.workbench='workbench-v3912.webp';
+DATA.assets.waterJar='water-jar-v3912.webp';
+DATA.assets.villageLetter='village-letter-v3915.webp';
 let gaitBlend=0,lastPoseTime=0;
 function state(){return engine.state;}
 function clean(text){return String(text).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
@@ -438,8 +438,8 @@ function itemSource(id){
   return m[id]||'在已开放地点实际拾取或完成对应动作获得';
 }
 const inventorySheets=[
-  {file:'assets/inventory-household-v392.png',rows:[0,414,805,1254],items:['yardKey','bedroll','repair','rice','ingredient','seed','vegetable','hotMeal','feast']},
-  {file:'assets/inventory-crafts-v392.png',rows:[0,425,800,1254],items:['driedHerb','bambooWare','shellCraft','rope','ledgerOriginal','ledgerCopy','receipt','reply','narrowBasket']}
+  {file:'inventory-household-v392.png',rows:[0,414,805,1254],items:['yardKey','bedroll','repair','rice','ingredient','seed','vegetable','hotMeal','feast']},
+  {file:'inventory-crafts-v392.png',rows:[0,425,800,1254],items:['driedHerb','bambooWare','shellCraft','rope','ledgerOriginal','ledgerCopy','receipt','reply','narrowBasket']}
 ];
 function inventoryArt(id){
   if(window.NanlanProductionModel?.itemIds.includes(id))return window.NanlanProduction?.itemArt(id)||'';
@@ -453,7 +453,7 @@ function inventoryArt(id){
 function toolbarArt(id){
   const ids=['hand','sickle','hoe','basket','water','axe','journal','map','rest'],index=ids.indexOf(id);
   if(index<0)return inventoryArt(id);
-  return '<svg viewBox="'+(index%3*418)+' '+(Math.floor(index/3)*418)+' 418 418" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><image href="assets/toolbar-ming-v394.png" width="1254" height="1254"/></svg>';
+  return '<svg viewBox="'+(index%3*418)+' '+(Math.floor(index/3)*418)+' 418 418" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><image href="toolbar-ming-v394.png" width="1254" height="1254"/></svg>';
 }
 function showBag(){
   window.NanlanDesktop?.enterBag();
@@ -1157,7 +1157,7 @@ function npcRole(o){
 // Per-object orientation and breathing remain transient presentation state.
 const npcFacing=new Map();
 const npcHomeFacing={grandfather:false,father:false,mother:true,motherHall:true,villager:false,doctor:true,aCen:false,shenYu:true,shenYuCoast:true,chengWan:true,qiu:true,v2MotherCounter:true,v2FatherCounter:false,keyHandover:true,familyLuggage:false};
-DATA.assets.npcIdle='assets/npc-idle-v3911.png';loadImage('npcIdle');
+DATA.assets.npcIdle='npc-idle-v3911.png';loadImage('npcIdle');
 function npcPresentation(o,t){
  const role=npcRole(o),s=state(),key=s.scene+':'+o.id,dx=s.player.x-o.x,dy=s.player.y-o.y;
  const seed=[...o.id].reduce((n,c)=>n+c.charCodeAt(0),0),near=Math.hypot(dx,dy)<125;

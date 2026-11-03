@@ -538,6 +538,7 @@ function showPeople(){
 }
 function showHelp(){
   const s=started?state():null,sections=['眼前怎样行动\n点击地面行走；点击人物或物件会先靠近，再互动。电脑可用 WASD / 方向键移动，空格或 E 互动；B 打开行囊，再按 B 返回；J 看当前记录，M 看舆图。手机与平板可点「场景互动」。','放心尝试\n体力或材料不足时，游戏会告诉你还缺什么。休息、补料后可以再来，不会因为一次没做成而清空进度。'];
+  if(s)sections.push('沿路换景\n用 WASD 或方向键朝门口、路口走，进入出口范围便会前往下一处，无须打开舆图。尚未开放的道路会说明缘由。');
   if(s&&N.reached(s,'M03'))sections.push('工具与整理\n数字键可选择工具栏。菜圃可在场景里直接劳作：选锄头点硬土、选种袋点空畦、选木桶点缺水作物；成熟后用双手或竹背篓点击采收。菜圃总览仍可查看全部地块。');
   if(s&&N.reached(s,'M04'))sections.push('时间与休息\n日常时钟会随游玩推进；对白、舆图和菜单中暂停。卧房床榻可以临时恢复体力，也可以睡到次日清晨。');
   if(s&&N.reached(s,'M07'))sections.push('种植与等待\n翻地、播种、浇水后，作物会随游戏时间生长。等待时可以探索、制作或回访已经认识的人。');
@@ -576,7 +577,7 @@ function showArchive(){
   window.NanlanProduction?.desk();
   button('查看家中的回响',showJournal,'archive-journal',true);
 }
-let selectedPlot=0,pendingSeed=null;
+let selectedPlot=0;
 const gardenSpots=[[930,412],[974,393],[944,443],[988,424],[958,474],[1002,455]];
 function gardenTarget(index){const [visualX,visualY]=gardenSpots[index];return {id:'gardenPlot'+index,label:plotName(index),type:'activity',action:'gardenDirect',plot:index,x:visualX,y:visualY,visualX,visualY};}
 function plotFrame(index){
@@ -596,7 +597,7 @@ function equipGardenHoe(){
 }
 async function gardenAction(name,p){
   await perform(name,p,()=>{
-    pendingSeed=null;showGarden(p.plot??selectedPlot);
+    showGarden(p.plot??selectedPlot);
     const tile=$('panelExtra').querySelector('[data-plot="'+selectedPlot+'"]');
     if(tile){const fx=document.createElement('span');fx.className='garden-action-fx '+name;fx.innerHTML=toolbarArt(name==='waterCrop'?'water':name==='tillPlot'?'hoe':name==='plant'?'seed':'hand');tile.append(fx);setTimeout(()=>fx.remove(),1000);}
     const feedback={tillPlot:'松土完成，留下了整齐的土垄。',plant:'种子已播下并覆土，接下来提水浇灌。',waterCrop:'水渗进泥土，作物开始生长。',harvest:'作物已经摘下，收成和留种已放进行囊。'};
@@ -618,8 +619,8 @@ async function directGardenAction(name,index,kind){
 function showDirectSeedChoice(index,target){
   const s=state(),allowed=index>=4?['herb']:s.flags.fullGarden?['vegetable','herb']:[s.choices.firstBed||'vegetable'];
   if(allowed.length===1){directGardenAction('plant',index,allowed[0]);return;}
-  activity(plotName(index)+' · 选种','只在需要决定种什么时打开选择。选好以后，人物会在场景里直接播下。','garden');dialogObject=target;$('dialogPortraits').hidden=true;
-  for(const kind of allowed)actButton((kind==='herb'?'药草种子':'青菜种子')+' · 现有 '+N.quantity(s,'seed')+' 份','plant',{plot:index,kind},()=>{closeDialog();startGardenWorkFx(index,'plant');render();notice('种子已经播下，换上箍木桶便可直接浇水。');},'direct-seed-'+kind);
+  activity(plotName(index)+' · 选种','青菜与药草使用同一种种子；点选后会立即播下，并扣除 1 份。','garden');dialogObject=target;$('dialogPortraits').hidden=true;
+  for(const kind of allowed)actButton((kind==='herb'?'播下药草':'播下青菜')+' · 现有 '+N.quantity(s,'seed')+' 份','plant',{plot:index,kind},()=>{closeDialog();startGardenWorkFx(index,'plant');render();notice('种子已经播下，换上箍木桶便可直接浇水。');},'direct-seed-'+kind);
   button('返回庭院',closeDialog,'direct-seed-cancel',true);
 }
 async function handleGardenPlot(target){
@@ -632,18 +633,23 @@ async function handleGardenPlot(target){
   if(c.ready){if(!['hand','basket'].includes(selected)){notice('作物已经成熟。按 1 使用双手，或按 4 选竹背篓，再点作物采收。',true);return;}await directGardenAction('harvest',index);return;}
   notice((g.kind==='herb'?'药草':'青菜')+'正在生长，还需约 '+Math.ceil(c.remaining)+' 游戏分钟。走动、做事或休息都会推进时间。');
 }
+function storyGardenPlot(){
+  const s=state();if(N.current(s)!=='M07'||!s.flags.fullGarden)return selectedPlot;
+  if(!s.flags.medicinalPlanted)return [4,5,0,1,2,3].find(i=>!N.crop(s,i).planted)??4;
+  return [4,5,0,1,2,3].find(i=>{const g=N.gardenPlot(s,i);return g.kind==='herb'&&g.duration===240&&g.plantedAt!==null;})??4;
+}
 function showGarden(index=selectedPlot){
   selectedPlot=Number.isInteger(index)?index:0;
   const s=state(),f=s.flags,g=N.gardenPlot(s,selectedPlot),c=N.crop(s,selectedPlot),q=N.current(s);
   const timeNote=s.mode==='prologue'?'完成 M04 家宴后开始生长计时。':N.clock(s).minute>=1320?'夜已深，睡一夜可推进生长。':'离开此面板后，走动、外出和休息都会推进生长。';
-  activity('自家菜圃与药圃',!f.smallBed?'先清理通路，再整理第一块小畦。':pendingSeed?'已拿起'+(pendingSeed==='herb'?'药草':'青菜')+'种子，请点一块空畦播下。':plotName(selectedPlot)+' · '+plotStatus(selectedPlot)+'。'+(c.planted&&g.watered&&!c.ready?'还需 '+Math.ceil(c.remaining)+' 游戏分钟。':'')+'\n'+timeNote,'garden');
+  activity('自家菜圃与药圃',!f.smallBed?'先清理通路，再整理第一块小畦。':plotName(selectedPlot)+' · '+plotStatus(selectedPlot)+'。'+(c.planted&&g.watered&&!c.ready?'还需 '+Math.ceil(c.remaining)+' 游戏分钟。':'')+'\n'+timeNote,'garden');
   $('dialogPortraits').hidden=true;
   const board=document.createElement('div');board.className='garden-board';
   for(let i=0;i<6;i++){
     const tile=document.createElement('button');tile.className='garden-plot'+(selectedPlot===i?' selected':'');tile.dataset.plot=i;tile.setAttribute('aria-label',plotName(i)+'，'+plotStatus(i));tile.setAttribute('aria-pressed',String(selectedPlot===i));
     tile.innerHTML=plotArt(i)+'<span>'+plotName(i)+'</span><small>'+plotStatus(i)+'</small>';
     if(!f.smallBed||i>=4&&!f.fullGarden)tile.classList.add('unprepared');
-    tile.onclick=()=>{selectedPlot=i;window.NanlanAudio?.play('click');const target=N.gardenPlot(state(),i);if(pendingSeed&&target.plantedAt===null){gardenAction('plant',{plot:i,kind:pendingSeed});}else{pendingSeed=null;showGarden(i);}};board.append(tile);
+    tile.onclick=()=>{selectedPlot=i;window.NanlanAudio?.play('click');showGarden(i);};board.append(tile);
   }
   $('panelExtra').append(board);
   if(q==='M03'&&f.pathCleared&&!f.smallBed){actButton('整理第一块菜畦','smallBed',{choice:'vegetable'},()=>showGarden(0),'bed-vegetable');actButton('先整理香草小畦','smallBed',{choice:'herb'},()=>showGarden(0),'bed-herb');}
@@ -651,14 +657,21 @@ function showGarden(index=selectedPlot){
   if(f.smallBed&&(selectedPlot<4||f.fullGarden)){
     if(selectedPlot>0&&!g.tilled)button('拿起长柄锄 · 翻土（体力 2）',()=>{if(!equipGardenHoe())return;return gardenAction('tillPlot',{plot:selectedPlot});},'garden-till');
     else if(!c.planted){
-      for(const kind of selectedPlot>=4?['herb']:['vegetable',...(f.fullGarden||s.choices.firstBed==='herb'?['herb']:[])])button('拿起'+(kind==='herb'?'药草':'青菜')+'种子 · 现有 '+N.quantity(s,'seed')+' 份',()=>{pendingSeed=kind;showGarden(selectedPlot);},'seed-'+kind);
+      for(const kind of selectedPlot>=4?['herb']:['vegetable',...(f.fullGarden||s.choices.firstBed==='herb'?['herb']:[])]){
+        const b=button((kind==='herb'?'播下药草':'播下青菜')+' · 种子 ×1',()=>gardenAction('plant',{plot:selectedPlot,kind}),'seed-'+kind);b.disabled=N.available(s,'seed')<1;
+      }
+      const stock=document.createElement('p');stock.className='prerequisite-note';stock.textContent='可用种子：'+N.available(s,'seed')+' 份。青菜与药草使用同一种种子；点击播种后扣除 1 份。';$('panelExtra').append(stock);
+      if(N.available(s,'seed')<1){
+        stock.textContent+='\n种子不够。可以采收已成熟的作物留种，或去南澜村的乡邻余粮补购。';
+        navButton('去乡邻余粮补购种子',()=>{closeDialog();startNavigation('village','villagePantry');},'garden-buy-seed');
+      }
     }else if(!g.watered)button('提起木桶 · 浇水（水 '+s.bucketWater+'）',()=>gardenAction('waterCrop',{plot:selectedPlot}),'garden-water');
     else if(c.ready)button('亲手采收 · '+(g.kind==='herb'?'鲜草药':'青菜')+' ×3，留种 ×1',()=>gardenAction('harvest',{plot:selectedPlot}),'garden-harvest');
     else prerequisiteNote('作物正在扎根生长，不必重复浇水。'+timeNote);
   }else prerequisiteNote(f.smallBed?'请在 M07 扩整药圃后，再种这两块药田。':'请按 M03 清理通路，整理第一块菜畦。');
   if(c.planted&&!g.watered&&s.bucketWater<1)button('去水缸装水',()=>{closeDialog();startNavigation('yard','waterJar');},'garden-refill',true);
   if(s.mode==='daily'&&N.clock(s).minute>=1320)button('去卧房睡一夜',()=>{closeDialog();startNavigation('bed','bedRest');},'garden-sleep',true);
-  button('收好农具 · 返回庭院',()=>{pendingSeed=null;closeDialog();},'garden-resume',true);
+  button('收好农具 · 返回庭院',()=>closeDialog(),'garden-resume',true);
 }
 function showCraft(){
   const s=state();activity('仓房工作台','制作和修缮都要核对材料。确认后才会扣料，成品会进入行囊。\n\n枯枝 '+N.quantity(s,'wood')+' · 竹材 '+N.quantity(s,'bamboo')+' · 草药 '+N.quantity(s,'herb')+' · 贝壳 '+N.quantity(s,'shell'));
@@ -915,7 +928,7 @@ async function interact(o){
     if(N.reached(s,'M03'))actButton('领取农具一束','farmTools',{},()=>{closeDialog();notice('镰刀、锄头和背篓已收好。工作台上可以修理。');});
   }else if(a==='axe'){activity('仓房 · 木柄斧','木柄与铁刃尚好，可随身带走。修好农具后，选中木柄斧，可在竹林和山腰处理沉香、海南黄花梨枯木。枯枝仍可徒手拾取。');if(N.reached(s,'M03')&&!s.tools.axe)actButton('领取木柄斧','takeAxe',{},()=>{closeDialog();notice('木柄斧已放入工具栏第 11 格。');});
   }else if(a==='bucket'){activity('仓房 · 旧水桶','水桶还能盛水。带到庭院的水缸旁装水，可用于做饭与浇灌。');if(N.reached(s,'M03'))actButton('拿起旧水桶','bucket',{},()=>{closeDialog();notice('获得旧水桶。');});}
-  else if(a==='garden')showGarden();
+  else if(a==='garden')showGarden(storyGardenPlot());
   else if(a==='craft')showCraft();
   else if(a==='cook')showCook();
   else if(a==='water'){activity('庭院 · 水缸','缸中的水可装入旧木桶。一次装满，够做一锅饭或浇一畦地。');if(N.reached(s,'M04'))actButton('把水桶装满','fillWater',{},()=>{closeDialog();refreshHud();notice(actionMessage('fillWater'));});}
@@ -1001,7 +1014,7 @@ async function switchScene(to){
 }
 function objectFootprint(o){
   if(o.type==='door'||resourceTypes.includes(o.type)||['window','leak','gutter','lamps','tide','waterMark'].includes(o.action))return null;
-  const fixed={familyLuggage:[48,28],mealTable:[88,42],bedRest:[66,31],workbench:[75,35],bookBox:[28,18],goodsCrates:[62,32],silkPond:[76,44],herbPlot:[67,36],waterJar:[35,23],stove:[42,25],shelter:[55,28],generalStoreKeeper:[62,27],v2Shelf:[48,25],villageLetter:[54,22]};
+  const fixed={familyLuggage:[48,28],mealTable:[88,42],bedRest:[66,31],workbench:[75,35],bookBox:[28,18],goodsCrates:[62,32],silkPond:[76,44],herbPlot:[67,36],waterJar:[24,14],stove:[42,25],shelter:[55,28],generalStoreKeeper:[62,27],v2Shelf:[48,25],villageLetter:[23,10]};
   if(fixed[o.id])return fixed[o.id];
   if(fruitTypes.includes(o.type))return [38,22];
   if(npcRole(o)||o.type==='npc')return [22,14];
@@ -1057,13 +1070,24 @@ function approach(o){
   if(!target){notice('这处还走不到。先看看通路是否清理，或从场景互动选择其他物件。',true);return;}
   focusedObjectId=o.id;path=target;notice('前往'+o.label+'。');refreshInteractionHint();
 }
-let edgeExitCooldown=0;
+let edgeExitCooldown=0,edgeExitAttempt=null;
+function keyboardExitDirection(o){
+  if(['study','home','backFoothill','sideBack','sideBamboo','coastBack','tideBack'].includes(o.id))return [-1,0];
+  if(['mountainGate','toGeneral','coastTide'].includes(o.id))return [1,0];
+  if(['villageGate','exit-yard','bayRoad','toVillage','countyBack','exit-county','footVillage','grovePath','summitBack','groveBack'].includes(o.id))return [0,1];
+  return [0,-1];
+}
 function tryKeyboardExit(dx,dy,dt){
-  edgeExitCooldown=Math.max(0,edgeExitCooldown-dt);if(edgeExitCooldown||transitioning)return false;
-  const s=state(),doors=visibleObjects().filter(o=>o.type==='door').map(o=>({o,d:Math.hypot(o.x-s.player.x,o.y-s.player.y)})).filter(v=>v.d<38).sort((a,b)=>a.d-b.d);
-  if(!doors.length)return false;
-  const {o,d}=doors[0],toward=((o.x-s.player.x)*dx+(o.y-s.player.y)*dy)/(d||1);if(toward<.35)return false;
-  edgeExitCooldown=1.1;notice('沿路前往'+world[o.to].name+'…');void interact(o);return true;
+  edgeExitCooldown=Math.max(0,edgeExitCooldown-dt);if(transitioning)return false;
+  const s=state(),doors=visibleObjects().filter(o=>o.type==='door').map(o=>{
+    const [ex,ey]=keyboardExitDirection(o),rx=o.x-s.player.x,ry=o.y-s.player.y;
+    return {o,d:Math.hypot(rx,ry),along:rx*ex+ry*ey,across:Math.abs(rx*ey-ry*ex),facing:dx*ex+dy*ey};
+  }).filter(v=>v.d<=94&&v.across<=68&&v.along>=-40&&v.along<=56&&v.facing>=.5).sort((a,b)=>a.d-b.d);
+  // A road has width: crossing beside its centre must work as well as hitting its exact point.
+  if(!doors.length){edgeExitAttempt=null;return false;}
+  const {o}=doors[0],attempt=s.scene+':'+o.id;
+  if(edgeExitCooldown||edgeExitAttempt===attempt)return false;
+  edgeExitAttempt=attempt;edgeExitCooldown=1.1;notice('沿路前往'+world[o.to].name+'…');void interact(o);return true;
 }
 function worldPoint(e){const r=canvas.getBoundingClientRect();return {x:(e.clientX-r.left-camera.ox)/camera.scale,y:(e.clientY-r.top-camera.oy)/camera.scale};}
 function resolveHit(p){
@@ -1233,10 +1257,11 @@ function render(){
     const locked=!!objectGate(o)||o.type==='locked'||o.type==='property',selected=o.id===focusedObjectId||o===destination,isObjective=o===objective;
     if(o.id==='silkPond'){hitTargets.push({o,rect:null,anchor:{x:245,y:385,w:130,h:140}});continue;}
     if(s.scene==='village'&&o.id==='villageLetter'){
-      const im=images.villageLetter,w=118,h=79;
-      if(im?.naturalWidth){ctx.save();ctx.globalAlpha=s.flags.letterRead?.78:1;ctx.drawImage(im,o.x-w/2,o.y-h+5,w,h);ctx.restore();}
-      hitTargets.push({o,rect:null,anchor:{x:o.x-w/2,y:o.y-h+5,w,h}});
-      if(selected||isObjective||nearObject(o)){ctx.save();ctx.strokeStyle=isObjective?'#a6533f':'#e1c47c';ctx.lineWidth=1.6;ctx.globalAlpha=.65+.22*Math.sin(time/240);ctx.beginPath();ctx.ellipse(o.x,o.y-2,42,12,0,0,Math.PI*2);ctx.stroke();ctx.restore();}
+      const im=images.villageLetter,w=50,h=34;
+      // Keep the small letter tray in scale with people; retain a forgiving touch target.
+      if(im?.naturalWidth)actors.push({layer:40,y:o.y,draw:()=>{ctx.save();ctx.globalAlpha=s.flags.letterRead?.78:1;ctx.drawImage(im,o.x-w/2,o.y-h+5,w,h);ctx.restore();}});
+      hitTargets.push({o,rect:null,anchor:{x:o.x-28,y:o.y-36,w:56,h:44}});
+      if(selected||isObjective||nearObject(o)){ctx.save();ctx.strokeStyle=isObjective?'#a6533f':'#e1c47c';ctx.lineWidth=1.2;ctx.globalAlpha=.65+.22*Math.sin(time/240);ctx.beginPath();ctx.ellipse(o.x,o.y-2,23,7,0,0,Math.PI*2);ctx.stroke();ctx.restore();}
       continue;
     }
     if(o.action?.startsWith('sealGather')){
@@ -1282,8 +1307,12 @@ function render(){
       ctx.drawImage(images.inventoryHousehold,0,414,418,391,o.x-52,o.y-68,72,68);
       ctx.drawImage(images.inventoryHousehold,836,0,418,414,o.x-5,o.y-62,72,72);
     }
-    if(s.scene==='yard'&&o.id==='waterJar'&&images.waterJar?.naturalWidth){
-      ctx.drawImage(images.waterJar,o.x-38,o.y-67,76,67);
+    if(s.scene==='yard'&&o.id==='waterJar'){
+      // The jar rests on the east-room paving, with the same depth order as people.
+      const im=images.waterJar,w=56,h=49;
+      if(im?.naturalWidth)actors.push({layer:40,y:o.y,draw:()=>{const shade=ctx.createRadialGradient(o.x,o.y-2,1,o.x,o.y-2,21);shade.addColorStop(0,'#29322444');shade.addColorStop(1,'#29322400');ctx.fillStyle=shade;ctx.fillRect(o.x-21,o.y-6,42,12);ctx.drawImage(im,o.x-w/2,o.y-h,w,h);}});
+      hitTargets.push({o,rect:null,anchor:{x:o.x-30,y:o.y-h,w:60,h:h+6}});
+      continue;
     }
     if(selected||isObjective)ellipse(o.x,o.y,selected?18:13,selected?8:5,locked?'#80674988':selected?'#f4cb6faa':'#f4e1a066');
     if(selected||isObjective){ctx.save();ctx.strokeStyle=isObjective?'#a6533f':'#ebc66f';ctx.lineWidth=selected?2.4:1.5;ctx.globalAlpha=.72+.22*Math.sin(time/240);ctx.beginPath();ctx.ellipse(o.x,o.y,selected?25:20,selected?11:9,0,0,Math.PI*2);ctx.stroke();ctx.restore();}
@@ -1431,7 +1460,7 @@ window.addEventListener('keydown',e=>{
   if((k==='e'||k===' ')&&!e.repeat){const near=visibleObjects().filter(o=>engine.near(o)).sort((a,b)=>Math.hypot(a.x-state().player.x,a.y-state().player.y)-Math.hypot(b.x-state().player.x,b.y-state().player.y))[0];if(near)interact(near);else notice('靠近场景物件或微光采集物，再按空格或 E。');return;}
   const index=['1','2','3','4','5','6','7','8','9','0','-','='].indexOf(k);if(index>=0){e.preventDefault();if(!e.repeat)selectTool(index);return;}keys[k]=true;
 });
-window.addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=false;});
+window.addEventListener('keyup',e=>{const k=e.key.toLowerCase();keys[k]=false;if(['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright'].includes(k))edgeExitAttempt=null;});
 window.addEventListener('blur',()=>{keys={};path=[];moving=false;});
 document.addEventListener('visibilitychange',()=>{keys={};path=[];moving=false;if(document.hidden){active=false;if(started)engine.save();}else{active=started&&$('dialog').hidden&&$('gallery').hidden&&$('worldMap').hidden&&!transitioning;lastFrame=performance.now();}});
 document.addEventListener('keydown',e=>{

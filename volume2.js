@@ -21,9 +21,9 @@ window.NanlanV2={
     V2_17:'生意渐忙，母亲的选品时间总被临时事打断，父亲又替你揽了几项往来。晚饭后，一家人重新商量轮值，给每个人留出能自己安排的时间。',
     V2_18:'陆掌柜记得约定，把问窄篮的客人领到门口。你也把自己暂时没有的货介绍给邻铺。三次真实营业之后，灯下写着余货、承诺和下一阶段的打算。'
   },
-  hint(s){
+  hint(s,q=N.current(s)){
     if(!s.flags.volume2Started)return N.done(s,'M20')?'第一卷已完成。回正厅读铺讯，开启第二卷；银钱、物资、日期与选择保留。':null;
-    const q=N.current(s);if(!q)return '第二卷已完成。可继续装货、转运、接待、按原价交付订单，并逐日盘点。';
+    if(!q)return '第二卷已完成。可继续装货、转运、接待、按原价交付订单，并逐日盘点。';
     const step=N.steps[q].find(([flag])=>!s.flags[flag]);
     return (step?step[1]+'。':'')+({V2_02:'三个时段都有预约观察入口，会同步推进时间。',V2_03:'两间铺面都在县城南街；亲自比较后选定。',V2_07:'仓房货箱装货发车 → 铺内货架验收。',V2_10:'先听旧客问窄篮，再在柜台成交。',V2_14:'缺可售货时先补货，或解除自己设置的时段留货。',V2_15:'仓房制作 → 装货转运 → 铺内交单。',V2_18:'三次闭账要在不同游戏日期发生；今日已闭店就回东厢房睡一夜。'}[q]||'点击「在地图中找目标」，可查看实际地点。');
   },
@@ -39,7 +39,19 @@ window.NanlanV2={
     function note(text){const p=document.createElement('p');p.className='v2-note';p.textContent=text;$('panelExtra').append(p);}
     function nav(label,scene,id){button(label,()=>{closeDialog();startNavigation(scene,id);},'v2-nav-'+scene+'-'+id,true);}
     function table(headers,rows){const table=document.createElement('table');table.className='shop-story-table';const head=document.createElement('thead'),tr=document.createElement('tr');headers.forEach(label=>{const th=document.createElement('th');th.textContent=label;tr.append(th);});head.append(tr);table.append(head);const body=document.createElement('tbody');rows.forEach(row=>{const tr=document.createElement('tr');row.forEach(value=>{const td=document.createElement('td');td.textContent=value;tr.append(td);});body.append(tr);});table.append(body);$('panelExtra').append(table);}
-    function title(name,text){activity(name,text,'volume2');$('dialogKicker').textContent='第二卷 · 南街灯起'+(q?' · '+(N.V2_ORDER.indexOf(q)+1)+'/18':' · 日常经营');if(q){const story=document.createElement('p');story.className='shop-story-copy';story.textContent=window.NanlanV2.scenes[q];$('panelExtra').append(story);}button('读当前任务与回报',showQuest,'v2-task-read',true);button('前往当前剧情目标',()=>{const target=nextObjective();closeDialog();startNavigation(target.scene,target.object);},'v2-next-place',true);}
+    function title(name,text){activity(name,text,'volume2');$('dialogKicker').textContent='第二卷 · 南街灯起'+(q?' · '+(N.V2_ORDER.indexOf(q)+1)+'/18':' · 日常经营');if(q){const story=document.createElement('p');story.className='shop-story-copy';story.textContent=window.NanlanV2.scenes[q];$('panelExtra').append(story);}button('读当前任务与回报',showQuest,'v2-task-read',true);navButton('前往当前剧情目标',()=>{
+      const current=state(),target=nextObjective();
+      if(kind==='v2Observe'&&target.scene===current.scene&&target.object===o?.id){
+        const slot=M.slots[o.slot];
+        if(slot&&!current.flags[slot.flag]){
+          const message='请先完成当前观察：点击「赴约观察 · '+slot.label+'」，记录这一时段的客流后再前往下一处。';
+          let feedback=$('choices').querySelector('.v2-navigation-note');
+          if(!feedback){feedback=document.createElement('p');feedback.className='v2-note v2-navigation-note';feedback.setAttribute('role','status');feedback.setAttribute('tabindex','-1');$('choices').append(feedback);}
+          feedback.textContent=message;feedback.focus();notice(message,true);return;
+        }
+      }
+      closeDialog();startNavigation(target.scene,target.object);
+    },'v2-next-place');}
     function pricesPanel(){const ids=Object.keys(shop.stock).filter(id=>shop.stock[id]>0);table(['商品','到店参考成本','当前售价','可售'],ids.map(id=>[itemName(id),num(shop.cost[id]??M.baseCost(id))+' 文',N.shopPrice(s,id)+' 文',M.stockAvailable(s,id)]));if(!ids.length)return;const id=ids.includes(selected)?selected:ids.includes(shop.featured)?shop.featured:ids[0];for(const item of ids)button('选 '+itemName(item)+' 调价',()=>window.NanlanV2.show('v2Pricing',o,item),'v2-price-item-'+item,true);for(const tier of [0,1,2])action(itemName(id)+' · '+['让利价','常价','较高价'][tier],'v2Price',{item:id,tier});}
     function ledger(){const v=M.summary(s),d=v.day;table(['账目','当前记录'],[['现金余额',s.coins+' 文'],['家用保留目标',t.reserve+' 文'],['实收存货参考价值',v.stockValue+' 文'],['已完成闭账',v.closedDays+' 个不同营业日'],['当日成交收入',(d?.sales||0)+' 文'],['当日已售成本',num(d?.cost||0)+' 文'],['当日租金与设施分摊',num(v.rent+v.wear)+' 文'],['当日经营结果',v.profit+' 文'],['今日状态',d?.closed?'已打烊并保存':'尚未闭账']]);const note=document.createElement('p');note.className='v2-note';note.textContent='成本采用材料参考价与实际运费；旧版历史销售不回算新日账。预付租金与可退押金不在闭店时重复扣款。';$('panelExtra').append(note);}
     if(!f.volume2Started){title('正厅 · 家宴后的铺讯','母亲拿出早已记下的铺讯。父亲摊开收支，祖父问谁来拿主意。\n「先看看，什么人会来买。」\n第一卷的物资与选择都留在身边。');action('读铺讯，开启第二卷','v2Start',{},N.done(s,'M20'),'请先完成 M20 岁末家宴。');return;}
@@ -54,6 +66,8 @@ window.NanlanV2={
       if(f.volume2Complete)note('本卷已完成，已接受订单和日常经营仍可继续。');return;
     }
     if(kind==='v2Observe'){
+      // The last observation completes this quest; replace its old detail panel.
+      if(q!=='V2_02'){showQuest();notice(nextHint());return;}
       const slot=o?.slot||'morning',a=M.slots[slot];title('南街 · '+a.label+'客流札记',a.text+'\n\n当前游戏时间：第'+N.clock(s).day+'日。按约观察会推进到对应时段；菜畦与其他事务同步经过这段时间。');
       if(q==='V2_02')action((f[a.flag]?'已记下 · ':'赴约观察 · ')+a.label,'v2Observe',{slot},!f[a.flag],'这一时段已真实记录，可前往下一个观察点。');
       table(['已经看见','记录'],t.observations.map(x=>[M.slots[x.slot].label,x.text]));return;

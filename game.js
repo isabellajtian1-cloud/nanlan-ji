@@ -247,9 +247,9 @@ function actionMessage(name){
     shareFirst:'家人围坐在饭桌前，庭院第一次有了安稳的灯火。',tidy:'材料按用途归好，没有凭空增加物资。',craft:'原料已扣除，成品已入包。'
   };return messages[name]||'这一步已经记下了。'+nextHint();
 }
-function nextHint(){
-  const s=state(),q=N.current(s),f=s.flags;
-  const v2=window.NanlanV2?.hint(s);if(v2)return v2;
+function nextHint(s=state(),q=N.current(s)){
+  const f=s.flags;
+  const v2=window.NanlanV2?.hint(s,q);if(v2)return v2;
   const hints={
     M01:!f.handover?'先在门前点家人与行李，选好怎样帮忙。':!f.keyTaken?'接过官兵递来的院门钥匙。':'靠近旧宅院门，亲手开门。',
     M02:!f.windowInspected||!f.leakInspected?'去卧房（东厢房），分别查看窗格和漏点。':!f.firstRepair?'在卧房（东厢房）先选一处最急的地方，花 1 份材料修补。':'到卧房（东厢房）床榻旁把床褥搬进去。',
@@ -317,13 +317,24 @@ function navigateTaskStep(flag,label,index){
   const target=objectiveForStep(flag,label);if(!target){notice('这一件事就在当前场景，先看看附近可互动之处。');return;}
   if(!$('dialog').hidden)closeDialog(true);startNavigation(target.scene,target.object);
 }
-function renderQuestSteps(host,dialog=false){
-  const s=state(),q=N.current(s),steps=q?N.steps[q]:[],first=steps.findIndex(([flag])=>!s.flags[flag]);host.replaceChildren();
+function renderQuestSteps(host,dialog=false,s=state(),q=N.current(s)){
+  const steps=q?N.steps[q]:[],first=steps.findIndex(([flag])=>!s.flags[flag]);host.replaceChildren();
   steps.forEach(([flag,label],index)=>{const done=!!s.flags[flag],row=document.createElement('button');row.type='button';row.className='task-row'+(done?' done':index===first?' current':' waiting');row.disabled=done;
     row.innerHTML='<span class="task-mark">'+(done?'✓':index===first?'○':'·')+'</span><span class="task-label">'+clean(label)+' <small>('+rowProgress(flag)+')</small>'+(done?'':index===first?'<span class="task-route">点击这一项，沿路去办</span>':'<span class="task-route">办妥上一件后开放</span>')+'</span>';
     row.onclick=()=>navigateTaskStep(flag,label,index);host.append(row);
   });
   if(dialog)host.classList.add('task-step-list');
+}
+// Title, rows and hint always describe the same current quest, even while folded.
+function refreshQuestBanner(s=state(),q=N.current(s)){
+  const hint=nextHint(s,q);
+  const questSignature=q+'|'+(q?N.steps[q].map(([flag])=>flag+':'+rowProgress(flag)).join('|'):'none');
+  if(questSignature!==lastQuestSignature){
+    renderQuestSteps($('quest'),false,s,q);lastQuestSignature=questSignature;
+  }
+  $('questAct').textContent=s.flags.volume2Started?'南街的新日子':q?(Number(q.slice(1))<=4?'先安顿一家人':'在南澜生活'):'这一季已经写完';
+  $('questHeading').textContent=q?N.titles[q]:s.flags.volume2Complete?'南街灯起 · 日常继续':'岁末满庭 · 新春家议';
+  $('questHint').textContent=hint;
 }
 function refreshHud(){
   const s=state(),q=N.current(s),t=timeText();
@@ -335,11 +346,7 @@ function refreshHud(){
   track.className='day-track';sun.style.left=(N.daylight(s).progress*100)+'%';sun.textContent=N.daylight(s).darkness>.5?'☾':'☀';track.append(sun);hint.className='clock-hint';hint.textContent='点此查看日历与生长';$('clock').append(track,hint);
   $('clock').setAttribute('aria-label','查看日期、昼夜与潮汐：'+t.short);
   $('energy').textContent=Math.floor(s.stamina);$('energyBar').style.width=s.stamina+'%';$('coins').textContent=s.coins;
-  $('questAct').textContent=s.flags.volume2Started?'南街的新日子':q?(Number(q.slice(1))<=4?'先安顿一家人':'在南澜生活'):'这一季已经写完';
-  $('questHeading').textContent=q?N.titles[q]:s.flags.volume2Complete?'南街灯起 · 日常继续':'岁末满庭 · 新春家议';
-  const questSignature=q+'|'+(q?N.steps[q].map(([flag])=>flag+':'+rowProgress(flag)).join('|'):'none');
-  if(questSignature!==lastQuestSignature){renderQuestSteps($('quest'));lastQuestSignature=questSignature;}
-  $('questHint').textContent=nextHint();$('nightNote').hidden=!(s.mode==='daily'&&N.clock(s).minute>=1320);
+  refreshQuestBanner(s,q);$('nightNote').hidden=!(s.mode==='daily'&&N.clock(s).minute>=1320);
   refreshToolbar();
 }
 const toolDefs=[
@@ -1409,7 +1416,7 @@ $('questOpen').onclick=showQuest;$('nearbyOpen').onclick=showNearby;$('peopleOpe
 $('interactionHint').onclick=()=>{if(!active)return;const o=visibleObjects().find(v=>v.id===$('interactionHint').dataset.object);if(!o)return;if(nearObject(o))interact(o);else approach(o);};
 $('startGuide').onclick=showStartGuide;
 $('clock').onclick=showTime;
-$('taskToggle').onclick=()=>{const collapsed=$('tasks').classList.toggle('collapsed');$('taskToggle').setAttribute('aria-expanded',String(!collapsed));};
+$('taskToggle').onclick=()=>{refreshQuestBanner();const collapsed=$('tasks').classList.toggle('collapsed');$('taskToggle').setAttribute('aria-expanded',String(!collapsed));};
 $('bagOpen').onclick=showBag;
 $('save').onclick=()=>{const result=engine.save();$('saveState').textContent=result.ok?(engine.memoryOnly?'仅本次试玩':'已保存'):'保存失败 · 进度仍在';notice(result.ok?(engine.memoryOnly?'当前为仅本次试玩模式，可从行囊导出备份。':'进度已保存，下次选择继续即可。'):result.message,true);};
 window.addEventListener('keydown',e=>{

@@ -1,6 +1,6 @@
 # V3.9.21 GitHub 图片路径清单
 
-选择方案 2：全站资源使用根目录相对路径。下表列出全部 75 个被改写的图片地址；图片内容未改动。
+选择方案 2：全站资源使用根目录相对路径。下表列出全部 76 个被改写的图片地址；图片内容未改动。
 
 | 原路径 | 上传包路径 | 引用文件 |
 | --- | --- | --- |
@@ -25,6 +25,7 @@
 | assets/hall.webp | hall.webp | data.js |
 | assets/inventory-crafts-v392.png | inventory-crafts-v392.png | game.js |
 | assets/inventory-household-v392.png | inventory-household-v392.png | game.js |
+| assets/kitchen-hearth-v3927.webp | kitchen-hearth-v3927.webp | game.js |
 | assets/market.webp | market.webp | data.js |
 | assets/mountain.webp | mountain.webp | data.js |
 | assets/mountainside.webp | mountainside.webp | data.js |

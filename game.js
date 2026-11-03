@@ -686,12 +686,82 @@ function showCraft(){
   }
   if(!N.done(s,'M06'))button('配方随竹林与药圃任务逐步开放',showQuest,'craft-locked',true);
 }
+// The kitchen steps are presentation only. The existing cookMeal action settles the whole pot.
+const kitchenStages=[
+  ['灶边 · 米下锅','淘好的米还沥在竹箩里。点铁锅，把米和菜送进清水里。','将米和菜下锅'],
+  ['灶边 · 添柴','清水刚刚没过米粒。点灶口，把枯枝往里送一送，再盖上木盖。','往灶口添柴'],
+  ['灶边 · 揭盖','木盖轻轻作响，米香从锅沿漫出来。点案边的饭碗，揭盖把饭盛出来。','揭盖盛饭'],
+  ['灶边 · 出锅','热饭已经盛好，碗沿还带着白汽。','']
+];
+function kitchenObstacle(s){
+  if(!N.reached(s,'M04'))return '先把庭院的小畦安顿好，再来开灶。';
+  if(!s.flags.stoveClean)return '灶膛还有积灰。先把灶边清理干净。';
+  if(!s.flags.drainClear)return '宅外的水口还堵着。先去疏通水口，再回来生火。';
+  if((s.bucketWater||0)<1)return '桶里还没有水。到庭院水缸装一桶水，再来下米。';
+  if(N.available(s,'rice')<1)return '米箩空了。备一份米粮，再来做饭。';
+  if(N.available(s,'wood')<1)return '灶下缺柴。拾一份枯枝，再来生火。';
+  const food=N.quantity(s,'vegetable')?'vegetable':'ingredient';
+  if(N.available(s,food)<1)return '还缺一份可用的菜蔬或食材。';
+  return '';
+}
 function showCook(){
-  const s=state(),q=N.current(s);activity('灶边 · 一顿热饭','米粮 ×1 + 食材或菜蔬 ×1 + 枯枝 ×1 + 桶内水 ×1 → 一锅热饭。\n\n米粮 '+N.quantity(s,'rice')+' · 食材 '+N.quantity(s,'ingredient')+' · 菜蔬 '+N.quantity(s,'vegetable')+' · 枯枝 '+N.quantity(s,'wood')+' · 桶内水 '+(s.bucketWater||0)+'\n\nM04 的第一锅饭要带回正厅，在饭桌旁与家人分享。缺粮可在出村后向乡邻补购。');
+  const s=state(),q=N.current(s);
+  activity('灶边 · 一顿热饭','一锅热饭用米粮、菜蔬或食材、枯枝各一份，再添一桶水。','kitchen');
+  const scene=document.createElement('div');scene.className='kitchen-scene';
+  const art=document.createElement('img');art.alt='';art.draggable=false;
+  art.onerror=()=>{art.hidden=true;scene.classList.add('without-art');};
+  art.src='kitchen-hearth-v3927.webp';
+  const spot=document.createElement('button');spot.type='button';spot.className='kitchen-action';
+  const tag=document.createElement('span');spot.append(tag);
+  const caption=document.createElement('p');caption.className='kitchen-caption';caption.setAttribute('aria-live','polite');
+  scene.append(art,spot);$('panelExtra').append(scene,caption);
+  const supplies=document.createElement('details');supplies.className='kitchen-supplies';
+  const summary=document.createElement('summary');summary.textContent='看看米缸与柴堆';
+  const stock=document.createElement('p');stock.textContent='米粮 '+N.available(s,'rice')+' · 食材 '+N.available(s,'ingredient')+' · 菜蔬 '+N.available(s,'vegetable')+' · 枯枝 '+N.available(s,'wood')+' · 桶内水 '+(s.bucketWater||0);
+  supplies.append(summary,stock);$('panelExtra').append(supplies);
+  let stage=0,busy=false,quick=null;
+  function paint(reason=''){
+    const [title,line,label]=kitchenStages[stage];
+    $('dialogKicker').textContent=title;scene.dataset.frame=String(stage);
+    caption.textContent=reason||line;tag.textContent=label;spot.hidden=stage===3;
+    spot.disabled=!!reason||busy;spot.setAttribute('aria-label',label||title);
+    if(quick)quick.disabled=!!reason||busy||stage===3;
+  }
+  async function finish(){
+    if(busy||stage===3||dialogKind!=='kitchen'||!scene.isConnected)return;
+    busy=true;paint();
+    try{
+      const result=await perform('cookMeal',{},()=>{
+        stage=3;paint();supplies.hidden=true;$('choices').replaceChildren();
+        if(N.current(state())==='M04'&&!state().flags.firstShared){
+          caption.textContent='门外传来母亲的声音：「祖父的碗摆好了。趁热端来，咱们一起吃。」';
+          navButton('端去正厅与家人分饭',()=>{closeDialog();startNavigation('hall','mealTable');},'kitchen-to-table');
+        }
+        navButton('回到灶台',showCook,'kitchen-again');
+        navButton('收好碗勺，回庭院',()=>closeDialog(),'kitchen-leave');
+        $('choices').querySelector('button')?.focus({preventScroll:true});
+      });
+      if(!result.ok){busy=false;paint(kitchenObstacle(state()));caption.textContent=result.message;}
+      return result;
+    }finally{busy=false;}
+  }
+  spot.onclick=event=>{
+    if(busy||dialogKind!=='kitchen'||event?.detail>1)return;
+    if(stage===3)return;
+    if(stage===2)return finish();
+    if(stage===0)window.NanlanAudio?.play('water');
+    stage++;paint();
+  };
   if(q==='M04'&&!s.flags.stoveClean)actButton('先把灶边清理干净','cleanStove',{},showCook);
-  if(N.reached(s,'M04'))actButton('亲手煮一锅热饭','cookMeal',{},showCook);
+  if(N.reached(s,'M04')){
+    quick=button('直接煮好一锅热饭',finish,'cookMeal',true,false);
+    if(s.flags.stoveClean&&!s.flags.drainClear)navButton('到宅外疏通水口',()=>{closeDialog();startNavigation('yard','drain');},'kitchen-to-drain');
+    else if(s.flags.stoveClean&&s.flags.drainClear&&(s.bucketWater||0)<1)navButton('去水缸装水',()=>{closeDialog();startNavigation('yard','waterJar');},'kitchen-to-water');
+  }
   if(s.flags.volume2Started)actButton('煮一锅鲜鱼饭 · 塘鱼1、枯枝1、桶内水1','silkCookFish',{sequence:s.revision},showCook);
   if(N.reached(s,'M20'))actButton('准备岁末家宴','cookFeast',{},showCook);
+  paint(kitchenObstacle(s));
+  if(!spot.disabled)spot.focus({preventScroll:true});
 }
 function showBed(){
   const s=state(),f=s.flags,q=N.current(s);

@@ -28,10 +28,14 @@ window.addEventListener('keydown',e=>{
  if(k==='escape'&&bagSession){stop();if(!e.repeat)restore();return;}
  if(!$('dialog').hidden&&(k===' '||k==='arrowdown'||k==='arrowup')){
   stop();if(e.repeat)return;
-  if(k===' '&&dialogKind==='paper-reading'&&e.target?.closest('#dialog button')){e.target.closest('button').click();return;}
+  if(k===' '&&dialogKind==='kitchen'&&e.target?.closest('summary')){e.target.closest('summary').click();return;}
+  if(k===' '&&['paper-reading','kitchen'].includes(dialogKind)&&e.target?.closest('#dialog button')){e.target.closest('button').click();return;}
   if(k===' '&&dialogKind==='arrival'){$('choices').querySelector('button:not(:disabled)')?.click();return;}
   if(k===' '){if(!$('next').hidden)$('next').click();else{const choices=[...$('choices').querySelectorAll('button:not(:disabled)')];if(!choices.length)closeDialog();else {choices[0].focus();notice('方向键选择，Enter 确认，Esc 返回。');}}return;}
-  const options=[...$('choices').querySelectorAll('button:not(:disabled)')];if($('choices').hidden||!options.length)return;let i=options.indexOf(document.activeElement);i=(i+(k==='arrowdown'?1:-1)+options.length)%options.length;options[i].focus();return;
+  const options=dialogKind==='kitchen'
+    ? [...$('dialog').querySelectorAll('.kitchen-action:not([hidden]):not(:disabled), #choices button:not(:disabled)')]
+    : [...$('choices').querySelectorAll('button:not(:disabled)')];
+  if($('choices').hidden||!options.length)return;let i=options.indexOf(document.activeElement);i=(i+(k==='arrowdown'?1:-1)+options.length)%options.length;options[i].focus();return;
  }
  if(k===' '&&active){stop();if(e.repeat)return;const near=visibleObjects().filter(o=>engine.near(o)).sort((a,b)=>Math.hypot(a.x-state().player.x,a.y-state().player.y)-Math.hypot(b.x-state().player.x,b.y-state().player.y))[0];if(near)interact(near);else notice('靠近人物或物件，按空格或 E 互动。');}
 },true);

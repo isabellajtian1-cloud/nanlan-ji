@@ -4,6 +4,8 @@
  * Maps, title and other full-screen screens keep their existing higher layers. */
 #tasks{z-index:13}
 #message{z-index:14}
+/* Empty live regions stay in the DOM but must not paint a floating badge. */
+#message:empty{display:none}
 *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#172b24;color:var(--paper);font-family:NanlanSerif,"Songti SC","STSong","SimSun",serif}
 button{font:inherit;cursor:pointer;color:inherit;touch-action:manipulation}button:focus-visible{outline:3px solid #eac786;outline-offset:3px}button:active{filter:brightness(.93)}button:disabled{opacity:.48;cursor:default}
 [hidden]{display:none!important}#wrap{position:relative;width:100vw;height:100dvh;overflow:hidden}#game{width:100%;height:100%;display:block;touch-action:none}

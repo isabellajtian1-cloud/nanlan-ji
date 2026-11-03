@@ -154,7 +154,7 @@ function activity(title,text,kind='general'){
   $('dialogKicker').textContent=kind==='quest'?'南澜记 · 眼前的事':'南澜小事';
   $('dialogQuestNavigate').hidden=true;
   $('choices').hidden=false;$('next').hidden=true;$('dialog').hidden=false;$('skip').textContent=started?'返回游戏 ×':'返回启程页 ×';
-  $('skip').onclick=closeDialog;$('skip').focus();window.NanlanDesktop?.dialogue(title,text);
+  $('skip').onclick=closeDialog;$('skip').focus();if(kind!=='arrival')window.NanlanDesktop?.dialogue(title,text);
 }
 function button(label,fn,id,secondary=false,showOutcome=true){
   const b=document.createElement('button');b.textContent=label;b.dataset.action=id||label;
@@ -1372,8 +1372,8 @@ function showArrivalBeat(index=0){
   const [title,line]=arrivalBeats[index];activity(title,line,'arrival');$('dialog').classList.add('arrival-mode');
   $('dialogKicker').textContent='初见南澜 · '+(index+1)+' / '+arrivalBeats.length;$('skip').textContent='跳过演出 ×';
   $('skip').onclick=showFirstSteps;
-  if(index<arrivalBeats.length-1)button('继续听下去',()=>showArrivalBeat(index+1),'arrival-next');
-  else button('走近家人与行李',showFirstSteps,'arrival-enter');
+  if(index<arrivalBeats.length-1)button('继续听下去',()=>showArrivalBeat(index+1),'arrival-next',false,false);
+  else button('走近家人与行李',showFirstSteps,'arrival-enter',false,false);
 }
 async function beginGame(confirmed=false){
   if(transitioning)return;

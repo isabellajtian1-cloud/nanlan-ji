@@ -28,6 +28,7 @@ window.addEventListener('keydown',e=>{
  if(k==='escape'&&bagSession){stop();if(!e.repeat)restore();return;}
  if(!$('dialog').hidden&&(k===' '||k==='arrowdown'||k==='arrowup')){
   stop();if(e.repeat)return;
+  if(k===' '&&dialogKind==='arrival'){$('choices').querySelector('button:not(:disabled)')?.click();return;}
   if(k===' '){if(!$('next').hidden)$('next').click();else{const choices=[...$('choices').querySelectorAll('button:not(:disabled)')];if(!choices.length)closeDialog();else {choices[0].focus();notice('方向键选择，Enter 确认，Esc 返回。');}}return;}
   const options=[...$('choices').querySelectorAll('button:not(:disabled)')];if($('choices').hidden||!options.length)return;let i=options.indexOf(document.activeElement);i=(i+(k==='arrowdown'?1:-1)+options.length)%options.length;options[i].focus();return;
  }

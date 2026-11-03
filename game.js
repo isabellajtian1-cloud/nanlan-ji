@@ -221,7 +221,7 @@ function actButton(label,name,p,refresh,id,secondary=false){
   return button(label,()=>perform(name,p||{},refresh),id||name,secondary);
 }
 function prerequisiteNote(text){
-  if(!text||$('panelExtra').querySelector('.prerequisite-note'))return;const note=document.createElement('p');note.className='prerequisite-note';note.textContent='尚未开放 · '+text;$('panelExtra').prepend(note);
+  if(!text||$('panelExtra').querySelector('.prerequisite-note'))return;const note=document.createElement('p');note.className='prerequisite-note lock-note';note.textContent='尚未开放 · '+text;$('panelExtra').prepend(note);
 }
 function objectPrerequisite(o){
   const s=state(),f=s.flags,q=N.current(s),a=o.action;
@@ -234,9 +234,9 @@ function objectPrerequisite(o){
   if(a==='bookbox'&&!N.reached(s,'M08'))return '请在完成 M07「等它慢慢长」后，再登记旧住客书箱。';
   if(a==='dry'&&!f.ledgerPermission)return f.boxFound?'请先在 M08 中联系程婉，征得同意后再晾旧页。':'请先在 M08 中登记仓房旧书箱，再联系程婉。';
   if(a==='gutter'&&!N.reached(s,'M13'))return '请在完成 M11「一单生意两种打算」后，再进行 M13 的风雨检查。';
-  if(a==='shelter'&&q!=='M14')return '请在 M14「灯火借人」开始后，再腾通道和安排铺位。';
-  if(a==='waterMark'&&q!=='M15')return '请在 M15「父亲没有按时回来」请阿岑带路后，再检查水位。';
-  if(a==='lamps'&&q!=='M20')return '请在完成 M19「京中来信」后，再挂岁末灯火。';
+  if(a==='shelter'&&!N.reached(s,'M14'))return '请在 M14「灯火借人」开始后，再腾通道和安排铺位。';
+  if(a==='waterMark'&&!N.reached(s,'M15'))return '请在 M15「父亲没有按时回来」请阿岑带路后，再检查水位。';
+  if(a==='lamps'&&!N.reached(s,'M20'))return '请在完成 M19「京中来信」后，再挂岁末灯火。';
   return '';
 }
 function actionMessage(name){
@@ -652,8 +652,10 @@ function showGarden(index=selectedPlot){
     tile.onclick=()=>{selectedPlot=i;window.NanlanAudio?.play('click');showGarden(i);};board.append(tile);
   }
   $('panelExtra').append(board);
-  if(q==='M03'&&f.pathCleared&&!f.smallBed){actButton('整理第一块菜畦','smallBed',{choice:'vegetable'},()=>showGarden(0),'bed-vegetable');actButton('先整理香草小畦','smallBed',{choice:'herb'},()=>showGarden(0),'bed-herb');}
-  if(q==='M07'&&!f.fullGarden)actButton('扩整药圃 · 开放两块药田','expandGarden',{},()=>showGarden(4));
+  const canPrepare=q==='M03'&&f.pathCleared&&!f.smallBed;
+  const canExpand=q==='M07'&&!f.fullGarden;
+  if(canPrepare){actButton('整理第一块菜畦','smallBed',{choice:'vegetable'},()=>showGarden(0),'bed-vegetable');actButton('先整理香草小畦','smallBed',{choice:'herb'},()=>showGarden(0),'bed-herb');}
+  if(canExpand)actButton('扩整药圃 · 开放两块药田','expandGarden',{},()=>showGarden(4));
   if(f.smallBed&&(selectedPlot<4||f.fullGarden)){
     if(selectedPlot>0&&!g.tilled)button('拿起长柄锄 · 翻土（体力 2）',()=>{if(!equipGardenHoe())return;return gardenAction('tillPlot',{plot:selectedPlot});},'garden-till');
     else if(!c.planted){
@@ -668,7 +670,7 @@ function showGarden(index=selectedPlot){
     }else if(!g.watered)button('提起木桶 · 浇水（水 '+s.bucketWater+'）',()=>gardenAction('waterCrop',{plot:selectedPlot}),'garden-water');
     else if(c.ready)button('亲手采收 · '+(g.kind==='herb'?'鲜草药':'青菜')+' ×3，留种 ×1',()=>gardenAction('harvest',{plot:selectedPlot}),'garden-harvest');
     else prerequisiteNote('作物正在扎根生长，不必重复浇水。'+timeNote);
-  }else prerequisiteNote(f.smallBed?'请在 M07 扩整药圃后，再种这两块药田。':'请按 M03 清理通路，整理第一块菜畦。');
+  }else if(!canPrepare&&!canExpand)prerequisiteNote(f.smallBed?'请在 M07 扩整药圃后，再种这两块药田。':'请按 M03 清理通路，整理第一块菜畦。');
   if(c.planted&&!g.watered&&s.bucketWater<1)button('去水缸装水',()=>{closeDialog();startNavigation('yard','waterJar');},'garden-refill',true);
   if(s.mode==='daily'&&N.clock(s).minute>=1320)button('去卧房睡一夜',()=>{closeDialog();startNavigation('bed','bedRest');},'garden-sleep',true);
   button('收好农具 · 返回庭院',()=>closeDialog(),'garden-resume',true);
@@ -694,11 +696,12 @@ function showCook(){
 function showBed(){
   const s=state(),f=s.flags,q=N.current(s);
   activity('卧房（东厢房）· 床榻',f.bedReady?'床褥已经铺好。这里始终有两种休息方式：临时休息恢复体力；睡一夜则到次日清晨，并推进菜畦、采集节点和潮汐。':'先检查窗格与屋顶漏点，选一处最急的地方修好，再把带来的床褥铺上。');
-  if(q==='M02'&&f.firstRepair&&!f.bedReady)actButton('搬入床褥，安顿卧房（东厢房）','setBed',{},showBed);
   if(f.bedReady){
     actButton('临时休息 · 体力恢复至 100（推进 30 分钟）','nap',{},showBed,'bed-nap');
     if(N.done(s,'M04'))actButton('睡一夜 · 到次日 06:00（推进生长）','sleep',{},()=>{closeDialog();refreshHud();notice(actionMessage('sleep'));},'bed-sleep');
     else{const locked=button('睡一夜 · 完成 M04 后开放',()=>{},'bed-sleep-locked',true);locked.disabled=true;prerequisiteNote('请在完成 M04「南澜的第一顿饭」后再睡一夜；现在可以临时休息恢复体力。');}
+  }else if(q==='M02'&&f.firstRepair){
+    actButton('搬入床褥，安顿卧房（东厢房）','setBed',{},showBed);
   }else prerequisiteNote(q==='M02'?'请先检查窗格与漏雨处，修好其中一处，再搬入床褥。':'请在 M02「今夜睡在哪里」中安顿卧房（东厢房）后再休息。');
 }
 function showStall(){
@@ -946,7 +949,16 @@ async function interact(o){
   else if(a==='pantry')showPantry();
   else if(a==='bridge'){activity('山路 · 木道','把眼前松动的一段铺好，才好进入竹林。先借出竹料，阿岑会帮工；先做自家晾架，则一起补另一段桥面。');if(q==='M06'&&!f.bridgeReady)actButton('铺通小路 · 枯枝 ×1'+(s.choices.bamboo==='rack'?'、竹材 ×1':''),'repairBridge',{},()=>{closeDialog();notice('小路铺好了，竹林入口已开放。');});}
   else if(a==='bookbox'){activity('仓房 · 旧住客书箱','书箱是旧住客留下的私人物件，里面的书页受了潮。先确认归属，联系程婉，征得同意后再查看和晾晒。');if(q==='M08'&&!f.boxFound)actButton('登记书箱，托人联系旧住客家人','findBox',{},()=>{closeDialog();notice('已记下书箱归属线索。去村里联系程婉。');});}
-  else if(a==='dry'){activity('书房窗下 · 晾纸','只晾晒程婉同意的两页，不自行拆散整本旧簿。');if(q==='M08'){for(let index=0;index<2;index++)if(!f['driedPage'+index])actButton('把第 '+(index+1)+' 页铺平晾好','dryPage',{index},()=>interact(o),'dry-'+index);}}
+  else if(a==='dry'){
+    activity('书房窗下 · 晾纸','只晾晒程婉同意的两页，不自行拆散整本旧簿。');
+    if(q==='M08'){
+      for(let index=0;index<2;index++){
+        if(f['driedPage'+index])continue;
+        const dryButton=actButton('把第 '+(index+1)+' 页铺平晾好','dryPage',{index},()=>interact(o),'dry-'+index);
+        dryButton.disabled=!f.ledgerPermission;
+      }
+    }
+  }
   else if(a==='archive')showArchive();
   else if(a==='tide')showTide();
   else if(a==='stall')showStall();

@@ -14,18 +14,80 @@ function paragraph(text,cls='production-note'){const p=document.createElement('p
 function nav(label,scene,id){button(label,()=>{closeDialog();startNavigation(scene,id);},'silk-nav-'+id,true);}
 function action(label,name,p={},again=()=>show(selected),ready=true,why='材料尚未备齐。'){const b=actButton(label,name,{sequence:state().revision,...p},again,'silk-'+name);if(!ready){b.disabled=true;paragraph(why);}return b;}
 function stage(i){const s=state(),p=s.production,z=M.status(s);if(i===0)return !p.mulberry.planted?0:!p.mulberry.watered?1:z.mulberryReady?2:p.mulberry.harvests?3:1;if(i===1)return z.wormAge===null?0:z.wormReady?3:z.wormAge>=180?2:1;return !p.fish.stocked?0:p.fish.fedAt===null?1:z.fishReady?3:2;}
-function statusText(i){const s=state(),p=s.production,z=M.status(s);if(i===0)return !p.mulberry.planted?'空畦待种':!p.mulberry.watered?'桑苗待浇水':z.mulberryReady?'桑叶可采':'长叶中 · '+Math.ceil(p.mulberry.readyAt-s.worldTick)+' 分钟';if(i===1)return z.wormAge===null?'空匾待养':z.wormReady?(p.worms.tended?'特级生丝待缫':'普通生丝待缫'):z.careOpen?(p.worms.cleaned?'蚕沙已清 · 待支窗':'吐丝前 · 可清扫开窗'):p.worms.tended?'已照料 · 等待结茧':z.wormAge>=300?'已上簇 · 等待结茧':'食叶中 · '+Math.ceil(180-z.wormAge)+' 分钟后照料';return !p.fish.stocked?'空塘待放苗':p.fish.fedAt===null?'鱼苗待投喂':z.fishReady?'塘鱼可收':'鱼群生长 · '+Math.ceil(p.fish.fedAt+480-s.worldTick)+' 分钟';}
+function statusText(i){const s=state(),p=s.production,z=M.status(s);if(i===0)return !p.mulberry.planted?'空畦待种':!p.mulberry.watered?'桑苗待浇水':z.mulberryReady?'桑叶可采':'长叶中 · '+Math.ceil(p.mulberry.readyAt-s.worldTick)+' 分钟';if(i===1)return z.wormAge===null?'空匾待养':z.wormReady?(p.worms.tended?'整匾蚕茧待缫':'普通生丝待缫'):z.careOpen?(p.worms.cleaned?'蚕沙已清 · 待支窗':'吐丝前 · 可清扫开窗'):p.worms.tended?'已照料 · 等待结茧':z.wormAge>=300?'已上簇 · 等待结茧':'食叶中 · '+Math.ceil(180-z.wormAge)+' 分钟后照料';return !p.fish.stocked?'空塘待放苗':p.fish.fedAt===null?'鱼苗待投喂':z.fishReady?'塘鱼可收':'鱼群生长 · '+Math.ceil(z.fishDue-s.worldTick)+' 分钟';}
 function show(i=selected){selected=i;const s=state(),p=s.production,z=M.status(s);activity('后院 · 桑基鱼塘',pending?'已拿起'+pending.label+'，请点'+labels[pending.index]+'放下。':'选中桑畦、蚕匾或鱼塘，再亲手照料。\n离开面板后继续生长；也可以在池边守候。错过蚕事照料仍会结茧，不会死亡或罚款。','production');
  if(!s.flags.volume2Started){paragraph('第二卷开启后，母亲会备下桑苗、蚕种和鱼苗。');nav('回正厅读铺讯','hall','v2Family');return;}
  const board=document.createElement('div');board.className='production-board';for(let n=0;n<3;n++){const b=document.createElement('button');b.className='production-tile'+(selected===n?' selected':'');b.setAttribute('aria-label',labels[n]+'，'+statusText(n));b.setAttribute('aria-pressed',String(selected===n));b.innerHTML=art(n,stage(n))+'<strong>'+labels[n]+'</strong><small>'+statusText(n)+'</small>';b.onclick=async()=>{if(b.disabled)return;window.NanlanAudio?.play('click');selected=n;if(pending?.index===n){const task=pending;pending=null;b.disabled=true;await perform(task.action,{sequence:state().revision},()=>show(n));if(b.isConnected)b.disabled=false;}else{pending=null;show(n);}};board.append(b);}$('panelExtra').append(board);
- if(!p.kit){action('整理池岸、安放蚕匾，接过初养物资','silkKit',{},()=>{show(0);paragraph('母亲备下：桑苗 ×1、蚕种 ×2、鱼苗 ×2、鱼食 ×2，已放入行囊。');});return;}
+ const L=(zh,en)=>window.NanlanI18n?.language==='en'?en:zh;
+ const weather=N.rural.weather(s),tomorrow=N.rural.weather(s,N.rural.day(s)+1);
+ const sky={fair:L('天晴，桑叶宜采。','Clear skies. A good day to pick leaves.'),damp:L('回南天，砖面返潮。湿叶先摊开，免得这一匾少出一束。','A damp spell. Air wet leaves first to keep the full silk yield.'),rain:L('雨脚渐密，塘水将涨，午前可扎篱保塘。','Floodwater is rising. Mend the fence before noon to protect the fish.')};
+ paragraph(sky[weather]);if(N.clock(s).minute>=1020)paragraph(L('明晨塘边','Tomorrow at the pond')+' · '+sky[tomorrow]);
+ if(!p.kit){paragraph(L('修塘先备枯枝二份、竹材一根。安塘二十分钟，费四点体力。','Bring two wood and one bamboo. Prepare the bank in 20 minutes for four stamina.'));action('整理池岸、安放蚕匾，接过初养物资','silkKit',{},()=>show(0));return;}
  const pick=(label,index,name)=>button('拿起'+label+' → 点'+labels[index],()=>{pending={label,index,action:name};show(index);},'silk-pick-'+index);
- if(selected===0){if(!p.mulberry.planted)pick('桑苗',0,'silkPlant');else if(!p.mulberry.watered){action('提桶浇透桑苗 · 桶内水 ×1','silkWater',{},undefined,s.bucketWater>0,'水桶空了，请先到水缸取水。');if(!s.bucketWater)nav('去水缸装水','yard','waterJar');}else if(z.mulberryReady)action('摘桑叶 ×6 · 保留桑树继续长叶','silkLeaves');else{paragraph('桑树会继续长叶，不需重种或重复浇水。');if(!p.mulberry.fertilized&&s.bag.silkwormCompost)action('将蚕沙堆肥施回桑畦','silkFertilize');}}
- if(selected===1){if(z.wormAge===null){paragraph('每匾需要蚕种 ×1、桑叶 ×3。收茧缫丝时会留回蚕种 ×1。');if(N.available(s,'silkwormEgg')>=1&&N.available(s,'mulberryLeaf')>=3)pick('蚕种与桑叶',1,'silkStart');else paragraph('请先采够桑叶；初养蚕种在行囊中。');}else if(z.wormReady)action('收茧缫丝 · '+(p.worms.tended?'特级':'普通')+'生丝 ×2，留蚕种 ×1','silkHarvest');else if(z.careOpen){button('拿竹刮板，照料这一匾蚕',care,'silk-care');paragraph('吐丝前照料一次即可；错过仍会收得普通生丝。');}else paragraph(p.worms.tended?'匾底清爽，窗边透进微凉。让它们安静吐丝吧。':z.wormAge>=300?'母亲：「已经上簇，便不必再惊动。收下来照样能缫丝。」':'桑叶已备足，不必反复投喂。吐丝前再来清匾支窗。');}
- if(selected===2){if(!p.fish.stocked)pick('鱼苗',2,'silkStockFish');else if(p.fish.fedAt===null){action('投一份鱼食','silkFeedFish',{food:'feed'},undefined,N.available(s,'fishFeed')>=1,'鱼食不足，可用桑叶投喂。');action('投桑叶 ×2','silkFeedFish',{food:'leaves'},undefined,N.available(s,'mulberryLeaf')>=2,'先去桑畦采两份桑叶。');}else if(z.fishReady)action('收塘鱼 ×3 · 留回鱼苗 ×1','silkHarvestFish');else paragraph('鱼群已吃过一餐，会慢慢长大；不必反复投喂。');}
+ if(selected===0){
+   if(!p.mulberry.planted)pick('桑苗',0,'silkPlant');
+   else if(!p.mulberry.watered){action('提桶浇透桑苗 · 桶内水 ×1','silkWater',{},undefined,s.bucketWater>0,'水桶空了，请先到水缸取水。');if(!s.bucketWater)nav('去水缸装水','yard','waterJar');}
+   else if(z.mulberryReady)action(L('采下六份桑叶，留树再长','Pick Six Leaves and Leave the Tree Growing'),'silkLeaves');
+   else if(!p.mulberry.fertilized&&s.bag.pondMud)action(L('敷塘泥 · 本轮快一小时','Dress with Pond Mud · One Hour Earlier'),'silkFertilize');
+   if(s.bag.wetLeaf){action(L('摊开湿叶 · 一刻钟','Air Wet Leaves · 15 Minutes'),'silkDryLeaves');action(L('用一份柴温叶 · 五分钟','Dry with One Wood · 5 Minutes'),'silkDryLeaves',{heat:true});}
+ }
+ if(selected===1){
+   if(z.wormAge===null){
+     paragraph(L('安蚕用一份蚕种、三份桑叶。干叶足可得两束，湿叶只够一束。','Use one egg lot and three leaves. Dry leaves yield two skeins. Wet leaves yield one.'));
+     if((s.bag.silkwormEgg||0)>0&&(s.bag.mulberryLeaf||0)+(s.bag.wetLeaf||0)>=3)pick('蚕种与桑叶',1,'silkStart');
+     else paragraph(L('种苗可向村里的乡邻补给摊买，桑叶到池边采。','Buy eggs at the village pantry and pick leaves here.'));
+   }else if(z.wormReady){
+     if(!p.worms.newLot)action(L('收起先前养好的这一匾','Gather the Batch You Started Earlier'),'silkHarvest');
+     else{button(L('温茧拾绪 · 全部缫丝','Warm the Cocoons · Reel the Whole Batch'),()=>reel(false),'silk-reel-all');
+       if(p.worms.yield>1)button(L('留一份种茧，再温茧拾绪','Keep Seed Cocoons and Reel the Rest'),()=>reel(true),'silk-reel-keep',true);}
+   }else if(z.careOpen){
+     paragraph(L('母亲：「快上簇了。拿竹刮轻清匾底，把窗支开一道缝，莫让风直吹。」','Mother says, “They will spin soon. Clean the tray gently and crack the window, out of the draught.”'));
+     action(L('清匾支窗 · 照料这一次','Clean the Tray and Open the Shutter'),'silkCare');
+   }else paragraph(p.worms.tended?'匾底清爽，窗边透进微凉。让它们安静吐丝吧。':'桑叶已备足，不必反复投喂。吐丝前再来清匾支窗。');
+ }
+ if(selected===2){
+   if(!p.fish.stocked)pick('鱼苗',2,'silkStockFish');
+   else{
+     if(weather==='rain'&&p.fish.start!=null&&!p.fish.protected&&!z.rainLoss&&!z.fishReady&&N.clock(s).minute+20<=720)action(L('扎篱通水 · 竹材一根','Secure the Fence with One Bamboo'),'silkGuard');
+     if(p.fish.fedAt===null){
+       action(L('把一份蚕沙撒入塘中','Scatter One Share of Silkworm Litter'),'silkFeedFish',{food:'litter'},undefined,(s.bag.silkwormCompost||0)>0,L('可在清蚕匾或收茧时取得蚕沙。','Collect litter when cleaning the tray or gathering cocoons.'));
+       action('投一份鱼食','silkFeedFish',{food:'feed'},undefined,N.available(s,'fishFeed')>=1,'鱼食不足，可用桑叶投喂。');
+       action('投桑叶 ×2','silkFeedFish',{food:'leaves'},undefined,(s.bag.mulberryLeaf||0)+(s.bag.wetLeaf||0)>=2,'先去桑畦采两份桑叶。');
+     }else if(z.fishReady){
+       action(L('起鱼取泥 · 全收','Lift the Fish and Gather Pond Mud'),'silkHarvestFish');
+       if(p.fish.start!=null)action(L('少收一尾，留苗取泥','Keep One Fry and Gather Pond Mud'),'silkHarvestFish',{keep:true});
+     }else paragraph(z.rainLoss?L('水已漫过岸，鱼慢长两小时，仍可收两尾。','The flood reached the bank. Two fish will be ready two hours later.'):'鱼群已吃过一餐，会慢慢长大；不必反复投喂。');
+   }
+ }
  if((p.mulberry.watered&&!z.mulberryReady)||(z.wormAge!==null&&!z.wormReady)||(p.fish.fedAt!==null&&!z.fishReady))action(z.careOpen?'这次不照料，守候它自然结茧':'在池边守候至下一生长阶段','silkWait',{skipCare:z.careOpen},undefined,N.clock(s).minute<1320,'夜已深，回东厢房睡一夜可继续推进生长。');
  if(N.clock(s).minute>=1320)nav('回卧房睡一夜','bed','bedRest');
  button('查看生产成果与新衣进度',progress,'silk-progress',true);button('收好农具，返回庭院',()=>{pending=null;closeDialog();},'silk-resume',true);
+}
+function reel(keep){
+ const L=(zh,en)=>window.NanlanI18n?.language==='en'?en:zh;
+ const s=state(),w=s.production.worms;
+ activity(L('廊下 · 温茧抽丝','Under the Eaves · Reel the Silk'),w.tended?L('拾起丝头。丝圈亮起时点木轮或按空格；也可慢慢缫完，收日用丝。','Pick up the thread. Tap the reel or press Space when the loop shines. A slow reel always gives plain silk.'):L('这一匾已自然成茧。慢慢抽丝，也能收得日用丝。','This tray spun on its own. Reel it slowly for plain silk.'),'silk-reel');
+ paragraph(L('枯枝一份 · 十分钟 · 两点体力','One wood · 10 minutes · Two stamina'));
+ const revision=s.revision;
+ if(!(s.bag.wood>=1&&s.stamina>=2&&N.clock(s).minute+10<=1320)){paragraph(L('先备柴、歇脚，或明早带够工时再来。茧会留在匾上。','Bring fuel and leave time and strength for the work. The cocoons will wait.'));button('回池边',()=>show(1),'reel-back');return;}
+ let elapsed=0,last=null,raf=0,started=false,finished=false,held=false;const hits=new Set(),beats=[2000,4000,6000];
+ const box=document.createElement('div');box.className='silk-reel-board';box.innerHTML=art(1,3);
+ const wheel=document.createElement('button');wheel.type='button';wheel.textContent=L('木轮 · 拾绪','Reel · Pick up the Thread');
+ const bar=document.createElement('progress');bar.max=8000;bar.value=0;
+ const echo=document.createElement('span');echo.setAttribute('role','status');box.append(wheel,bar,echo);$('panelExtra').append(box);
+ const alive=()=>box.isConnected&&!$('dialog').hidden&&dialogKind==='silk-reel';
+ const target=()=>beats.findIndex((ms,i)=>!hits.has(i)&&Math.abs(elapsed-ms)<=450);
+ function stop(){cancelAnimationFrame(raf);window.removeEventListener('keydown',key,true);window.removeEventListener('keyup',release,true);document.removeEventListener('visibilitychange',pause);}
+ async function finish(score){if(finished||!alive())return;finished=true;stop();wheel.disabled=true;bar.value=8000;const result=await perform('silkHarvest',{sequence:revision,keep,hits:score},()=>show(1));if(!result.ok&&alive()){show(1);paragraph(result.message);}}
+ function frame(t){if(!alive()){stop();return;}if(!document.hidden&&last!==null)elapsed+=Math.max(0,t-last);last=document.hidden?null:t;bar.value=elapsed;wheel.classList.toggle('thread-loose',target()>=0);if(elapsed>=8000){finish(hits.size);return;}raf=requestAnimationFrame(frame);}
+ function tap(){if(!alive()||finished)return;if(!started){started=true;wheel.textContent=L('引丝 · 空格或轻点','Draw the Thread · Space or Tap');raf=requestAnimationFrame(frame);return;}const i=target();if(i>=0){hits.add(i);wheel.classList.remove('thread-loose');echo.textContent=L('丝路已理顺','Thread caught')+' · '+hits.size+'/3';window.NanlanAudio?.play('click');}}
+ function key(e){if(!alive()){stop();return;}if(e.code==='Space'&&(e.target===wheel||e.target===$('skip')||e.target===document.body)){e.preventDefault();e.stopImmediatePropagation();if(!e.repeat&&!held){held=true;tap();}}}
+ function release(e){if(e.code==='Space')held=false;}
+ function pause(){last=null;held=false;}
+ box.addEventListener('reelresume',()=>{if(finished)return;last=null;cancelAnimationFrame(raf);if(started)raf=requestAnimationFrame(frame);if(w.tended){window.addEventListener('keydown',key,true);window.addEventListener('keyup',release,true);document.addEventListener('visibilitychange',pause);}});
+ if(w.tended){wheel.onclick=tap;wheel.focus();window.addEventListener('keydown',key,true);window.addEventListener('keyup',release,true);document.addEventListener('visibilitychange',pause);}else wheel.hidden=true;
+ button(L('慢慢缫完 · 收日用丝','Reel Slowly for Plain Silk'),()=>finish(0),'reel-slow',true);
+ button('回池边',()=>{stop();show(1);},'reel-back',true);
 }
 function care(){const p=state().production,z=M.status(state());activity('廊下蚕匾 · 吐丝前的一次照料','母亲：「蚕儿快上簇了。把匾底的蚕沙轻轻清净，再将窗扇支开一道缝，散散闷气，别让风直吹着它们。」','silk-care');
  if(!z.careOpen){paragraph(p.worms.tended?'这次照料已经完成，不必再惊动。':'时机已过也不妨事，蚕茧仍会照常成熟。');button('回池边',()=>show(1),'silk-care-back');return;}
@@ -34,7 +96,7 @@ function care(){const p=state().production,z=M.status(state());activity('廊下�
  else{paragraph('蚕沙已清好，收作堆肥。再支开窗扇，让屋里透一口气。');action('支开一道窗缝 · 完成照料','silkVent',{},()=>{show(1);paragraph('母亲点点头，示意你放轻脚步，让蚕儿安静吐丝。');});}
  button('先回池边',()=>show(1),'silk-care-back',true);
 }
-function progress(){dialogObject=null;activity('桑叶成丝 · 家中有新衣','桑叶养蚕，余叶喂鱼，清出的蚕沙堆肥再回桑畦。生丝与塘鱼都可带到南街出售。','production-progress');const s=state(),p=s.production;const goods=document.createElement('div');goods.className='production-goods';for(const id of ['mulberryLeaf','rawSilk','fineSilk','pondFish']){const item=document.createElement('div');item.innerHTML=itemArt(id);const t=document.createElement('small');t.textContent=N.itemNames[id]+' ×'+N.quantity(s,id);item.append(t);goods.append(item);}$('panelExtra').append(goods);
+function progress(){dialogObject=null;activity('桑叶成丝 · 家中有新衣','桑叶养蚕，蚕沙喂鱼，塘泥敷桑。生丝与塘鱼都可带到南街出售。','production-progress');const s=state(),p=s.production;const goods=document.createElement('div');goods.className='production-goods';for(const id of ['mulberryLeaf','rawSilk','fineSilk','pondFish']){const item=document.createElement('div');item.innerHTML=itemArt(id);const t=document.createElement('small');t.textContent=N.itemNames[id]+' ×'+N.quantity(s,id);item.append(t);goods.append(item);}$('panelExtra').append(goods);
  if(!p.kit)nav('去池边领取初养物资','yard','silkPond');else nav('回池边种桑、养蚕、喂鱼','yard','silkPond');
  if(!p.botanical){paragraph('祖父近来记了几页岭南草木，可去书案看一看，借作母亲的绣样。');nav('到书房看草木底稿','study','books');}
  if(p.clothesStartedAt===null){paragraph('全家新衣需要特级生丝 ×2、祖父的草木底稿。交料前会再次确认；不自动扣除行囊里的生丝。');const shop=N.story2.familyAtShop(s,'mother');nav('去找母亲商量新衣',shop?'generalStore':'hall',shop?'v2MotherCounter':'motherHall');}else if(s.actorState.outfit!=='nanlanSilk')paragraph('母亲正在裁绣。第 '+(Math.floor(p.clothesReadyAt/1440)+1)+' 日清晨，新衣就能穿上。');else button('回看清晨的新衣',morning,'silk-memory',true);

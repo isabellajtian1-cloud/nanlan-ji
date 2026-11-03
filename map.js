@@ -130,8 +130,8 @@ function drawPlaceLists(){
       const known=mapKnown(id),b=document.createElement('button');b.className='directory-scene';b.textContent=known?world[id].name+' · '+(mapAccess(id)?'尚未走通':'已经认得'):'未题名 · 等待探索';
       b.onclick=()=>{inspectMapPlace(id);centerMap(id);};box.append(b);
       if(!known)continue;
-      const details=document.createElement('details'),summary=document.createElement('summary');summary.textContent='展开 '+world[id].objects.length+' 处人物、设施与采集点';details.append(summary);
-      for(const o of world[id].objects){const local=document.createElement('button');local.textContent=o.label;local.onclick=()=>{inspectMapPlace(id,o.id);centerMap(id);$('mapInspector').scrollIntoView({block:'nearest',behavior:'smooth'});};details.append(local);}
+      const entries=world[id].objects.filter(o=>!o.id.startsWith('neighbor-')||visibleObjects(id,true).some(v=>v.id===o.id));const details=document.createElement('details'),summary=document.createElement('summary');summary.textContent='展开 '+entries.length+' 处人物、设施与采集点';details.append(summary);
+      for(const o of entries){const local=document.createElement('button');local.textContent=o.label;local.onclick=()=>{inspectMapPlace(id,o.id);centerMap(id);$('mapInspector').scrollIntoView({block:'nearest',behavior:'smooth'});};details.append(local);}
       box.append(details);
     }
     if(title==='宅院与房间'){const p=document.createElement('p');p.textContent='池塘：第一卷固定淤塞背景，无互动。灶边与药圃是庭院内设施。';box.append(p);}

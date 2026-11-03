@@ -36,7 +36,7 @@
   const validCount=n=>Number.isInteger(n)&&n>=0&&n<1000000;
   const record=o=>o&&typeof o==='object'&&!Array.isArray(o);
   function emptyShop(){return {stock:{},cost:{},featured:'bambooWare',revenue:0,sold:0,customerDay:0,served:0,tiers:{},holds:{},reserved:{}};}
-  function emptyStory(){return {version:1,reserve:0,site:null,contract:null,cargo:{},shipment:null,shipments:[],days:{},closings:[],orders:{},capital:0,observations:[],legacy:null};}
+  function emptyStory(){return {version:1,reserve:0,site:null,contract:null,cargo:{},cargoCosts:{},shipment:null,shipments:[],days:{},closings:[],orders:{},capital:0,observations:[],legacy:null};}
   function baseCost(item){const r=h.recipes[item];return r?.cost?Object.entries(r.cost).reduce((n,[k,q])=>n+(h.prices[k]||1)*q,0):(h.prices[item]||1);}
   function basePrice(s,item){return h.prices[item]+(products.includes(item)?4:1)+(s.flags.v2MotherPlan&&s.shop.featured===item?2:0);}
   function price(s,item){return Math.max(baseCost(item),basePrice(s,item)+([-2,0,3][s.shop?.tiers?.[item]??1]));}
@@ -67,33 +67,70 @@
     for(const k of Object.keys(h.prices)){need((shop.tiers[k]??1)<=2,'售价档位无效。');need((shop.holds[k]||0)+(shop.reserved[k]||0)<=(shop.stock[k]||0),'铺内预留超出实货。');}
     const t=s.story2;
     need(Number.isFinite(t.reserve)&&t.reserve>=0&&Number.isFinite(t.capital)&&t.capital>=0,'第二卷预算无效。');
-    validateMap(t.cargo,Object.keys(h.prices));need(record(t.days)&&record(t.orders)&&Array.isArray(t.closings)&&Array.isArray(t.shipments)&&Array.isArray(t.observations),'第二卷账册无效。');
+    t.cargoCosts??={};validateMap(t.cargoCosts,Object.keys(h.prices),false);validateMap(t.cargo,Object.keys(h.prices));need(record(t.days)&&record(t.orders)&&Array.isArray(t.closings)&&Array.isArray(t.shipments)&&Array.isArray(t.observations),'第二卷账册无效。');
     need(t.site===null||Object.hasOwn(shops,t.site),'铺面选择无效。');
     if(t.contract)need(record(t.contract)&&Number.isFinite(t.contract.rent)&&t.contract.rent>=0&&Number.isFinite(t.contract.deposit)&&t.contract.deposit>=0&&Number.isFinite(t.contract.dailyRent)&&t.contract.dailyRent>=0&&['self','owner'].includes(t.contract.repair),'租约无效。');
-    if(t.shipment){need(record(t.shipment)&&Number.isFinite(t.shipment.eta)&&Number.isFinite(t.shipment.fee)&&t.shipment.fee>=0,'转运凭单无效。');validateMap(t.shipment.items,Object.keys(h.prices));}
+    if(t.shipment){need(record(t.shipment)&&Number.isFinite(t.shipment.eta)&&Number.isFinite(t.shipment.fee)&&t.shipment.fee>=0,'转运凭单无效。');validateMap(t.shipment.items,Object.keys(h.prices));if(t.shipment.costs)validateMap(t.shipment.costs,Object.keys(h.prices),false);}
     for(const d of Object.values(t.days)){need(record(d)&&validCount(d.day)&&Number.isFinite(d.sales)&&d.sales>=0&&Number.isFinite(d.cost)&&d.cost>=0&&validCount(d.quantity)&&Number.isFinite(d.expenses)&&d.expenses>=0&&Number.isFinite(d.cashAtOpen)&&typeof d.closed==='boolean','营业日记录无效。');d.rentAtOpen??=t.contract?.dailyRent||0;d.wearAtOpen??=t.capital/30;need(Number.isFinite(d.rentAtOpen)&&d.rentAtOpen>=0&&Number.isFinite(d.wearAtOpen)&&d.wearAtOpen>=0,'营业日分摊记录无效。');}
     need(t.closings.every(n=>validCount(n)&&t.days[n]?.closed)&&new Set(t.closings).size===t.closings.length,'闭店记录无效。');
     for(const o of Object.values(t.orders)){need(record(o)&&Object.hasOwn(h.prices,o.item)&&validCount(o.quantity)&&o.quantity>0&&validCount(o.delivered)&&o.delivered<=o.quantity&&Number.isFinite(o.unitPrice)&&o.unitPrice>=0&&Number.isFinite(o.deposit)&&o.deposit>=0&&o.deposit<=o.quantity*o.unitPrice,'订单记录无效。');}
+    const sample=t.orders.silkSample;
+    if(sample)need(sample.item==='fineSilk'&&[2,3].includes(sample.quantity)&&validCount(sample.held)&&sample.held<=sample.quantity&&!((shop.reserved.fineSilk||0)<sample.held)&&validCount(sample.expires),'订单记录无效。');
     for(const key of ['revenue','sold','customerDay','served'])need(validCount(shop[key]),'铺面账目无效。');
     need(shop.served<=6&&products.includes(shop.featured),'铺面陈列无效。');
     return s;
   }
-  function reconcile(s){if(!s.flags.volume2Started)return;s.flags.v2ThreeDays=s.story2.closings.length>=3;}
-  function leaseQuote(s,choice){const a=shops[s.story2.site||'east'];need(['self','owner','trial'].includes(choice),'请选择完整租约。');const rent=choice==='owner'?a.rent+12:choice==='trial'?a.rent-5:a.rent,period=choice==='trial'?14:30;return {name:a.name+' · '+({self:'自修低租',owner:'房东修补',trial:'短期试租'}[choice]),rent,deposit:a.deposit,period,dailyRent:rent/period,repair:choice==='owner'?'owner':'self',total:rent+a.deposit};}
+  function reconcile(s){if(!s.flags.volume2Started)return;expireSample(s);s.flags.v2ThreeDays=s.story2.closings.length>=3;}
+  function leaseQuote(s,choice){const a=shops[s.story2.site||'east'];need(['self','owner','trial'].includes(choice),'请选择完整租约。');const rent=choice==='owner'?a.rent+12:choice==='trial'?a.rent-5:a.rent,period=choice==='trial'?14:30,deposit=s.story2.site==='east'&&h.rural.rank(s)===2?0:a.deposit;return {name:a.name+' · '+({self:'自修低租',owner:'房东修补',trial:'短期试租'}[choice]),rent,deposit,period,dailyRent:rent/period,repair:choice==='owner'?'owner':'self',total:rent+deposit};}
   function advance(s,tick){s.worldTick=Math.max(s.worldTick,tick);if(clock(s).minute>1320)s.worldTick=Math.floor(s.worldTick/1440+1)*1440+360;}
   function addStock(s,item,q,cost){const n=s.shop.stock[item]||0;s.shop.cost[item]=(n*(s.shop.cost[item]??baseCost(item))+q*cost)/(n+q);s.shop.stock[item]=n+q;}
   function sale(s,item,q,unit,kind,reserved=false){
     need(reserved?(s.shop.reserved[item]||0)>=q:stockAvailable(s,item)>=q,'可售实货不足；请补货或查看预留。');const d=day(s);need(!d.closed,'今日已闭店，请回卧房睡一夜，明日再营业。');
+    if(item==='rawSilk'&&kind==='shopSale')d.rawSilkSold=(d.rawSilkSold||0)+q;
     const total=unit*q,cost=(s.shop.cost[item]??baseCost(item))*q;s.shop.stock[item]-=q;if(reserved)s.shop.reserved[item]-=q;
     d.sales=round(d.sales+total);d.cost=round(d.cost+cost);d.quantity+=q;s.shop.revenue+=total;s.shop.sold+=q;s.coins+=total;log(s,kind,total,'南街 '+h.itemNames[item]+' ×'+q+'（单价 '+unit+' 文）',item);give(s,{receipt:1});s.flags.v2FirstSale=true;
   }
   function closeDay(s,requestedDay=clock(s).day){need(Number.isInteger(requestedDay)&&requestedDay>0&&requestedDay<=clock(s).day,'请选择已经发生的营业日。');const d=s.story2.days[String(requestedDay)];need(d&&d.quantity>0,'该日需有真实交付后才能盘点。');need(!d.closed,'这一营业日已经结算。');const result=summary(s,requestedDay);d.rent=result.rent;d.wear=result.wear;d.profit=result.profit;d.closed=true;s.story2.closings.push(d.day);s.flags.v2FirstCounted=true;log(s,'shopClose',0,'第'+d.day+'日闭账：收入'+d.sales+'，商品成本'+round(d.cost)+'，费用分摊'+round(d.rent+d.wear+d.expenses)+'，经营结果'+d.profit+'文；预付租金不重复扣款');if(requestedDay===clock(s).day)advance(s,(clock(s).day-1)*1440+1080);}
   function familyAtShop(s,person){return !!(s.flags.v2RosterPlanned&&s.choices.shopRoster===(person==='mother'?'motherStore':'playerStore')&&clock(s).minute>=540&&clock(s).minute<1080&&!s.story2.days[String(clock(s).day)]?.closed);}
+  const farmGoods=['rawSilk','fineSilk','pondFish'];
+  function blend(costs,id,old,q,unit){if(farmGoods.includes(id))costs[id]=(old*(costs[id]??baseCost(id))+q*unit)/(old+q);}
+  function expireSample(s){
+    const t=s.story2,o=t.orders.silkSample;
+    if(o&&!o.delivered&&clock(s).day>=o.expires){
+      s.shop.reserved.fineSilk=(s.shop.reserved.fineSilk||0)-(o.held||0);delete t.orders.silkSample;
+    }
+  }
+  function cabinetPlan(s){const days=Object.values(s.story2.days).filter(d=>d.rawSilkSold);return !!s.story2.sampleFulfilled&&days.length>=2&&days.reduce((total,d)=>total+d.rawSilkSold,0)>=4;}
   function act(s,name,p){
     const f=s.flags,t=s.story2,shop=s.shop;
     const fresh=()=>need(p.sequence===s.revision,'这份记录已更新，请重新查看后确认。');
     if(name==='v2Start'){at(s,'hall');need(h.done(s,'M20'),'请先完成 M20 岁末家宴。');return once(s,'v2Start',()=>{f.volume2Started=true;f.volume2Complete=false;f.v2Entry=true;order.forEach(id=>s.quests[id]={status:id===order[0]?'ACTIVE':'LOCKED'});s.journal.push({id:'卷二',text:'母亲拿出铺讯：“先看看，什么人会来买。”'});});}
     need(f.volume2Started,'先完成第一卷，再到正厅开启第二卷。');
+    expireSample(s);
+    if(['v2SampleAccept','v2SampleReserve','v2SampleDeliver','v2SilkCabinet'].includes(name)){
+      at(s,'generalStore');fresh();need(f.v2Opened,'铺面开张后再来接样单。');
+      const today=clock(s).day;
+      if(name==='v2SilkCabinet'){
+        need(!t.silkCabinet&&cabinetPlan(s),'再过两日看看售丝记录和交过的样单。');
+        need(s.coins-8>=t.reserve,'请留足家用。');spend(s,{wood:2,bamboo:2});s.coins-=8;
+        t.capital+=8+2*baseCost('wood')+2*baseCost('bamboo');log(s,'cabinet',-8,'制防潮丝样柜');t.silkCabinet=true;return;
+      }
+      if(name==='v2SampleAccept'){
+        need(!t.lastSampleDay||today>=t.lastSampleDay+3,'行商过几日才再取样。');
+        need(!t.orders.silkSample||t.orders.silkSample.delivered,'先了结手中这张样单。');
+        need(p.quantity===2||p.quantity===3&&t.silkCabinet,'请按柜上可陈列的数量接单。');
+        t.orders.silkSample={item:'fineSilk',quantity:p.quantity,delivered:0,unitPrice:28,deposit:0,expires:today+3,held:0};t.lastSampleDay=today;
+      }
+      const o=t.orders.silkSample;need(o&&!o.delivered,'没有待交的匀丝样单。');
+      const n=Math.min(o.quantity-o.held,stockAvailable(s,'fineSilk'));
+      if(name==='v2SampleReserve')need(n>0,'还没有可追加预留的特级丝。');
+      o.held+=n;shop.reserved.fineSilk=(shop.reserved.fineSilk||0)+n;
+      if(name==='v2SampleDeliver'){
+        need(o.held===o.quantity,'先把约好的特级丝运到柜上。');sale(s,o.item,o.quantity,o.unitPrice,'silkSample',true);
+        o.held=0;o.delivered=o.quantity;t.sampleFulfilled=true;
+      }
+      return;
+    }
     if(name==='v2ReadNotice'){quest(s,'V2_01');at(s,'hall');f.v2Entry=true;return;}
     if(name==='v2Reserve'){at(s,'hall');need(['cautious','flexible'].includes(p.choice),'请选择家计安排。');t.reserve=p.choice==='cautious'?Math.floor(s.coins*.25):0;f.v2ReserveSet=true;s.choices.shopReserve=p.choice;return;}
     if(name==='v2Observe'){quest(s,'V2_02');at(s,'county');const a=slots[p.slot];need(a,'请选择实际观察时段。');return once(s,a.flag,()=>{let tick=(clock(s).day-1)*1440+a.minute;if(tick<s.worldTick)tick+=1440;advance(s,tick);t.observations.push({slot:p.slot,tick:s.worldTick,text:a.text});f[a.flag]=true;});}
@@ -105,10 +142,10 @@
     if(name==='v2Repair'){quest(s,'V2_06');at(s,'generalStore');if(f.v2Repaired)return false;need(f.v2LeaseSigned,'先签租约。');return once(s,'story2Repair',()=>{if(t.contract.repair==='self'){const cost=shops[t.site].repair;spend(s,cost);t.capital+=Object.entries(cost).reduce((n,[id,q])=>n+baseCost(id)*q,0);}f.v2Repaired=true;});}
     if(name==='v2Decorate'){quest(s,'V2_06');at(s,'generalStore');need(f.v2Repaired,'先检修柜架。');need(['practical','herbal'].includes(p.style),'请选择布局。');s.choices.shopStyle=p.style;f.v2Decorated=true;return;}
     if(name==='v2Sign'){quest(s,'V2_06');at(s,'generalStore');if(f.v2Sign)return false;need(f.v2Decorated,'先试走通道并确定布局。');need(s.production?.shopName,'请先回书房，在祖父书案前选定字号。');return once(s,'story2Sign',()=>{spend(s,{wood:1,rope:1});t.capital+=baseCost('wood')+baseCost('rope');f.v2Sign=true;});}
-    if(name==='v2Pack'||name==='v2Unpack'){at(s,'store');need(f.v2Sign,'先把铺面收拾好。');fresh();need(Object.hasOwn(h.prices,p.item),'这件物品不能装货。');need(!t.shipment,'已有一批货在途，先到店验收。');const q=p.quantity??1;need(Number.isInteger(q)&&q>0&&q<=20,'装货数量无效。');if(name==='v2Pack'){spend(s,{[p.item]:q});t.cargo[p.item]=(t.cargo[p.item]||0)+q;}else{need((t.cargo[p.item]||0)>=q,'箱中没有这些货。');t.cargo[p.item]-=q;give(s,{[p.item]:q});}f.v2PackingDone=Object.values(t.cargo).reduce((n,q)=>n+q,0)>=2||f.v2ShipmentReceived;return;}
-    if(name==='v2Ship'){at(s,'store');fresh();need(!t.shipment,'前批货还在路上。');need(['shared','regular'].includes(p.method),'请选择承运方式。');const count=Object.values(t.cargo).reduce((n,q)=>n+q,0),space=Object.entries(t.cargo).reduce((n,[id,q])=>n+q*(id==='narrowBasket'?2:1),0),capacity=p.method==='shared'?8:20,fee=p.method==='shared'?8:12;need(count>=(f.v2ShipmentReceived?1:2),f.v2ShipmentReceived?'先装入一件真实补货。':'首批先实际装入至少两件可售货。');need(space<=capacity,'这班车可装 '+capacity+' 格，当前 '+space+' 格；可卸回一部分或改选班次。');need(s.coins-fee>=t.reserve,'运费 '+fee+' 文，家用保留 '+t.reserve+' 文；可调整批量、先出售余货或回家调整预算。');s.coins-=fee;log(s,'freight',-fee,'村中发往南街的'+(p.method==='shared'?'拼车':'定班')+'转运');t.shipment={items:copy(t.cargo),fee,eta:s.worldTick+(p.method==='shared'?90:45),id:'S'+(t.shipments.length+1)};t.cargo={};f.v2ShipmentSent=true;return;}
-    if(name==='v2Receive'){at(s,'generalStore');fresh();need(t.shipment,'没有等待验收的转运。');advance(s,t.shipment.eta);const shipment=t.shipment,n=Object.values(shipment.items).reduce((a,b)=>a+b,0);for(const [id,q]of Object.entries(shipment.items))if(q)addStock(s,id,q,baseCost(id)+shipment.fee/n);t.shipments.push(shipment);t.shipment=null;f.v2ShipmentReceived=true;f.v2Stocked=true;log(s,'arrival',0,'已按转运凭单签收，货物从在途转入店内');return;}
-    if(name==='v2Withdraw'){at(s,'generalStore');fresh();need(stockAvailable(s,p.item)>0,'这件实货已售或已预留。');shop.stock[p.item]--;give(s,{[p.item]:1});return;}
+    if(name==='v2Pack'||name==='v2Unpack'){at(s,'store');need(f.v2Sign,'先把铺面收拾好。');fresh();need(Object.hasOwn(h.prices,p.item),'这件物品不能装货。');need(!t.shipment,'已有一批货在途，先到店验收。');const q=p.quantity??1;need(Number.isInteger(q)&&q>0&&q<=20,'装货数量无效。');if(name==='v2Pack'){blend(t.cargoCosts,p.item,t.cargo[p.item]||0,q,s.production.costs[p.item]??baseCost(p.item));spend(s,{[p.item]:q});t.cargo[p.item]=(t.cargo[p.item]||0)+q;}else{need((t.cargo[p.item]||0)>=q,'箱中没有这些货。');blend(s.production.costs,p.item,s.bag[p.item]||0,q,t.cargoCosts[p.item]??baseCost(p.item));t.cargo[p.item]-=q;give(s,{[p.item]:q});}f.v2PackingDone=Object.values(t.cargo).reduce((n,q)=>n+q,0)>=2||f.v2ShipmentReceived;return;}
+    if(name==='v2Ship'){at(s,'store');fresh();need(!t.shipment,'前批货还在路上。');need(['shared','regular'].includes(p.method),'请选择承运方式。');const count=Object.values(t.cargo).reduce((n,q)=>n+q,0),space=Object.entries(t.cargo).reduce((n,[id,q])=>n+q*(id==='narrowBasket'?2:1),0),capacity=p.method==='shared'?8:20,fee=p.method==='shared'?8:12;need(count>=(f.v2ShipmentReceived?1:2),f.v2ShipmentReceived?'先装入一件真实补货。':'首批先实际装入至少两件可售货。');need(space<=capacity,'这班车可装 '+capacity+' 格，当前 '+space+' 格；可卸回一部分或改选班次。');need(s.coins-fee>=t.reserve,'运费 '+fee+' 文，家用保留 '+t.reserve+' 文；可调整批量、先出售余货或回家调整预算。');s.coins-=fee;log(s,'freight',-fee,'村中发往南街的'+(p.method==='shared'?'拼车':'定班')+'转运');t.shipment={items:copy(t.cargo),costs:copy(t.cargoCosts),fee,eta:s.worldTick+(p.method==='shared'?90:45),id:'S'+(t.shipments.length+1)};t.cargo={};t.cargoCosts={};f.v2ShipmentSent=true;return;}
+    if(name==='v2Receive'){at(s,'generalStore');fresh();need(t.shipment,'没有等待验收的转运。');advance(s,t.shipment.eta);const shipment=t.shipment,n=Object.values(shipment.items).reduce((a,b)=>a+b,0);for(const [id,q]of Object.entries(shipment.items))if(q)addStock(s,id,q,(shipment.costs?.[id]??baseCost(id))+shipment.fee/n);t.shipments.push(shipment);t.shipment=null;f.v2ShipmentReceived=true;f.v2Stocked=true;log(s,'arrival',0,'已按转运凭单签收，货物从在途转入店内');return;}
+    if(name==='v2Withdraw'){at(s,'generalStore');fresh();need(stockAvailable(s,p.item)>0,'这件实货已售或已预留。');blend(s.production.costs,p.item,s.bag[p.item]||0,1,shop.cost[p.item]??baseCost(p.item));shop.stock[p.item]--;give(s,{[p.item]:1});return;}
     if(name==='v2Display'){quest(s,'V2_08');at(s,'generalStore');need(['small','signature','use'].includes(p.style),'请选择陈列方式。');s.choices.shopDisplay=p.style;f.v2DisplayChosen=true;return;}
     if(name==='v2Hold'){at(s,'generalStore');need(f.v2Sign,'先完成铺内修整。');fresh();need(Object.hasOwn(h.prices,p.item),'请选择店内商品。');const q=p.quantity??0;need(validCount(q)&&q<=(shop.stock[p.item]||0)-(shop.reserved[p.item]||0),'时段留货不能超过未承诺的实货。');shop.holds[p.item]=q;f.v2HoldChosen=true;return;}
     if(name==='v2NoHold'){at(s,'generalStore');need(f.v2Sign,'先完成铺内修整。');shop.holds={};f.v2HoldChosen=true;return;}
@@ -135,5 +172,5 @@
     if(name==='v2FamilyEnd'){quest(s,'V2_18');at(s,'hall');need(f.v2ThreeDays&&f.v2Cooperated,'先兑现邻铺协作，并完成三个不同营业日的闭账。');need(!Object.values(t.orders).some(o=>o.delivered<o.quantity),'还有已接受订单未交清；先按原报价交付，再结卷。');need(['steady','neighbors','travel'].includes(p.choice),'请选择下一步方向。');s.choices.nextSeason=p.choice;f.v2FamilyEnd=true;return;}
     need(false,'这项南街事务尚未开放。');
   }
-  return {order,titles,steps,rewards,products,shops,slots,emptyShop,emptyStory,normalise,reconcile,act,price,basePrice,baseCost,stockAvailable,customers,summary,leaseQuote,familyAtShop};
+  return {cabinetPlan,order,titles,steps,rewards,products,shops,slots,emptyShop,emptyStory,normalise,reconcile,act,price,basePrice,baseCost,stockAvailable,customers,summary,leaseQuote,familyAtShop};
 });

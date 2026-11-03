@@ -10,8 +10,8 @@ zhou:{wood:['夫子扫过货目，伸指点了点用途一栏，神情端正。'
 luo:{wood:['罗掌柜掂了掂货，收单前又确认了一遍规格。','「茶客日日要用，大小可别忽宽忽窄。下回照这件做，到日子送来便好。」'],stone:['罗掌柜收起凭单，顺手将一盏温茶推到你面前。','「坐会儿，茶还温着。往后缺了什么，我先托人来问；不急用的那几件，你凑一趟送来，省得来回奔波。」']},
 regular:{wood:['她对照凭单清点物件，又核过已付的定钱。','「这就齐了。单子我收着，下回有要添的，再来问。」'],stone:['她把凭单仔细折起，紧攥钱袋的手渐渐松了。','「这回约好的都齐了，我心里也踏实。下回有要添的，先来同你商量；做得慢些，提前说一声就好。」']}
 };
-const eligible=(name,p={})=>['v2Sell','v2DeliverBulk','v2DeliverRegular','v2DeliverBatch'].includes(name)||(name==='v2Bulk'&&p.choice!=='decline');
-function patron(s,name){if(['v2Bulk','v2DeliverBulk'].includes(name))return 'qiu';if(name==='v2DeliverRegular')return 'regular';if(name==='v2DeliverBatch')return s.story2.orders.batch?.item==='narrowBasket'?'xu':'zhou';return ['chen','luo','xu','zhou'][s.shop.served%4];}
+const eligible=(name,p={})=>['v2Sell','v2SampleDeliver','v2DeliverBulk','v2DeliverRegular','v2DeliverBatch'].includes(name)||(name==='v2Bulk'&&p.choice!=='decline');
+function patron(s,name){if(['v2Bulk','v2DeliverBulk','v2SampleDeliver'].includes(name))return 'qiu';if(name==='v2DeliverRegular')return 'regular';if(name==='v2DeliverBatch')return s.story2.orders.batch?.item==='narrowBasket'?'xu':'zhou';return ['chen','luo','xu','zhou'][s.shop.served%4];}
 function fresh(){return {wood:false,stone:false,woodRoute:false,stoneRoute:false,receipts:[]};}
 function normalise(s,need){if(s.seals===undefined)s.seals=fresh();const z=s.seals;need(z&&typeof z==='object'&&!Array.isArray(z),'印章资料无效。');for(const k of ['wood','stone','woodRoute','stoneRoute'])need(typeof z[k]==='boolean','印章资料无效。');need(!z.stone||z.wood,'石印资料缺少木印经历。');need(Array.isArray(z.receipts)&&z.receipts.length<=30,'凭单资料无效。');for(const r of z.receipts)need(r&&['wood','stone'].includes(r.seal)&&names[r.patron]&&typeof r.complete==='boolean'&&typeof r.item==='string'&&Number.isInteger(r.quantity)&&r.quantity>0&&Number.isFinite(r.paid)&&r.paid>=0&&Number.isFinite(r.tick)&&r.tick>=0,'凭单记录无效。');}
 function act(s,name,p,h){const {requireThat:need,requireScene:at,spend,give}=h;need(s.flags.volume2Started,'请先在正厅开启第二卷，再筹备铺号印章。');need(p.sequence===s.revision,'这份安排已更新，请重新打开后操作。');s.seals??=fresh();const z=s.seals;

@@ -7,7 +7,7 @@ function restore(){if(!bagSession)return false;const v=returnView;bagSession=fal
  $('dialog').hidden=true;$('worldMap').hidden=!v.map;$('gallery').hidden=!v.gallery;
  if(v.dialog){for(const p of v.parts){$(p.id).replaceChildren(...p.nodes);$(p.id).hidden=p.hidden;$(p.id).className=p.className;}dialogKind=v.kind;dialogObject=v.object;previousFocus=v.previous;$('next').hidden=v.next.hidden;$('next').textContent=v.next.text;$('next').onclick=v.next.onclick;$('dialog').hidden=false;$('dialog').scrollTop=v.scroll;}
  else{dialogKind=null;dialogObject=null;}
- active=started&&!v.dialog&&!v.map&&!v.gallery&&!transitioning&&!document.hidden;keys={};path=[];moving=false;window.NanlanAudio?.setDialogue(v.dialog&&!$('dialogPortraits').hidden);if(v.focus?.isConnected)v.focus.focus({preventScroll:true});return true;}
+ active=started&&!v.dialog&&!v.map&&!v.gallery&&!transitioning&&!document.hidden;keys={};path=[];moving=false;window.NanlanAudio?.setDialogue(v.dialog&&!$('dialogPortraits').hidden);if(v.kind==='silk-reel')v.parts.find(p=>p.id==='panelExtra')?.nodes.find(n=>n.classList?.contains('silk-reel-board'))?.dispatchEvent(new Event('reelresume'));if(v.focus?.isConnected)v.focus.focus({preventScroll:true});return true;}
 function toggleBag(){if(bagSession){restore();return;}if(!started||transitioning)return;
  if(document.querySelector('[data-busy="true"]'))return;
  showBag();}
@@ -22,7 +22,7 @@ window.NanlanDesktop={restore,discard(){bagSession=false;returnView=null;},toggl
 $('bagOpen').onclick=toggleBag;
 window.addEventListener('keydown',e=>{
  if(e.ctrlKey||e.metaKey||e.altKey||e.isComposing||e.target?.isContentEditable||['INPUT','TEXTAREA','SELECT'].includes(e.target?.tagName))return;
- const k=e.key.toLowerCase();const stop=()=>{e.preventDefault();e.stopImmediatePropagation();};
+ const k=e.key.toLowerCase();if(dialogKind==='silk-reel'&&k===' '&&e.target?.closest('.silk-reel-board'))return;const stop=()=>{e.preventDefault();e.stopImmediatePropagation();};
  if(!$('audioPanel').hidden)return;
  if(k==='b'&&started){stop();if(!e.repeat)toggleBag();return;}
  if(k==='escape'&&bagSession){stop();if(!e.repeat)restore();return;}

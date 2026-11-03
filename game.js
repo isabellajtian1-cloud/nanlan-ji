@@ -414,7 +414,7 @@ function showQuestCatalog(){
   const unknown=document.createElement('p');unknown.className='prerequisite-note';unknown.textContent='后面的页还是空白。继续生活、交谈与选择，它们才会有名字。';$('panelExtra').append(unknown);
 }
 function showJournal(){
-  activity('家中的回响',state().journal.length?state().journal.map(r=>(r.id||'小事')+' · '+r.text).join('\n\n'):'刚到南澜，新的故事还未写下。');
+  activity('家中的回响',state().journal.length?state().journal.map(r=>(r.id||'小事')+' · '+r.text).join('\n\n'):'刚到南澜，新的故事还未写下。');window.NanlanVillage?.journal();
 }
 function showTextMap(){
   const s=state();
@@ -430,8 +430,10 @@ function showTextMap(){
   button('查看所有场景原画',showGallery,'map-gallery',true);
 }
 function itemSource(id){
-  if(['mulberrySapling','silkwormEgg','fishFry','fishFeed'].includes(id))return '第二卷池边初养物资；收获时留回蚕种、鱼苗。';
+  if(['mulberrySapling','silkwormEgg','fishFry','fishFeed'].includes(id))return '初养物资可在乡邻余粮补购，也可在收获时选择留种留苗。';
   if(['mulberryLeaf','rawSilk','fineSilk','pondFish','silkwormCompost'].includes(id))return '后院桑基生产所得；生丝、桑叶与塘鱼可装车运往南街。';
+  if(id==='wetLeaf')return '回南天采下的桑叶，可在桑畦摊晾。';
+  if(id==='pondMud')return '起鱼时取得，敷回桑畦可促长叶。';
   if(id==='sealTimber')return '阿岑指路，在青岚山取下；交林师傅刻木印。';
   if(id==='sealPebble')return '沈晚渔指路，在海湾旧泊岸拾得；交林师傅磨石印。';
   const m={rice:'村中乡邻余粮可补购',ingredient:'村中乡邻补给，或用自种菜蔬代替',seed:'采收返还一份；村中也可补购',
@@ -449,6 +451,7 @@ const inventorySheets=[
   {file:'inventory-crafts-v392.png',rows:[0,425,800,1254],items:['driedHerb','bambooWare','shellCraft','rope','ledgerOriginal','ledgerCopy','receipt','reply','narrowBasket']}
 ];
 function inventoryArt(id){
+  if(id==='pondMud'||id==='wetLeaf')return window.NanlanProduction?.itemArt(id==='pondMud'?'silkwormCompost':'mulberryLeaf')||'';
   if(window.NanlanProductionModel?.itemIds.includes(id))return window.NanlanProduction?.itemArt(id)||'';
   if(['sealTimber','sealPebble'].includes(id))return window.NanlanSeals?.art(id,'inventory-art')||'';
   if(resourceTypes.includes(id))return resourceArt(id);
@@ -497,6 +500,7 @@ function showAccounts(){
 function showPantry(){
   const fresh=$('dialog').hidden,s=state();if(fresh)for(const item of Object.keys(pantryDraft))pantryDraft[item]=0;
   activity('乡邻余粮 · 补给','挑选实际需要的物资，可以混合选择并自行填写数量。确认前只计算合计，不会扣除家用。\n\n目前家用 '+s.coins+' 文。');
+  if(s.production.kit)window.NanlanVillage?.supplies();
   const board=document.createElement('div');board.className='pantry-board';const controls=[];
   for(const item of Object.keys(N.supplyPrices)){
     const price=N.supplyPrices[item],row=document.createElement('div');row.className='pantry-row';
@@ -677,6 +681,7 @@ function showGarden(index=selectedPlot){
 }
 function showCraft(){
   const s=state();activity('仓房工作台','制作和修缮都要核对材料。确认后才会扣料，成品会进入行囊。\n\n枯枝 '+N.quantity(s,'wood')+' · 竹材 '+N.quantity(s,'bamboo')+' · 草药 '+N.quantity(s,'herb')+' · 贝壳 '+N.quantity(s,'shell'));
+  window.NanlanVillage?.rack();
   if(N.current(s)==='M03'&&!s.flags.toolsRepaired)actButton('修旧农具 · 修补材料 ×1','repairTools',{},showCraft);
   for(const [id,r] of Object.entries(N.recipes)){
     if(id==='narrowBasket'&&!s.flags.volume2Started)continue;
@@ -808,7 +813,7 @@ function showConversation(o){
   },'chat-choice-'+choice);
   navButton('结束交谈，回到场景',closeDialog,'chat-leave');
 }
-function npc(o){npcStory(o);addConversation(o);window.NanlanSeals?.npc(o);window.NanlanProduction?.npc(o);}
+function npc(o){npcStory(o);addConversation(o);window.NanlanSeals?.npc(o);window.NanlanProduction?.npc(o);window.NanlanVillage?.npc(o);}
 function npcStory(o){
   const s=state(),f=s.flags,q=N.current(s),id=o.id;
   if(f.volume2Started&&['father','motherHall','grandfather'].includes(id)){window.NanlanV2.show('v2Family');return;}
@@ -900,10 +905,13 @@ function objectGate(o){
 function visibleObjects(scene=state().scene,includeCooling=false){
   const s=state(),f=s.flags,q=N.current(s);
   return world[scene].objects.filter(o=>{
+    if(o.id.startsWith('neighbor-home')&&(s.rural.chen!=='working'||s.rural.homes&(1<<(o.stop-1))))return false;
+    if(o.id.startsWith('neighbor-mark')&&(s.rural.cen!=='working'||s.rural.marks&(1<<(o.stop-1))))return false;
+    if(o.id==='neighbor-windfall'&&!s.rural.gifts.cen)return false;
     if(o.id==='sealTimberNode'&&(!s.seals?.woodRoute||s.seals.wood||s.bag.sealTimber))return false;
     if(o.id==='sealPebbleNode'&&(!s.seals?.stoneRoute||s.seals.stone||s.bag.sealPebble))return false;
     if(o.id==='v2Family'&&!N.done(s,'M20'))return false;
-    if(o.id==='doctor'&&f.volume2Started)return false;
+    if(o.id==='doctor'&&f.volume2Started&&!s.rural.xu&&!N.rural.offered(s,'xu'))return false;
     if(o.id==='shenYu'&&f.metYu)return false;
     if(o.id==='v2Customer'&&(!f.v2Opened||N.shopCustomers(s)<=0)&&!['V2_10','V2_14'].includes(q))return false;
     if(o.id.startsWith('v2Observe')){if(q!=='V2_02'||f[N.story2.slots[o.slot].flag])return false;}
@@ -970,10 +978,11 @@ async function interact(o){
     else await perform('collect',{id:o.id});return;
   }
   const s=state(),f=s.flags,q=N.current(s),a=o.action;
+  if(a==='neighborStop'){window.NanlanVillage.stop(o);dialogObject=o;return;}
   if(a==='gardenDirect'){await handleGardenPlot(o);return;}
   if(a==='silkProduction'){window.NanlanProduction.show();dialogObject=o;return;}
   if(a?.startsWith('seal')){window.NanlanSeals.gather(o);return;}
-  if(a?.startsWith('v2')){window.NanlanV2.show(a,o);dialogObject=o;addConversation(o);window.NanlanSeals?.npc(o);window.NanlanProduction?.npc(o);return;}
+  if(a?.startsWith('v2')){window.NanlanV2.show(a,o);dialogObject=o;addConversation(o);window.NanlanSeals?.npc(o);window.NanlanProduction?.npc(o);window.NanlanVillage?.npc(o);return;}
   if(f.volume2Started&&o.id==='goodsCrates'){window.NanlanV2.show('v2Cargo',o);dialogObject=o;return;}
   if(a==='arrival'){
     activity('旧宅门前 · 交接','官兵：「文书与行李都在此。李家远迁岭南，并未籍没家产。我等交接完便返京。」\n\n祖父：「走了这么远，倒到了门口才觉得腿沉。」\n你：「进去坐一坐。」\n\n门还没有开。你先帮谁一把？');

@@ -7,6 +7,7 @@
   'use strict';
   const SAVE_KEY = 'nanlan_v20';
   const conversations=typeof module==='object'&&module.exports?require('./conversations.js'):globalThis.NanlanConversations;
+  const rural=typeof module==='object'&&module.exports?require('./rural-model.js'):globalThis.NanlanRural;
   const production=typeof module==='object'&&module.exports?require('./production-model.js'):globalThis.NanlanProductionModel;
   const seals=typeof module==='object'&&module.exports?require('./seals-model.js'):globalThis.NanlanSealsModel;
   const copy = value => JSON.parse(JSON.stringify(value));
@@ -51,7 +52,7 @@
     M20:[20,'第一卷完成 · 保留全部选择，继续日常生活']
   };
   const itemNames = {
-    mulberrySapling:'桑苗',mulberryLeaf:'桑叶',silkwormEgg:'蚕种',fishFry:'鱼苗',fishFeed:'鱼食',pondFish:'塘鱼',rawSilk:'普通生丝',fineSilk:'特级生丝',silkwormCompost:'蚕沙堆肥',
+    mulberrySapling:'桑苗',mulberryLeaf:'桑叶',silkwormEgg:'蚕种',fishFry:'鱼苗',fishFeed:'鱼食',pondFish:'塘鱼',rawSilk:'普通生丝',fineSilk:'特级生丝',silkwormCompost:'蚕沙',pondMud:'塘泥',wetLeaf:'带露桑叶',
     sealTimber:'印材坚木',sealPebble:'海磨印石',yardKey:'院门钥匙',bedroll:'床褥',repair:'修补材料',rice:'米粮',ingredient:'食材',seed:'种子',
     lychee:'荔枝',longan:'龙眼',mandarin:'柑橘',ginseng:'人参',agarwood:'沉香',huali:'海南黄花梨',wood:'枯枝',weed:'杂草',herb:'鲜草药',bamboo:'竹材',stone:'山石',mushroom:'蘑菇',shoot:'竹笋',
     shell:'贝壳',seaweed:'海藻',clam:'蛤蜊',vegetable:'菜蔬',hotMeal:'一锅热饭',feast:'家宴饭菜',
@@ -76,7 +77,7 @@
   itemNames.narrowBasket='窄口竹篓';prices.narrowBasket=18;
   recipes.narrowBasket={label:'编制改良窄口竹篓',cost:{bamboo:2,rope:1},out:{narrowBasket:1}};
   const storyFactory=typeof module==='object'&&module.exports?require('./story2-model.js'):globalThis.NanlanStoryModel;
-  const storyV2=storyFactory({copy,requireThat,requireScene,expectQuest,spend,give,once,log,clock,done,available,prices,recipes,products,itemNames});
+  const storyV2=storyFactory({rural,copy,requireThat,requireScene,expectQuest,spend,give,once,log,clock,done,available,prices,recipes,products,itemNames});
   const V2_ORDER=storyV2.order;
   Object.assign(titles,storyV2.titles);Object.assign(steps,storyV2.steps);Object.assign(rewards,storyV2.rewards);
   const shopPrice=storyV2.price,shopCustomers=storyV2.customers;
@@ -89,7 +90,7 @@
       bag:{bedroll:1,repair:2,rice:2,ingredient:1,seed:1,wood:0,weed:0},
       tools:{hand:true},selected:'hand',keyring:[],flags:{},choices:{},collected:{},nodes:{},
       quests:{},claimed:{},actions:{},garden:{kind:null,plantedAt:null,watered:false,duration:120},
-      production:production.fresh(),actorState:production.freshActors(),seals:seals.fresh(),shop:storyV2.emptyShop(),story2:storyV2.emptyStory(),practice:{},pages:{},visits:{gate:true},familyTalks:{},order:null,transactions:[],journal:[],
+      rural:rural.fresh(),production:production.fresh(),actorState:production.freshActors(),seals:seals.fresh(),shop:storyV2.emptyShop(),story2:storyV2.emptyStory(),practice:{},pages:{},visits:{gate:true},familyTalks:{},order:null,transactions:[],journal:[],
       tideAnchor:null,tideTutorialUsed:false,stallUntil:null,featured:null,lastNotice:'先和家人完成门前交接。'
     };
     for(const id of Object.keys(titles)) s.quests[id]={status:V2_ORDER.includes(id)?'DEFERRED_V2':id==='M01'?'ACTIVE':'LOCKED'};
@@ -102,7 +103,7 @@
   function requireThat(ok,msg) { if(!ok)fail(msg); }
   function quantity(s,id) { return s.bag[id]||0; }
   function available(s,id) {
-    return quantity(s,id)-(s.order && s.order.product===id ? s.order.reserved : 0);
+    return quantity(s,id)-rural.held(s,id)-(s.order && s.order.product===id ? s.order.reserved : 0);
   }
   function spend(s,cost) {
     for(const [id,n] of Object.entries(cost)) requireThat(available(s,id)>=n,'还需要 '+(itemNames[id]||id)+' ×'+Math.max(0,n-available(s,id))+'。可在背包查看来源。');
@@ -196,6 +197,7 @@
       if(g.wateredAt!==undefined)requireThat(Number.isFinite(g.wateredAt)&&g.wateredAt>=0&&g.wateredAt<=value.worldTick,'地块浇水时间无效。');
     }
     for(const id of ORDER)requireThat(['ACTIVE','LOCKED','COMPLETED'].includes(value.quests[id]?.status),'存档任务状态无效。');
+    rural.normalise(value,requireThat);
     storyV2.normalise(value);
     seals.normalise(value,requireThat);
     production.normalise(value,requireThat);
@@ -257,6 +259,7 @@
           s.choices['chatCount:'+role]=count+1;s.choices['chatLast:'+role]=p.choice;
           return;
         }
+        if(name.startsWith('neighbor'))return rural.act(s,name,p,{requireThat,requireScene,spend,give,available,log});
         if(name.startsWith('silk'))return production.act(s,name,p,{requireThat,requireScene,spend,give,log,familyAtShop:storyV2.familyAtShop});
         if(name.startsWith('seal'))return seals.act(s,name,p,{requireThat,requireScene,spend,give});
         if(name.startsWith('v2'))return volume2Action(s,name,p);
@@ -297,6 +300,7 @@
           requireThat(o&&['herb','wood','bamboo','stone','mushroom','shoot','shell','seaweed','clam','ginseng','agarwood','huali',...fruitResources].includes(o.type),'这里没有可拾取的物资。');
           if(s.scene==='tidalflat')requireThat(tide(s).low,'潮水已涨，先退回海边，下一轮低潮还会再来。');
           const last=s.nodes[o.id];requireThat(last===undefined||s.worldTick-last>=resourceCooldown(o.type),'这处刚刚采过，可在舆图查看剩余刷新时间。');
+          if(o.id==='neighbor-windfall')requireThat(s.rural.gifts.cen,'先请阿岑带路。');
           const why=resourceRequirement(s,o.type);requireThat(!why,why);
           const cost=rareResources[o.type]?.stamina||1;requireThat(s.stamina>=cost,'体力不足，本次需要 '+cost+' 点体力，可回卧房休息。');
           give(s,{[o.type]:fruitResources.includes(o.type)?2:1});s.nodes[o.id]=s.worldTick;s.collected[o.id]=true;s.stamina-=cost;
@@ -334,6 +338,7 @@
           requireThat(crop(s,index).ready,g.watered?'作物还没长成，回到场景让时间推进，或到卧房休息。':'土还干着，请先浇水，作物才会生长。');
           const herb=g.kind==='herb';give(s,{seed:1,[herb?'herb':'vegetable']:3});
           if(g.duration===240&&herb)f.medicinalHarvested=true;
+          if(!herb)f.neighborVegetables=true;
           setPlot({...emptyPlot(),tilled:true,harvestedKind:g.kind});return;
         }
         if(name==='craft'){if(p.recipe==='narrowBasket')requireThat(f.volume2Started,'窄口竹篓在第二卷看铺后制作。');requireScene(s,'store');const r=recipes[p.recipe];requireThat(r,'尚未学会这个配方。');
@@ -393,6 +398,6 @@
       });
     }
   }
-  return {Engine,initial,current,done,reached,sceneGate,clock,tide,crop,gardenPlot,quantity,available,normaliseLoaded,
+  return {Engine,rural,initial,current,done,reached,sceneGate,clock,tide,crop,gardenPlot,quantity,available,normaliseLoaded,
     rareResources,resourceCooldown,resourceRequirement,daylight,SAVE_KEY,ORDER,V2_ORDER,shopPrice,shopCustomers,story2:storyV2,shopProducts:storyV2.products,titles,steps,rewards,itemNames,products,prices,supplyPrices,recipes};
 });

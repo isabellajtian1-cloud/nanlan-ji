@@ -957,6 +957,7 @@ async function interact(o){
         const dryButton=actButton('把第 '+(index+1)+' 页铺平晾好','dryPage',{index},()=>interact(o),'dry-'+index);
         dryButton.disabled=!f.ledgerPermission;
       }
+      if(f.ledgerPermission&&!f.pagesDried)navButton('托起纸角，迎光细看',()=>showWindowPages(o),'inspect-paper');
     }
   }
   else if(a==='archive')showArchive();
@@ -979,6 +980,43 @@ async function interact(o){
   else activity(o.label,'这处物件暂时没有新的安排。'+nextHint());
   prerequisiteNote(objectPrerequisite(o));
   dialogObject=o;
+}
+// A closer look is optional. The only saved action is the ordinary dryPage action.
+function showWindowPages(o){
+  const s=state(),f=s.flags;
+  if(N.current(s)!=='M08'||!f.ledgerPermission||f.pagesDried){void interact(o);return;}
+  const details=[
+    ['迎光辨墨迹','你把纸稍稍偏向窗光。“借灯”二字留了下来，日子却浅得只剩半笔。','「那一笔若是认不清，就留着吧。等纸干了，我陪你慢慢认。」'],
+    ['轻托小花旁的卷边','你从纸背托住卷边，一朵淡墨小花露了出来。最后一瓣歪着，倒像刚被风吹过。','「小时候我总想把那一瓣描圆。如今再看，倒舍不得添这一笔了。」']
+  ];
+  let selected=null;
+  activity('书房窗下 · 细看潮页','你将两张旧页分开一掌宽。窗风很轻，指腹托住纸背，就看得见上面的细处。','paper-reading');
+  dialogObject=o;
+  const desk=document.createElement('div');desk.className='paper-reading-desk';
+  desk.innerHTML=inventoryArt('ledgerOriginal');
+  const response=document.createElement('div');response.className='paper-reading-response';response.hidden=true;
+  response.setAttribute('aria-live','polite');
+  const portrait=document.createElement('img');portrait.src=DATA.assets.npc_wan;portrait.alt='程婉';
+  const words=document.createElement('div'),detail=document.createElement('p'),voice=document.createElement('p');
+  words.append(detail,voice);response.append(portrait,words);
+  $('panelExtra').append(desk,response);
+  const spots=[];
+  for(const [index,[label,observation,line]] of details.entries()){
+    if(f['driedPage'+index])continue;
+    const spot=document.createElement('button');spot.type='button';spot.className='paper-reading-spot page-'+index;
+    spot.textContent=label;spot.setAttribute('aria-pressed','false');spots.push(spot);
+    spot.onclick=()=>{
+      selected=index;
+      for(const other of spots)other.setAttribute('aria-pressed',String(other===spot));
+      desk.dataset.page=String(index);detail.textContent=observation;
+      voice.textContent='想起程婉递纸时的话：'+line;response.hidden=false;dry.disabled=false;
+    };
+    desk.append(spot);
+  }
+  const dry=button('把眼前这页铺平晾好',()=>perform('dryPage',{index:selected},()=>interact(o)),'paper-dry',false,false);
+  dry.disabled=true;
+  navButton('放回窗边',()=>interact(o),'paper-back');
+  spots[0]?.focus({preventScroll:true});
 }
 function showFamilyMeal(feast=false,memory=false){
   const s=state(),imageKey=s.gender==='male'?'familyMealMale':'familyMealFemale';

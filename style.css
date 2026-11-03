@@ -67,3 +67,26 @@ button{font:inherit;cursor:pointer;color:inherit;touch-action:manipulation}butto
 .held-item-card{display:flex;align-items:center;gap:14px;margin:12px 0;padding:12px;border:1px solid #b49a6b;border-radius:8px;background:#efe2c4}.held-item-card .inventory-art{width:78px;height:78px;flex:none}.held-item-card strong,.held-item-card small{display:block}.held-item-card strong{color:#3e563f;font-size:16px}.held-item-card small{margin-top:5px;color:#78684b;font-size:11px}
 
 .prerequisite-note.lock-note{font-size:13px}
+
+/* The old ledger and study use the same painted art as the scene and satchel. */
+.paper-reading-desk{
+  position:relative;display:grid;place-items:center;min-height:126px;padding:14px;
+  overflow:hidden;border-radius:7px;border:1px solid #b9a076;
+  background:linear-gradient(#f0e1bfbd,#e6d1a9c9),url(study.webp) center 55%/cover;
+}
+.paper-reading-desk .inventory-art{width:106px;height:92px;transition:transform .25s ease}
+.paper-reading-desk[data-page="0"] .inventory-art{transform:translateY(-3px) rotate(-4deg)}
+.paper-reading-desk[data-page="1"] .inventory-art{transform:translateY(-3px) rotate(4deg)}
+.paper-reading-spot{
+  position:absolute;max-width:38%;min-height:44px;padding:5px 10px;border:1px solid #b99d67;border-radius:6px;
+  background:#f4e8cfe8;color:#4e4b35;font:inherit;font-size:13px;
+}
+.paper-reading-spot.page-0{left:3%;top:14%}
+.paper-reading-spot.page-1{right:3%;bottom:12%}
+.paper-reading-spot[aria-pressed="true"]{background:#425b46;color:#fff0ce}
+.paper-reading-spot:focus-visible{outline:2px solid #84652e;outline-offset:2px}
+.paper-reading-response{display:flex;gap:12px;align-items:center;margin:10px 0 0;color:#4a5039}
+.paper-reading-response[hidden]{display:none}
+.paper-reading-response img{width:40px;height:52px;object-fit:cover;object-position:top;border-radius:5px;background:#d8c99e}
+.paper-reading-response p{margin:3px 0;font-size:13px;line-height:1.65}
+@media(prefers-reduced-motion:reduce){.paper-reading-desk .inventory-art{transition:none}}

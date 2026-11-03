@@ -67,7 +67,7 @@
 | assets/seals-v398.png | seals-v398.png | data.js、seals.js |
 | assets/store-pickups-v39.png | store-pickups-v39.png | game.js |
 | assets/store.webp | store.webp | data.js |
-| assets/study.webp | study.webp | data.js、production.css |
+| assets/study.webp | study.webp | data.js、production.css、style.css |
 | assets/summit.webp | summit.webp | data.js |
 | assets/teahouse.webp | teahouse.webp | data.js |
 | assets/tidalflat.webp | tidalflat.webp | data.js |

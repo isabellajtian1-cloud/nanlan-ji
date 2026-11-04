@@ -104,7 +104,7 @@ function inspectMapPlace(id,objectId=null){
   selectedMapPlace=id;selectedMapObject=objectId;const s=state(),w=world[id],why=mapAccess(id),known=mapKnown(id),historical=id==='gate'&&s.flags.gateOpen;
   for(const b of $('mapNodes').children)b.classList.toggle('selected',b.dataset.mapPlace===id);
   $('mapPlaceTitle').textContent=known?w.name:'尚未题名的地方';$('mapPlaceState').textContent=s.scene===id?'当前位置 · 你在这里':historical?'来时的旧宅门前':known?(why?'听说过 · 尚未走通':'已经认得 · 可以沿路抵达'):'只看得见山海轮廓';
-  $('mapPlaceImage').src=DATA.assets[w.asset];$('mapPlaceImage').alt=w.name+'原画预览';
+  $('mapPlaceImage').src=DATA.assets[w.asset];$('mapPlaceImage').dataset.seasonOriginal=DATA.assets[w.asset];NanlanClimate.preview($('mapPlaceImage'),id,s);$('mapPlaceImage').alt=w.name+'原画预览';
   $('mapPlaceImage').classList.toggle('undiscovered',!known);$('mapPlaceActions').replaceChildren();$('mapPlaceDetails').replaceChildren();
   if(!known){$('mapPlaceDescription').textContent='这处地方还没有进入你的故事。等家人或新认识的人提起它，舆图会写下名字和路线。';return;}
   const target=historical?'yard':id,route=firstRoute(s.scene,target),o=w.objects.find(v=>v.id===objectId);

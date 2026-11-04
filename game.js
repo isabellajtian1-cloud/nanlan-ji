@@ -294,11 +294,11 @@ function timeText(){
   const c=N.clock(state());
   if(c.story)return {short:'初夏 · 初抵南澜 · '+c.story,full:'初抵南澜\n'+c.story,extra:'序章随剧情推进时段'};
   if(window.NanlanI18n?.language==='en'){
-    const season=state().flags.volume2Started?'Early Spring':'Early Summer';
+    const calendar=NanlanClimate.at(state()),season=calendar.en+' · '+calendar.day+'/'+calendar.length;
     const time=String(c.hour).padStart(2,'0')+':'+String(c.minute%60).padStart(2,'0');
     return {short:season+' · Day '+c.day+' · '+time,full:season+' · Day '+c.day+'\n'+time,extra:window.NanlanI18n.t(N.daylight(state()).label)+' · '+(N.tide(state()).low?'Low Tide':'Rising Tide')+' · Changes in '+Math.ceil(N.tide(state()).remaining)+' game min'};
   }
-  const season=state().flags.volume2Started?'新春':'初夏';
+  const calendar=NanlanClimate.at(state()),season=calendar.zh+' · '+calendar.day+'/'+calendar.length;
   const h=c.hour,minute=String(c.minute%60).padStart(2,'0');
   return {short:season+' · 第 '+c.day+' 日 · '+(h>=12?'下午':'上午')+' '+(h%12||12)+':'+minute,
     full:season+' · 第 '+c.day+' 日\n'+(h>=12?'下午':'上午')+' '+(h%12||12)+':'+minute,
@@ -317,6 +317,7 @@ function showTime(){
     ['南澜潮汐',(t.low?'低潮还剩 ':'下一轮低潮还有 ')+Math.ceil(t.remaining)+' 游戏分钟；涨潮仍可从滩涂返回海边。'],
     ['村口集市',c.minute>=540&&c.minute<1020?'正在开集 · 17:00 收摊。':'日常 09:00—17:00 开集；M10 首摊可单独预约。']
   ];
+  if(!c.story)entries.unshift([window.NanlanI18n?.language==='en'?'Season':'时令',NanlanClimate.note(s,window.NanlanI18n?.language==='en')]);
   const list=document.createElement('div');list.className='time-cards';
   entries.forEach(([title,text])=>{const card=document.createElement('div'),b=document.createElement('b'),p=document.createElement('p');b.textContent=title;p.textContent=text;card.append(b,p);list.append(card);});$('panelExtra').append(list);
   button('在舆图上查看全部地点',()=>{closeDialog();showMap();},'time-map',true);
@@ -1474,7 +1475,8 @@ function personBounds(role,x,y){
 function render(){
   const r=canvas.getBoundingClientRect();ctx.setTransform(1,0,0,1,0,0);ctx.fillStyle='#20392d';ctx.fillRect(0,0,canvas.width,canvas.height);setupCamera();ctx.imageSmoothingEnabled=true;
   const s=state(),baseKey=s.scene==='backHall'&&s.flags.v4_room?'backHallReady':s.scene==='bed'&&s.flags.leakPatched?'bedPatched':world[s.scene].asset;
-  const base=images[baseKey]||images[world[s.scene].asset];if(base?.naturalWidth)ctx.drawImage(base,0,0,W,H);
+  const base=images[baseKey]||images[world[s.scene].asset];if(base?.naturalWidth)ctx.drawImage(NanlanClimate.picture(base,s.scene,s),0,0,W,H);
+  NanlanClimate.atmosphere(ctx,s.scene,s,performance.now(),W,H);
   paintDifferenceLayers();hitTargets=[];
   const left=Math.max(8,-camera.ox/camera.scale+8),right=Math.min(W-8,(camera.vw-camera.ox)/camera.scale-8);
   const time=performance.now(),objective=localObjectiveObject(),destination=path[path.length-1]?.object;

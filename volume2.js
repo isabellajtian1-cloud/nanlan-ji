@@ -78,12 +78,14 @@ window.NanlanV2={
     }
     if(kind==='v2Lease'){
       const site=o?.site||t.site||'east',a=M.shops[site];title(a.name+' · 看铺与条款',a.text+'\n\n榕荫铺：租金30文、押金20文。桥口铺：租金45文、押金30文。房东修补需加租；自修需实际备料。'+(t.contract?'\n\n已确认：'+t.contract.name+'；已付租金'+t.contract.rent+'文，押金'+t.contract.deposit+'文。':''));
+      if(q==='V2_03')window.NanlanThreads.offer('door');
       if(q==='V2_03'){action('亲查'+a.name+'的窗墙、门面和通道','v2Inspect',{site},!f[site==='east'?'v2InspectEast':'v2InspectWest'],'这间铺面的缺陷已记下。');if(f.v2InspectEast&&f.v2InspectWest)for(const key of ['east','west'])action('选定'+M.shops[key].name,'v2SelectShop',{site:key},!f.v2Leased||t.site===key,'旧租约继续有效，保留原铺面。');}
       if(q==='M12')for(const [choice,label]of [['self','自修换低租'],['owner','房东负责修补'],['trial','短期试租']]){const c=M.leaseQuote(s,choice);action(label+' · 租金'+c.rent+'＋押金'+c.deposit+'文','v2Lease',{choice},s.coins-c.total>=t.reserve,'支付后需保留家用 '+t.reserve+' 文；可回正厅调整，或继续试摊筹钱。');}
       if(q==='V2_04')nav('回正厅逐笔核算','hall','v2Family');return;
     }
     if(kind==='v2Repair'){
       const cost=M.shops[t.site||'east'].repair;title('林师傅 · 尺与柜架','「架子是给人拿东西的。替客人走一遍。」\n'+(t.contract?.repair==='owner'?'本次租约由房东负责约定修补，你仍需到场验收。':'自修材料：'+Object.entries(cost).map(([k,n])=>itemName(k)+' '+n).join('、'))+'\n挂铺号：枯枝1、草绳1。草绳可在仓房制作。');
+      if(q==='V2_06')window.NanlanThreads.offer('ruler');
       window.NanlanSeals.workshop();
       if(!s.production.shopName)nav('回书房请祖父题字号','study','books');else note('已题字号：「'+s.production.shopName+'」。');
       if(q==='V2_06'){if(!f.v2Repaired)action(t.contract?.repair==='owner'?'现场检查房东完成的修补':'备料检修柜架','v2Repair',{},t.contract?.repair==='owner'||goods(cost),'材料不足；可在村庄与山路采集。');else if(!f.v2Decorated){action('试走低架通道 · 日用靠前','v2Decorate',{style:'practical'});action('试走靠墙陈列 · 草木分类','v2Decorate',{style:'herbal'});}else if(!f.v2Sign)action('亲手挂铺号 · 枯枝1、草绳1','v2Sign',{},goods({wood:1,rope:1})&&!!s.production.shopName,'先在书房选定字号，并备好枯枝1、草绳1。');}nav('去仓房制作与备料','store','workbench');return;
@@ -103,7 +105,7 @@ window.NanlanV2={
       for(const id of Object.keys(shop.stock))if(M.stockAvailable(s,id)>0)action('取回行囊 '+itemName(id)+' ×1','v2Withdraw',{item:id});nav('去旧宅仓房装下一批货','store','goodsCrates');return;
     }
     if(kind==='v2Pricing'){title('价签 · 成本与报价','较高价格可能让街坊暂缓购买；常价和让利也要看毛利。已经确认的订单保留原单价。');pricesPanel();button('回柜台经营',()=>window.NanlanV2.show('v2Shop'),'v2-price-back',true);return;}
-    if(kind==='v2Lamp'){title('门前灯笼','母亲把明日补货单压在砚台下：「她说明日还来，带隔壁一起。」');if(q==='M18')action('亲手点亮南街这盏灯','v2Lamp',{},f.v2FirstCounted,'先在柜台完成真实闭店盘点。');return;}
+    if(kind==='v2Lamp'){title('门前灯笼','母亲把明日补货单压在砚台下：「她说明日还来，带隔壁一起。」');if(s.production.shopName)window.NanlanThreads.offer('doorlamp');if(q==='M18')action('亲手点亮南街这盏灯','v2Lamp',{},f.v2FirstCounted,'先在柜台完成真实闭店盘点。');return;}
     if(kind==='v2Shop'){
       const d=M.summary(s).day;title((s.production.shopName||M.shops[t.site]?.name||'南街铺面')+' · 柜台与账目','主打：'+itemName(shop.featured)+'\n货架：'+stockText()+'\n今日尚可接待 '+N.shopCustomers(s)+' 位普通来客。'+(d?.closed?'\n今日已经打烊，回东厢房睡一夜，明日继续。':'\n街坊、匠工与行商关心的东西不同；谈妥后才付钱拿货。'));
       if(!s.production.shopName)nav('去书房补题自家字号','study','books');

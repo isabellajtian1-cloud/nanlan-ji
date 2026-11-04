@@ -857,6 +857,7 @@ function npcStory(o){
     activity('祖父',tone+(q==='M19'?'「来信只问我们好不好。把这一季的日子写进去，不必只写京中的旧事。」':
       q==='M16'?'程婉：“画一朵，他就说，这一笔先不问了。”\n祖父：“簿子上的数目，未必能记尽。”':
       N.done(s,'M04')?'「纸还有空白处，拿来写几个字吧。别只等着地里的东西长。」':'「走了这么远，倒到了门口才觉得腿沉。先让家人有地方坐，也有地方睡。」'));
+    if(f.historyConfirmed&&f.copyApproved)window.NanlanThreads.offer('flower');
     if(q==='M16'&&!f.historyConfirmed)actButton('请祖父核对小花记号的往事','confirmHistory',{},()=>npc(o));
     if(q==='M19'){
       if(!s.familyTalks.grandfather)actButton('听祖父谈来信','familyLetter',{who:'grandfather'},()=>npc(o));

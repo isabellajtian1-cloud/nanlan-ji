@@ -128,7 +128,7 @@ function panel(o,stage=0,pick){
   const lines=idx===0&&heard.has(i)&&ch.beats.length>1?ch.beats.slice(1):ch.beats;
   const line=lines.find(b=>b[0]===preferred)||lines[Math.min(idx,lines.length-1)];
   activity(cast[line[0]]||ch.title[0],line[1],'v4-story');$('next').hidden=true;$('dialogKicker').textContent=ch.title[0];if(line[0]==='player')portraitPlayer();
-  note(r[3]);details(k);const parts=moments[k];
+  note(r[3]);details(k);window.NanlanThreads.fourth(k,s);const parts=moments[k];
   const gesture=gestures[k];
   if(gesture&&pick!==undefined)sceneGesture(k,o,pick);
   if(gesture&&stage===0){if(!V.waitUntil(s)||s.worldTick>=V.waitUntil(s))sceneGesture(k,o);}
@@ -140,6 +140,7 @@ function panel(o,stage=0,pick){
   if(k==='room'){route('回卧房歇脚','bed','bedRest');}
   button('听这一章的前后对白',()=>reader(i,o),'v4-read-chapter',true,false);
  }
+ window.NanlanThreads.after(o,s);
  if(s.flags.volume4Complete)button('查下一航的公所派单',window.NanlanGuild.show,'v4-next-order');
  button('翻开公所总账',ledger,'v4-book',true,false);
  if(o.action!=='v4Scene')button('照常使用这个地点',()=>{useOriginal=true;void interact(o);},'v4-usual',true,false);

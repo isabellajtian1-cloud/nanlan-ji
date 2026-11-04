@@ -90,6 +90,7 @@ function play(o,r,stage=0){
  activity(roles[words[0]]||ch.title[0],words[1],'v3-story');$('dialogKicker').textContent=ch.title[0];$('next').hidden=true;
  if(words[0]==='player')playerPortrait();
  if(pictures[k]!=null)prop(pictures[k]);note(r[3]);
+ const memory={claim:'cord',herbal:'herb',mend:'mark',teach:'teach'}[k];if(memory)window.NanlanThreads.offer(memory);
  const ex=exercises[k];
  if(['desk','handoff','audit','plan','capacity','contract','answer','ship','return'].includes(k))balances(k);
  if(k==='answer'){if(s.story3.remainder||s.story3.freight)route(L('去河埠清点分送余货','Settle the Split Load at the Wharf'),'wharf','v3Berth');if(s.story3.contract?.delivered<s.story3.contract?.q)route(L('找方掌柜核对交期','Confirm the Deadline with Fang'),'wharf','v3Fang');}

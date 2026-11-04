@@ -177,7 +177,8 @@ function button(label,fn,id,secondary=false,showOutcome=true){
       const outcome=await fn(event);
       if(showOutcome&&b.isConnected){
         if(outcome?.ok===false){b.dataset.choiceState='blocked';b.classList.add('choice-blocked');b.setAttribute('aria-pressed','false');feedback.className='choice-feedback blocked';feedback.textContent='尚未完成 · '+(outcome.message||'请先办妥前面的事情。');}
-        else{b.dataset.choiceState='confirmed';feedback.className='choice-feedback confirmed';feedback.textContent='✓ 已办妥：'+label;}
+        else if(outcome?.ok===true){b.dataset.choiceState='confirmed';feedback.className='choice-feedback confirmed';feedback.textContent='✓ 已办妥：'+label;}
+        else{b.dataset.choiceState='selected';feedback.className='choice-feedback';feedback.textContent='已选择：'+label;}
       }
     }finally{if(b.isConnected)b.dataset.busy='false';}
   };
@@ -255,6 +256,9 @@ function actionMessage(name){
 }
 function nextHint(s=state(),q=N.current(s)){
   const f=s.flags;
+  if(q?.startsWith('S5_'))return N.season5.first(s)?.label[0]||N.titles[q];
+  if(N.season5?.canStart(s))return '后堂秋风翻账，母亲和伙伴们等你商量下一年的日子。';
+  if(s.flags.season5Complete&&!q)return '岁序簿已翻到来年，伙伴的共事和后堂的纪念物都留在身边。';
   if(q?.startsWith('V5_'))return N.v5.first(s)?.[3]||N.titles[q];
   if(s.flags.volume5Complete)return '清渠已有名字与轮值，自家水缸边也留着给路人的碗。';
   if(N.v5?.canStart(s))return '后堂桌上多了一碗井水，井绳晒干后结着细白。';
@@ -330,12 +334,12 @@ function navigateTaskStep(flag,label,index){
   if(index>first){notice('先办妥「'+steps[first][1]+'」，再做这一件。',true);return;}
   if(typeof objectiveForStep!=='function'){notice('路线正在写入舆图，请稍后再点一次。');return;}
   const target=objectiveForStep(flag,label);if(!target){notice('这一件事就在当前场景，先看看附近可互动之处。');return;}
-  if(!$('dialog').hidden)closeDialog(true);startNavigation(target.scene,target.object);
+  if(!$('dialog').hidden)closeDialog(true);chooseTaskRoute(target);
 }
 function renderQuestSteps(host,dialog=false,s=state(),q=N.current(s)){
   const steps=q?N.steps[q]:[],first=steps.findIndex(([flag])=>!s.flags[flag]);host.replaceChildren();
   steps.forEach(([flag,label],index)=>{const done=!!s.flags[flag],row=document.createElement('button');row.type='button';row.className='task-row'+(done?' done':index===first?' current':' waiting');row.disabled=done;
-    row.innerHTML='<span class="task-mark">'+(done?'✓':index===first?'○':'·')+'</span><span class="task-label">'+clean(label)+' <small>('+rowProgress(flag)+')</small>'+(done?'':index===first?'<span class="task-route">点击后自动沿已走通路线前往</span>':'<span class="task-route">办妥上一件后开放</span>')+'</span>';
+    row.innerHTML='<span class="task-mark">'+(done?'✓':index===first?'○':'·')+'</span><span class="task-label">'+clean(label)+' <small>('+rowProgress(flag)+')</small>'+(done?'':index===first?'<span class="task-route">点击选择沿路行走或快行</span>':'<span class="task-route">办妥上一件后开放</span>')+'</span>';
     row.onclick=()=>navigateTaskStep(flag,label,index);host.append(row);
   });
   if(dialog)host.classList.add('task-step-list');
@@ -347,7 +351,7 @@ function refreshQuestBanner(s=state(),q=N.current(s)){
   if(questSignature!==lastQuestSignature){
     renderQuestSteps($('quest'),false,s,q);lastQuestSignature=questSignature;
   }
-  $('questAct').textContent=s.flags.volume5Started?'清水归渠':s.flags.volume4Started?'海天帆影':s.flags.volume3Started?'山海成行':s.flags.volume2Started?'南街的新日子':q?(Number(q.slice(1))<=4?'先安顿一家人':'在南澜生活'):'这一季已经写完';
+  $('questAct').textContent=q?.startsWith('S5_')||s.flags.season5Complete&&!q?'岁序长青':s.flags.volume5Started?'清水归渠':s.flags.volume4Started?'海天帆影':s.flags.volume3Started?'山海成行':s.flags.volume2Started?'南街的新日子':q?(Number(q.slice(1))<=4?'先安顿一家人':'在南澜生活'):'这一季已经写完';
   $('questHeading').textContent=q?N.titles[q]:s.flags.volume5Complete?'清水满缸 · 日常继续':s.flags.volume4Complete?'海天帆影 · 家灯长明':s.flags.volume3Complete?'山海之间 · 日常继续':s.flags.volume2Complete?'南街灯起 · 日常继续':'岁末满庭 · 新春家议';
   $('questHint').textContent=hint;
 }
@@ -430,7 +434,7 @@ function showQuest(){
 }
 function showQuestCatalog(){
   const s=state();
-  const current=N.current(s),known=[...N.ORDER,...N.V2_ORDER,...(N.V3_ORDER||[]),...(N.V4_ORDER||[]),...(N.V5_ORDER||[])].filter(id=>s.quests[id]?.status==='COMPLETED'||id===current);
+  const current=N.current(s),known=[...N.ORDER,...N.V2_ORDER,...(N.V3_ORDER||[]),...(N.V4_ORDER||[]),...(N.V5_ORDER||[]),...(N.SEASON5_ORDER||[])].filter(id=>s.quests[id]?.status==='COMPLETED'||id===current);
   activity('走过的路',known.length>1?'从旧宅门前走到今日，许多事是做过以后才明白。这里不会提前写下还没发生的故事。':'旧宅的门还没有推开。先把眼前的一件事做好，新的页章自然会出现。','quest');
   const box=document.createElement('div');box.className='quest-catalog';
   for(const id of known){
@@ -456,6 +460,7 @@ function showTextMap(){
   button('查看所有场景原画',showGallery,'map-gallery',true);
 }
 function itemSource(id){
+  if(id==='travelBox')return '通过四项试样后，在仓房以竹材二、草绳一制作。';
   if(id==='duckStone'||id==='grassHopper')return globalThis.NanlanKids.desc[id];
   if(id==='shootRice'||id==='crustRice')return '按梁先生的饭方，用米、竹笋、枯枝和桶内水焖制。';
   if(['mulberrySapling','silkwormEgg','fishFry','fishFeed'].includes(id))return '初养物资可在乡邻余粮补购，也可在收获时选择留种留苗。';
@@ -479,6 +484,7 @@ const inventorySheets=[
   {file:'inventory-crafts-v392.png',rows:[0,425,800,1254],items:['driedHerb','bambooWare','shellCraft','rope','ledgerOriginal','ledgerCopy','receipt','reply','narrowBasket']}
 ];
 function inventoryArt(id){
+  if(id==='travelBox')return inventoryArt('narrowBasket');
   if(id==='duckStone'||id==='grassHopper')return globalThis.NanlanKids.art(id);
   if(id==='shootRice'||id==='crustRice')return '<img class="scholar-food-icon" alt="" src="'+(id==='crustRice'?'scholar-rice.webp':'scholar-rice-plain.webp')+'">';
   if(id==='pondMud'||id==='wetLeaf')return window.NanlanProduction?.itemArt(id==='pondMud'?'silkwormCompost':'mulberryLeaf')||'';
@@ -507,6 +513,11 @@ function taskMaterials(s){
   if(q==='M20'&&!f.feastCooked){add('rice');add('wood');if(!N.quantity(s,'vegetable'))add('ingredient');}
   if(q?.startsWith('V4_')){const k=N.v4.first(s)?.[0];if(['sample','liLot'].includes(k)){add('fineSilk');add('narrowBasket');}if(k==='room'&&s.story4?.choices.room===0){add('wood',2);add('bamboo');}}
   if(q?.startsWith('V5_')){const k=N.v5.first(s)?.[0];if(k==='build'){add('bamboo',2);add('wood');}if(k==='brace')add('wood');if(k==='repair')add('bamboo');}
+  if(q?.startsWith('S5_')){
+    const k=N.season5.first(s)?.key,materials={reserve:{ingredient:1},motherDo:{herb:2},apprenticePlan:{bamboo:3,rope:1},xiaomanDo:{bamboo:2},prototype:{bamboo:4,rope:1},maintenance:{wood:1},tripDepart:{rice:1,wood:1,...(s.season5.trip?.delegate?{driedHerb:1}:{})}};
+    for(const [id,n]of Object.entries(materials[k]||{}))add(id,n);
+    if(s.season5.prototype?.tests[k]==='adjust')add('bamboo');
+  }
   return need;
 }
 function showBag(){
@@ -520,6 +531,7 @@ function showBag(){
     row.innerHTML=inventoryArt(id)+'<div><strong>'+N.itemNames[id]+' ×'+N.quantity(s,id)+(required[id]?'<em>任务需要 '+required[id]+'</em>':'')+(N.available(s,id)!==N.quantity(s,id)?'（预留 '+(N.quantity(s,id)-N.available(s,id))+'）':'')+'</strong><small>'+itemSource(id)+'</small></div>';grid.append(row);
   }$('panelExtra').append(grid);
   if(!keys.length){const empty=document.createElement('p');empty.textContent='行囊暂时没有物资，采集所得会显示在这里。';$('panelExtra').append(empty);}
+  if(s.season5)navButton('岁序长青 · 查看共事与试样',()=>window.NanlanSeasons.ledger(),'bag-seasons');
   if(s.scholar?.recipe)globalThis.NanlanScholar?.bag();
   if(N.quantity(s,'hotMeal')&&N.done(s,'M04'))actButton('吃一份热饭 · 恢复 35 体力','eat',{},showBag);
   if(s.flags.volume2Started)button('桑基生产与全家新衣',()=>window.NanlanProduction.progress(),'bag-production',true);
@@ -742,6 +754,7 @@ function showCraft(){
   window.NanlanVillage?.rack();
   if(N.current(s)==='M03'&&!s.flags.toolsRepaired)actButton('修旧农具 · 修补材料 ×1','repairTools',{},showCraft);
   for(const [id,r] of Object.entries(N.recipes)){
+    if(id==='travelBox'&&!s.flags.travelBoxPattern)continue;
     if(id==='narrowBasket'&&!s.flags.volume2Started)continue;
     const ready=id==='rack'?N.reached(s,'M07'):id==='driedHerb'?N.done(s,'M07'):id==='shellCraft'?N.done(s,'M09'):N.done(s,'M06');
     if(!ready)continue;if(r.flag&&s.flags[r.flag])continue;
@@ -971,6 +984,9 @@ function visibleObjects(scene=state().scene,includeCooling=false){
   return world[scene].objects.filter(o=>{
     if(globalThis.NanlanV5&&!globalThis.NanlanV5.visible(s,o))return false;
     if(globalThis.NanlanV4&&!globalThis.NanlanV4.visible(s,o))return false;
+    if(o.id==='seasonBook')return !!f.volume4Complete;
+    if(o.id==='seasonDisplay')return !!s.season5?.display?.placed;
+    if(f.season5Started&&!f.season5Complete){const r=N.season5.first(s),to=r&&N.season5.target(s,r.key);if(to&&to[0]===scene&&to[1]===o.id)return true;}
     if(o.id==='dryRackVisual'&&!f.dryRack)return false;
     if(o.action==='kidsCamp'&&N.children.camp(s)!==scene)return false;
     if(o.id==='scholarLiang'&&!N.scholar.present(s))return false;
@@ -1043,6 +1059,7 @@ async function interact(o){
   if(!nearObject(o)){notice('先走近'+o.label+'。');return;}
   if(o.action==='kidsCamp'){dialogObject=o;globalThis.NanlanKids.play();return;}
   if(o.action==='liangTea'){dialogObject=o;await globalThis.NanlanScholar.meet();return;}
+  if(globalThis.NanlanSeasons?.offer(o)){dialogObject=o;return;}
   if(globalThis.NanlanGuild?.atStop(o)){dialogObject=o;return;}
   if(globalThis.NanlanV5?.offer(o)){dialogObject=o;return;}
   if(globalThis.NanlanV4?.offer(o)){dialogObject=o;return;}
@@ -1057,6 +1074,7 @@ async function interact(o){
   }
   const s=state(),f=s.flags,q=N.current(s),a=o.action;
   if(a==='neighborStop'){window.NanlanVillage.stop(o);dialogObject=o;return;}
+  if(a==='seasonDisplay'){window.NanlanSeasons.ledger();dialogObject=o;return;}
   if(a==='dryRack'){activity('庭院 · 自家晾架','这就是当初留下的自家晾架。竹脚落在地面，药草与潮湿桑叶都在这里摊开通风。');window.NanlanVillage?.rack();dialogObject=o;return;}
   if(a==='gardenDirect'){await handleGardenPlot(o);return;}
   if(a==='silkProduction'){window.NanlanProduction.show();dialogObject=o;return;}
@@ -1470,6 +1488,14 @@ function render(){
     if(o.id==='dryRackVisual'){
       actors.push({layer:40,y:o.y,draw:()=>{ctx.save();const x=o.x,y=o.y;ctx.strokeStyle='#765334';ctx.lineCap='round';ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(x-31,y);ctx.lineTo(x-23,y-61);ctx.moveTo(x+31,y);ctx.lineTo(x+23,y-61);ctx.stroke();ctx.strokeStyle='#b98a4e';ctx.lineWidth=3;for(let j=0;j<5;j++){ctx.beginPath();ctx.moveTo(x-30,y-52+j*10);ctx.lineTo(x+30,y-52+j*10);ctx.stroke();}ctx.fillStyle='#71854f';for(let j=0;j<9;j++){ctx.beginPath();ctx.ellipse(x-24+j*6,y-48+(j%3)*10,5,2.5,(j%2?-.5:.4),0,Math.PI*2);ctx.fill();}ctx.restore();}});
       hitTargets.push({o,rect:null,anchor:{x:o.x-42,y:o.y-72,w:84,h:76}});continue;
+    }
+    if(o.id==='seasonDisplay'){
+      const id=s.season5.display.item,im=images.inventoryCrafts;
+      if(['duckStone','grassHopper'].includes(id)){
+        const gift=images.kidsGifts;if(!gift)loadImage('kidsGifts');
+        else actors.push({layer:40,y:o.y,draw:()=>{const half=gift.naturalWidth/2,w=id==='duckStone'?18:23;ctx.drawImage(gift,id==='duckStone'?0:half,0,half,gift.naturalHeight,o.x-w/2,o.y-w*gift.naturalHeight/half,w,w*gift.naturalHeight/half);}});
+      }else if(im?.naturalWidth)actors.push({layer:40,y:o.y,draw:()=>ctx.drawImage(im,...(id==='ledgerCopy'?[836,425,418,375]:[836,800,418,454]),o.x-19,o.y-37,38,37)});
+      hitTargets.push({o,rect:null,anchor:{x:o.x-25,y:o.y-44,w:50,h:50}});continue;
     }
     if(o.id==='silkPond'){hitTargets.push({o,rect:null,anchor:{x:245,y:385,w:130,h:140}});continue;}
     if(s.scene==='study'&&o.id==='books')globalThis.NanlanKids?.draw('study');

@@ -21,6 +21,8 @@ function mapKnown(id){
 }
 function objectiveForStep(flag,label){
   const s=state(),f=s.flags;
+  if(flag?.startsWith('season5_')){const to=N.season5.target(s,flag.slice(8));return to?{scene:to[0],object:to[1],label}:null;}
+  if(flag?.startsWith('v5_')){const to=N.v5.target(s,flag.slice(3));return to?{scene:to[0],object:to[1],label}:null;}
   if(flag?.startsWith('v4_')){const [scene,object]=N.v4.target(s,flag.slice(3));return {scene,object,label};}
   if(flag?.startsWith('v3_')){const [scene,object]=N.v3.target(s,flag.slice(3));return {scene,object,label};}
   if(['v2Sign','v2Opened'].includes(flag)&&!s.production?.shopName)return {scene:'study',object:'books',label:'请祖父题下自家字号'};
@@ -30,7 +32,7 @@ function objectiveForStep(flag,label){
     bucketFilled:s.tools.water?['yard','waterJar']:['store','water'],drainClear:['yard','drain'],firstCooked:['yard','stove'],firstShared:['hall','mealTable'],
     metChen:['village','villager'],metDoctor:['village','doctor'],letterRead:['village','villageLetter'],
     metCen:['foothill','aCen'],bambooIdentified:['foothill','footBamboo'],bambooChoice:['foothill','aCen'],bridgeReady:['mountain','bridgeWork'],
-    fullGarden:['yard','herbPlot'],dryRack:['store','workbench'],medicinalPlanted:['yard','herbPlot'],medicinalWatered:s.bucketWater?['yard','herbPlot']:['yard','waterJar'],medicinalHarvested:['yard','herbPlot'],
+    fullGarden:['yard','herbPlot'],dryRack:['store','workbench'],medicinalPlanted:['yard','herbPlot'],medicinalWatered:!s.tools.water?['store','water']:s.bucketWater?['yard','herbPlot']:['yard','waterJar'],medicinalHarvested:['yard','herbPlot'],
     boxFound:['store','bookBox'],ledgerPermission:['village','chengWan'],pagesDried:['study','dryPages'],
     metYu:['village','shenYu'],coastVisited:['coast','coastBoard'],tideRead:['coast','coastBoard'],tidalCollected:['tidalflat','clam1'],
     stallBooked:['market','vegetableStall'],productDisplayed:['market','playerStall'],firstSale:['market','playerStall'],orderAccepted:['market','playerStall'],orderReserved:['market','playerStall'],orderDelivered:['market','playerStall'],
@@ -47,6 +49,7 @@ function objectiveForStep(flag,label){
 }
 function nextObjective(){
   const s=state(),q=N.current(s),f=s.flags;
+  if(!q&&N.season5?.canStart(s))return {scene:'backHall',object:'seasonBook',label:'回后堂，与家人翻开岁序簿'};
   if(!q&&N.v4?.canStart(s))return {scene:'coast',object:'v4Bell',label:'去海湾岸边认一认陌生的帆'};
   if(!q&&N.v3?.canStart(s))return {scene:'generalStore',object:'v3Chest',label:'去南街看看门边的竹箱'};
   if(!q)return N.done(s,'M20')&&!s.flags.volume2Started?{scene:'hall',object:'v2Family',label:'新春家议 · 开启第二卷'}:{scene:'yard',object:'herbPlot',label:'回家照料小畦'};
@@ -112,6 +115,7 @@ function inspectMapPlace(id,objectId=null){
   $('mapPlaceDescription').textContent=description;
   function add(label,fn,secondary){const b=document.createElement('button');b.textContent=label;b.onclick=fn;if(secondary)b.className='secondary';$('mapPlaceActions').append(b);}
   if(started&&!why&&route!==null)add(s.scene===target?(o?'走近目标 · '+o.label:'查看这里的互动地点'):'沿路前往'+w.name,()=>{closeMap();if(state().scene===target&&!o)showNearby();else startNavigation(target,o?.id);});
+  if(started&&!why&&route!==null&&s.visits[target]&&target!==s.scene)add('快速抵达 · 已走过的地方',()=>quickTravel(target,o?.id),true);
   if(!started)add('从旧宅门前启程',()=>{closeMap();$('begin').focus();});
   add('放大场景原画',()=>{closeMap();showGallery();const card=$('galleryGrid').querySelector('[data-scene="'+(id==='gate'?'yard':id)+'"]');if(card){card.classList.add('expanded');card.scrollIntoView({block:'start'});}},true);
   for(const local of visibleObjects(id,true)){
@@ -176,6 +180,22 @@ function startNavigation(to,objectId=null){
   }
   $('navigationLabel').textContent='前往 '+world[to].name+' · 还经 '+route.length+' 处入口';$('navigationStatus').hidden=false;
   approach(route[0]);notice('导航到'+world[to].name+' · 下一处：'+route[0].label+'。',true);
+}
+async function quickTravel(to,objectId=null){
+  const s=state(),route=firstRoute(s.scene,to);
+  if(!s.visits[to]||mapAccess(to)||route===null){notice(mapAccess(to)||'先沿路走到这处，再使用快行。',true);return;}
+  if(!$('worldMap').hidden)closeMap();if(!$('dialog').hidden)closeDialog(true);cancelNavigation();
+  if(s.scene!==to)await switchScene(to);
+  if(state().scene===to&&objectId){const o=visibleObjects().find(v=>v.id===objectId);if(o)approach(o);else notice('已经到达，目标会随当前事项出现。');}
+}
+function chooseTaskRoute(target){
+  if(target.scene===state().scene){startNavigation(target.scene,target.object);return;}
+  const route=firstRoute(state().scene,target.scene),why=mapAccess(target.scene);
+  if(why||route===null){notice(why||'这条路尚未走通。',true);return;}
+  activity('这次怎样前往？',target.label+'\n'+world[target.scene].name,'task-route');
+  navButton('沿路走去 · 可随时采集',()=>{closeDialog(true);startNavigation(target.scene,target.object);},'route-walk');
+  if(state().visits[target.scene])navButton('快速抵达 · 已走过的地方',()=>quickTravel(target.scene,target.object),'route-quick');
+  else{const p=document.createElement('p');p.className='prerequisite-note';p.textContent='第一次请沿路走到，之后就能快行。';$('panelExtra').append(p);}
 }
 function continueNavigation(){if(navigationTarget)startNavigation(navigationTarget,navigationObject);}
 function locateObjective(){const target=nextObjective();inspectMapPlace(target.scene,target.object);centerMap(target.scene);}

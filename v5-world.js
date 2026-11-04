@@ -1,6 +1,8 @@
 /* Fifth-volume touch points reuse established painted scenes; no floating task labels. */
 (()=>{'use strict';const D=window.NANLAN_DATA,W=D&&D.world;if(!W)return;
 const add=(scene,o)=>{if(W[scene]&&!W[scene].objects.some(x=>x.id===o.id))W[scene].objects.push(o);};
+add('backHall',{id:'seasonBook',x:701,y:480,label:'岁序簿 · 家人与伙伴',type:'activity',action:'seasonScene',v3Art:3});
+add('backHall',{id:'seasonDisplay',x:575,y:369,label:'后堂纪念物',type:'activity',action:'seasonDisplay'});
 const deep=W.mountain?.objects.find(o=>o.id==='deep');if(deep)Object.assign(deep,{type:'activity',action:'v5Scene',label:'深谷旧渠口'});
 add('backHall',{id:'v5Ledger',x:646,y:410,label:'井边水样与清渠簿',type:'activity',action:'v5Scene'});
 add('village',{id:'v5Well',x:610,y:500,label:'村井与取水名簿',type:'activity',action:'v5Scene'});

@@ -14,7 +14,7 @@ function camp(s){
 function normalise(s,need){const a=s.children;if(a===undefined)return;
  need(a&&typeof a==='object'&&a.gifts&&a.places&&a.memory,'童物手记缺页。');
  for(const k of Object.keys(a.gifts))need(keepsakes.includes(k)&&a.gifts[k]===true,'童物手记缺页。');
- for(const [k,room]of Object.entries(a.places))need(a.gifts[k]&&['hall','study'].includes(room),'童物摆放位置有误。');
+ for(const [k,room]of Object.entries(a.places))need(a.gifts[k]&&['hall','study','backHall'].includes(room),'童物摆放位置有误。');
  for(const k of keepsakes)need((s.bag[k]||0)===(a.gifts[k]&&!a.places[k]?1:0),'童物数量有误。');
 }
 function act(s,name,p,h){const {requireThat:need,requireScene:at,spend,give}=h;

@@ -362,7 +362,7 @@
           }
           if(name==='waterCrop'){
             requireThat(g.plantedAt!==null,'先选种，再点击土地播种。');requireThat(!g.watered,'泥土仍然湿润，无需重复浇水。');
-            requireThat(s.bucketWater>=1,'木桶没有水了，请先到庭院水缸装水。');s.bucketWater--;g.watered=true;g.wateredAt=s.worldTick;
+            const rainWater=!!globalThis.NanlanWeather?.helpsWater?.(s);requireThat(rainWater||s.bucketWater>=1,'木桶没有水了，请先到庭院水缸装水。');if(!rainWater)s.bucketWater--;g.watered=true;g.wateredAt=s.worldTick;
             if(g.duration===240&&g.kind==='herb')f.medicinalWatered=true;return;
           }
           requireThat(crop(s,index).ready,g.watered?'作物还没长成，回到场景让时间推进，或到卧房休息。':'土还干着，请先浇水，作物才会生长。');

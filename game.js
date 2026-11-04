@@ -291,21 +291,21 @@ function nextHint(s=state(),q=N.current(s)){
   };return q?(hints[q]||'跟随任务簿继续。'):'第一卷已完成。可以继续采集、种植、制作与镇集买卖，或回看人物与家中的变化。';
 }
 function timeText(){
-  const c=N.clock(state());
+  const c=N.clock(state()),weather=window.NanlanWeather?.current(state());
   if(c.story)return {short:'初夏 · 初抵南澜 · '+c.story,full:'初抵南澜\n'+c.story,extra:'序章随剧情推进时段'};
   if(window.NanlanI18n?.language==='en'){
     const calendar=NanlanClimate.at(state()),season=calendar.en+' · '+calendar.day+'/'+calendar.length;
     const time=String(c.hour).padStart(2,'0')+':'+String(c.minute%60).padStart(2,'0');
-    return {short:season+' · Day '+c.day+' · '+time,full:season+' · Day '+c.day+'\n'+time,extra:window.NanlanI18n.t(N.daylight(state()).label)+' · '+(N.tide(state()).low?'Low Tide':'Rising Tide')+' · Changes in '+Math.ceil(N.tide(state()).remaining)+' game min'};
+    return {short:season+' · Day '+c.day+' · '+time,full:season+' · Day '+c.day+'\n'+time,extra:(weather?.en||'Clear')+' · '+window.NanlanI18n.t(N.daylight(state()).label)+' · '+(N.tide(state()).low?'Low Tide':'Rising Tide')+' · Changes in '+Math.ceil(N.tide(state()).remaining)+' game min'};
   }
   const calendar=NanlanClimate.at(state()),season=calendar.zh+' · '+calendar.day+'/'+calendar.length;
   const h=c.hour,minute=String(c.minute%60).padStart(2,'0');
   return {short:season+' · 第 '+c.day+' 日 · '+(h>=12?'下午':'上午')+' '+(h%12||12)+':'+minute,
     full:season+' · 第 '+c.day+' 日\n'+(h>=12?'下午':'上午')+' '+(h%12||12)+':'+minute,
-    extra:N.daylight(state()).label+' · 海湾'+(N.tide(state()).low?'低潮':'涨潮')+' · '+Math.ceil(N.tide(state()).remaining)+' 游戏分钟后转换'};
+    extra:(weather?.zh||'晴朗')+' · '+N.daylight(state()).label+' · 海湾'+(N.tide(state()).low?'低潮':'涨潮')+' · '+Math.ceil(N.tide(state()).remaining)+' 游戏分钟后转换'};
 }
 function showTime(){
-  const s=state(),c=N.clock(s),g=N.crop(s),t=N.tide(s),light=N.daylight(s);
+  const s=state(),c=N.clock(s),g=N.crop(s),t=N.tide(s),light=N.daylight(s),weather=window.NanlanWeather?.current(s),weatherAdvice=window.NanlanWeather?.advice(s,window.NanlanI18n?.language==='en');
   activity('南澜日历 · 山海有时',c.story?
     '初抵南澜 · '+c.story+'\n\n序章时段跟随安顿进度：门前抵达 → 收拾卧房（东厢房）与后院的傍晚 → 第一顿热饭的入夜。M04 家宴完成后，开启日常日期和时钟。':
     timeText().short+' · '+light.label+'\n\n日常从 06:00 到 22:00。每现实 1 秒，经过 1 个游戏分钟；对白、舆图、菜单和切到后台时暂停。夜深后，可回东厢房睡到次日清晨。');
@@ -317,7 +317,10 @@ function showTime(){
     ['南澜潮汐',(t.low?'低潮还剩 ':'下一轮低潮还有 ')+Math.ceil(t.remaining)+' 游戏分钟；涨潮仍可从滩涂返回海边。'],
     ['村口集市',c.minute>=540&&c.minute<1020?'正在开集 · 17:00 收摊。':'日常 09:00—17:00 开集；M10 首摊可单独预约。']
   ];
-  if(!c.story)entries.unshift([window.NanlanI18n?.language==='en'?'Season':'时令',NanlanClimate.note(s,window.NanlanI18n?.language==='en')]);
+  if(!c.story){
+    entries.unshift([window.NanlanI18n?.language==='en'?'Today’s weather':'今日天色',(window.NanlanWeather?.dayLine(s,window.NanlanI18n?.language==='en')||'')+'\n'+(weatherAdvice?.summary||'')+'\n'+(weather?.remaining?Math.ceil(weather.remaining)+(window.NanlanI18n?.language==='en'?' game minutes until the sky changes.':' 游戏分钟后天色可能转变。'):'')]);
+    entries.unshift([window.NanlanI18n?.language==='en'?'Season':'时令',NanlanClimate.note(s,window.NanlanI18n?.language==='en')]);
+  }
   const list=document.createElement('div');list.className='time-cards';
   entries.forEach(([title,text])=>{const card=document.createElement('div'),b=document.createElement('b'),p=document.createElement('p');b.textContent=title;p.textContent=text;card.append(b,p);list.append(card);});$('panelExtra').append(list);
   button('在舆图上查看全部地点',()=>{closeDialog();showMap();},'time-map',true);
@@ -669,7 +672,7 @@ async function gardenAction(name,p){
     showGarden(p.plot??selectedPlot);
     const tile=$('panelExtra').querySelector('[data-plot="'+selectedPlot+'"]');
     if(tile){const fx=document.createElement('span');fx.className='garden-action-fx '+name;fx.innerHTML=toolbarArt(name==='waterCrop'?'water':name==='tillPlot'?'hoe':name==='plant'?'seed':'hand');tile.append(fx);setTimeout(()=>fx.remove(),1000);}
-    const feedback={tillPlot:'松土完成，留下了整齐的土垄。',plant:'种子已播下并覆土，接下来提水浇灌。',waterCrop:'水渗进泥土，作物开始生长。',harvest:'作物已经摘下，收成和留种已放进行囊。'};
+    const feedback={tillPlot:'松土完成，留下了整齐的土垄。',plant:'种子已播下并覆土，接下来提水浇灌。',waterCrop:window.NanlanWeather?.helpsWater(state())?'借着檐下雨水浇透了地，木桶里的水没有消耗。':'水渗进泥土，作物开始生长。',harvest:'作物已经摘下，收成和留种已放进行囊。'};
     notice(feedback[name]);
   });
 }
@@ -737,15 +740,15 @@ function showGarden(index=selectedPlot){
         navButton('去乡邻余粮补购种子',()=>{closeDialog();startNavigation('village','villagePantry');},'garden-buy-seed');
       }
     }else if(!g.watered){
-      const water=Number.isFinite(s.bucketWater)?s.bucketWater:0,b=button('提起木桶 · 浇水（水 '+water+'）',()=>gardenAction('waterCrop',{plot:selectedPlot}),'garden-water');
-      if(!s.tools.water){b.disabled=true;prerequisiteNote('先在仓房领取水桶。领取前水量按 0 显示，不能尝试浇水。');}
+      const water=Number.isFinite(s.bucketWater)?s.bucketWater:0,rainWater=!!window.NanlanWeather?.helpsWater(s),b=button(rainWater?'借檐雨浇灌 · 不耗桶水':'提起木桶 · 浇水（水 '+water+'）',()=>gardenAction('waterCrop',{plot:selectedPlot}),'garden-water');
+      if(!rainWater&&!s.tools.water){b.disabled=true;prerequisiteNote('先在仓房领取水桶。领取前水量按 0 显示，不能尝试浇水。');}
       else if(water<1){b.disabled=true;prerequisiteNote('木桶是空的。先到庭院水缸装水，再回来浇灌。');}
     }
     else if(c.ready)button('亲手采收 · '+(g.kind==='herb'?'鲜草药':'青菜')+' ×3，留种 ×1',()=>gardenAction('harvest',{plot:selectedPlot}),'garden-harvest');
     else prerequisiteNote('作物正在扎根生长，不必重复浇水。'+timeNote);
   }else if(!canPrepare&&!canExpand)prerequisiteNote(f.smallBed?'请在 M07 扩整药圃后，再种这两块药田。':'请按 M03 清理通路，整理第一块菜畦。');
-  if(c.planted&&!g.watered&&s.tools.water&&Number(s.bucketWater||0)<1)button('去水缸装水',()=>{closeDialog();startNavigation('yard','waterJar');},'garden-refill',true);
-  if(c.planted&&!g.watered&&!s.tools.water)button('去仓房领取水桶',()=>{closeDialog();startNavigation('store','water');},'garden-get-bucket',true);
+  if(c.planted&&!g.watered&&!window.NanlanWeather?.helpsWater(s)&&s.tools.water&&Number(s.bucketWater||0)<1)button('去水缸装水',()=>{closeDialog();startNavigation('yard','waterJar');},'garden-refill',true);
+  if(c.planted&&!g.watered&&!window.NanlanWeather?.helpsWater(s)&&!s.tools.water)button('去仓房领取水桶',()=>{closeDialog();startNavigation('store','water');},'garden-get-bucket',true);
   if(s.mode==='daily'&&N.clock(s).minute>=1320)button('去卧房睡一夜',()=>{closeDialog();startNavigation('bed','bedRest');},'garden-sleep',true);
   button('收好农具 · 返回庭院',()=>closeDialog(),'garden-resume',true);
 }
@@ -1477,6 +1480,7 @@ function render(){
   const s=state(),baseKey=s.scene==='backHall'&&s.flags.v4_room?'backHallReady':s.scene==='bed'&&s.flags.leakPatched?'bedPatched':world[s.scene].asset;
   const base=images[baseKey]||images[world[s.scene].asset];if(base?.naturalWidth)ctx.drawImage(NanlanClimate.picture(base,s.scene,s),0,0,W,H);
   NanlanClimate.atmosphere(ctx,s.scene,s,performance.now(),W,H);
+  window.NanlanWeather?.atmosphere(ctx,s.scene,s,performance.now(),W,H);
   paintDifferenceLayers();hitTargets=[];
   const left=Math.max(8,-camera.ox/camera.scale+8),right=Math.min(W-8,(camera.vw-camera.ox)/camera.scale-8);
   const time=performance.now(),objective=localObjectiveObject(),destination=path[path.length-1]?.object;

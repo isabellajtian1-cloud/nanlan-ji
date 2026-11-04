@@ -1618,7 +1618,7 @@ function frame(t){
   const dt=Math.min(.1,(t-(lastFrame||t))/1000);lastFrame=t;
   try{update(dt);render();if(t-lastHud>300){refreshHud();refreshInteractionHint();lastHud=t;}
     void window.NanlanProduction?.maybeMorning();
-    window.NanlanAudio?.setEnvironment(world[state().scene].soundScene||state().scene,N.daylight(state()).darkness>.25,started&&active&&moving);
+    window.NanlanAudio?.setEnvironment(window.NanlanOpening?.environment()||world[state().scene].soundScene||state().scene,window.NanlanOpening?.running()?false:N.daylight(state()).darkness>.25,started&&active&&moving);
     if(started&&active&&t-lastAutosave>20000){const r=engine.save();$('saveState').textContent=r.ok?(engine.memoryOnly?'仅本次试玩':'已保存'):'自动保存失败 · 请手动保存';lastAutosave=t;}
   }catch(e){console.error(e);active=false;notice('画面暂停了，请先保存进度，再刷新重试。',true);}
   requestAnimationFrame(frame);
@@ -1677,6 +1677,11 @@ function showFirstSteps(){
   button('我来试试',()=>{closeDialog(true);focusedObjectId='familyLuggage';lastInteractionHint='';notice('第一步：点击右下角「家人与行李」，或走近后按空格。',true);},'first-step-try');
   button('先自己看看',()=>{closeDialog(true);notice('需要提示时，看右下角「初行引导」；玩法会在第一次遇到时说明。');},'first-step-explore',true);
 }
+function finishOpeningIntro(){
+  closeDialog(true);focusedObjectId='familyLuggage';lastInteractionHint='';
+  notice(window.NanlanI18n?.language==='en'?'Walk towards your family and the luggage. Use WASD / arrow keys, then press Space; or click the guide at the lower right.':'走近家人与行李。用 WASD / 方向键移动后按空格，或点击右下角的初行引导。',true);
+  refreshInteractionHint();
+}
 function showArrivalBeat(index=0){
   const [title,line]=arrivalBeats[index];activity(title,line,'arrival');$('dialog').classList.add('arrival-mode');
   $('dialogKicker').textContent='初见南澜 · '+(index+1)+' / '+arrivalBeats.length;$('skip').textContent='跳过演出 ×';
@@ -1704,7 +1709,7 @@ async function beginGame(confirmed=false){
     if(!await loadImage('gate')){$('loadWarning').hidden=false;$('loadWarning').textContent='旧宅门前图片未能载入，请稍后再试。';return;}
     if(storedRaw&&!engine.memoryOnly){storage.setItem('nanlan_v20_previous',storedRaw);$('restoreAutoBackup').hidden=false;}
     engine.reset(gender);if(!engine.memoryOnly)localStorage.removeItem('nanlan_last_night');started=true;active=true;$('start').hidden=true;$('hud').hidden=false;storedRaw=null;
-    refreshHud();showArrivalBeat();
+    refreshHud();if(window.NanlanOpening)window.NanlanOpening.start(finishOpeningIntro);else showArrivalBeat();
   }catch(e){
     activity('浏览器暂时无法保存','当前浏览器没有可用的本地存储。你可以检查浏览器设置后重试，或选择仅本次试玩；试玩模式关闭网页后不会保留进度。');
     button('仅本次试玩 · 我知道关闭后会丢失',()=>{engine.memoryOnly=true;storedRaw=null;closeDialog();beginGame();},'memory-only');
@@ -1734,6 +1739,7 @@ $('volume2Entry').onclick=()=>{const entry=N.chapterEntries(state()).find(e=>!e.
 $('questOpen').onclick=showQuest;$('nearbyOpen').onclick=showNearby;$('peopleOpen').onclick=showPeople;$('galleryOpen').onclick=showGallery;$('helpOpen').onclick=showHelp;
 $('interactionHint').onclick=()=>{if(!active)return;const o=visibleObjects().find(v=>v.id===$('interactionHint').dataset.object);if(!o)return;if(nearObject(o))interact(o);else approach(o);};
 $('startGuide').onclick=showStartGuide;
+$('openingReplay').onclick=()=>window.NanlanOpening?.replay();
 $('clock').onclick=showTime;
 $('taskToggle').onclick=()=>{refreshQuestBanner();const collapsed=$('tasks').classList.toggle('collapsed');$('taskToggle').setAttribute('aria-expanded',String(!collapsed));};
 $('bagOpen').onclick=showBag;

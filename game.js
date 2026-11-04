@@ -201,7 +201,9 @@ async function perform(name,p={},rerender){
   if(name==='openGate'&&!await loadImage('yard')){const failed={ok:false,message:'庭院图片未能载入，请重试。原有进度已保留。'};notice(failed.message,true);return failed;}
   if(['shareFirst','shareFeast','liangShare'].includes(name)&&!await loadImage(state().gender==='male'?'familyMealMale':'familyMealFemale')){const failed={ok:false,message:'用餐画面未加载完成，请再试一次；饭菜尚未扣除。'};notice(failed.message,true);return failed;}
   const gathered=['collect','harvest','clearWeed','silkLeaves','silkHarvest','silkHarvestFish','silkKit'].includes(name),beforeBag=gathered?{...state().bag}:null;
+  const nightCopy=name==='sleep'&&!engine.memoryOnly?JSON.stringify(state()):null;
   const result=engine.act(name,p);
+  if(nightCopy&&result.ok&&!result.duplicate){try{localStorage.setItem('nanlan_last_night',nightCopy);}catch{notice(deskText('已过夜，设备空间不足，未能保留睡前副本。','Morning has come, but the device could not keep a bedtime copy.'),true);}}
   if(!result.ok){window.NanlanAudio?.play('blocked');notice(result.message,true);$('saveState').textContent=result.message.startsWith('保存失败')?'本次动作尚未保存':'当前目标尚待完成';return result;}
   if(!result.duplicate)window.NanlanAudio?.play(p.seal?(p.seal==='stone'?'sealStone':'sealWood'):name==='openGate'?'door':/water|Water/.test(name)?'water':/repair|Repair|patch|Patch|craft|Craft/.test(name)?'repair':/nap|sleep/.test(name)?'rest':/collect|harvest|Harvest|gather/.test(name)?'gather':'success');
   $('saveState').textContent=engine.memoryOnly?'仅本次试玩 · 关闭网页会丢失':'已保存';
@@ -380,6 +382,17 @@ function iconArt(id){
   if(['hand','sickle','hoe','basket','water','axe'].includes(id))return toolArt(id);
   return '<svg viewBox="0 0 64 64" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">'+(extraIcons[id]||extraIcons.bag)+'</svg>';
 }
+const deskText=(zh,en)=>window.NanlanI18n?.language==='en'?en:zh;
+let lastGardenInput=matchMedia('(pointer:coarse)').matches?'touch':'mouse';
+document.addEventListener('pointerdown',e=>{lastGardenInput=e.pointerType;},true);
+document.addEventListener('keydown',()=>{lastGardenInput='keyboard';},true);
+function gardenToolHint(slot,keyboard,zh,en){
+ const tool=$('bottom').children[slot-1];if(tool?.animate&&!matchMedia('(prefers-reduced-motion: reduce)').matches)tool.animate([{outline:'3px solid #f0c46a'},{outline:'3px solid transparent'}],{duration:750,iterations:2});
+ notice(lastGardenInput==='keyboard'?keyboard:deskText(zh,en),true);
+}
+function sceneClue(label,words,id){
+ button(label,()=>{let line=$('panelExtra').querySelector('[data-clue]');if(!line){line=document.createElement('p');line.dataset.clue='true';line.className='production-note';line.setAttribute('role','status');$('panelExtra').append(line);}line.textContent=words;},id,true,false);
+}
 function refreshToolbar(){
   const s=state(),belt=$('bottom');
   if(!belt.children.length)toolDefs.forEach(([id,label,note],index)=>{
@@ -496,6 +509,9 @@ function showBag(){
   button('查看家庭收支与凭单',showAccounts,'accounts',true);
   button('导入进度文件',importSave,'import',true);
   if(localStorage.getItem('nanlan_before_import'))button('下载导入前的进度备份',()=>download('Nanlan_Before_Import.json',localStorage.getItem('nanlan_before_import')),'before-import',true);
+  button(deskText('切换对话字号','Toggle Dialogue Text Size'),toggleReadingSize,'large-text',true);
+  if(document.fullscreenEnabled)button(deskText('切换窗口与全屏','Toggle Full Screen'),toggleGameScreen,'fullscreen',true);
+  if(localStorage.getItem('nanlan_last_night'))button(deskText('查看上次睡前存档','Review Last Bedtime Save'),bedtimeReview,'bedtime-save',true);
   button('导出当前进度备份',()=>download('Nanlan_V20_Save.json',JSON.stringify(state(),null,2)),'export',true);
 }
 function showMealBowl(){
@@ -648,10 +664,10 @@ async function handleGardenPlot(target){
   const index=target.plot,s=state(),f=s.flags,g=N.gardenPlot(s,index),c=N.crop(s,index),selected=s.selected;
   if(!f.smallBed){showGarden(0);return;}
   if(index>=4&&!f.fullGarden){notice('这两块药田还没有扩整。继续生活，等许青禾教你整理药圃。',true);return;}
-  if(index>0&&!g.tilled){if(selected!=='hoe'){notice('这块土还硬着。先按 3 选中长柄锄，再点这块土地。',true);return;}await directGardenAction('tillPlot',index);return;}
-  if(!c.planted){if(selected!=='seed'){notice('这里可以播种。先按 6 选中布种袋，再点这块空畦。',true);return;}if(N.quantity(s,'seed')<1){notice('布种袋空了。采收会留下种子，也可向乡邻补购。',true);return;}showDirectSeedChoice(index,target);return;}
-  if(!g.watered){if(selected!=='water'){notice('嫩芽还缺水。先按 5 选中箍木桶，再点这块菜畦。',true);return;}if(s.bucketWater<1){notice('木桶是空的。先去庭院水缸装水，再回来点菜畦。',true);return;}await directGardenAction('waterCrop',index);return;}
-  if(c.ready){if(!['hand','basket'].includes(selected)){notice('作物已经成熟。按 1 使用双手，或按 4 选竹背篓，再点作物采收。',true);return;}await directGardenAction('harvest',index);return;}
+  if(index>0&&!g.tilled){if(selected!=='hoe'){gardenToolHint(3,'这块土还硬着。先按 3 选中长柄锄，再点这块土地。','点下方长柄锄，再点硬土。','Select the hoe below, then the hard soil.');return;}await directGardenAction('tillPlot',index);return;}
+  if(!c.planted){if(selected!=='seed'){gardenToolHint(6,'这里可以播种。先按 6 选中布种袋，再点这块空畦。','点下方布种袋，再点空畦。','Select the seed pouch below, then the empty plot.');return;}if(N.quantity(s,'seed')<1){notice('布种袋空了。采收会留下种子，也可向乡邻补购。',true);return;}showDirectSeedChoice(index,target);return;}
+  if(!g.watered){if(selected!=='water'){gardenToolHint(5,'嫩芽还缺水。先按 5 选中箍木桶，再点这块菜畦。','点下方木桶，再点嫩芽。','Select the bucket below, then the seedlings.');return;}if(s.bucketWater<1){notice('木桶是空的。先去庭院水缸装水，再回来点菜畦。',true);return;}await directGardenAction('waterCrop',index);return;}
+  if(c.ready){if(!['hand','basket'].includes(selected)){gardenToolHint(4,'作物已经成熟。按 1 使用双手，或按 4 选竹背篓，再点作物采收。','点下方竹背篓，再点成熟的作物。','Select the basket below, then the ripe crop.');return;}await directGardenAction('harvest',index);return;}
   notice((g.kind==='herb'?'药草':'青菜')+'正在生长，还需约 '+Math.ceil(c.remaining)+' 游戏分钟。走动、做事或休息都会推进时间。');
 }
 function storyGardenPlot(){
@@ -995,6 +1011,7 @@ async function interact(o){
   if(!nearObject(o)){notice('先走近'+o.label+'。');return;}
   if(o.action==='kidsCamp'){dialogObject=o;globalThis.NanlanKids.play();return;}
   if(o.action==='liangTea'){dialogObject=o;await globalThis.NanlanScholar.meet();return;}
+  if(globalThis.NanlanGuild?.atStop(o)){dialogObject=o;return;}
   if(globalThis.NanlanV4?.offer(o)){dialogObject=o;return;}
   if(globalThis.NanlanV3?.offer(o)){dialogObject=o;return;}
   if(o.type==='door'){const why=objectGate(o);if(why){notice(why,true);return;}await switchScene(o.to);return;}
@@ -1516,6 +1533,28 @@ function frame(t){
   }catch(e){console.error(e);active=false;notice('画面暂停了，请先保存进度，再刷新重试。',true);}
   requestAnimationFrame(frame);
 }
+function reviewSave(check){
+      const candidate=check.state,q=N.current(candidate);
+      activity('导入进度 · 确认内容','地点：'+world[candidate.scene].name+'\n任务：'+(q?q+' '+N.titles[q]:candidate.flags.volume4Complete?deskText('第四卷已完成','Volume IV complete'):candidate.flags.volume3Complete?deskText('第三卷已完成','Volume III complete'):candidate.flags.volume2Complete?'第二卷已完成':'第一卷已完成')+'\n家用：'+candidate.coins+' 文\n\n确认后替换本页进度。原进度将保留一份备份，可在行囊下载。');
+      button('确认导入这份进度',async()=>{
+        if(!await loadSceneAssets(candidate.scene)){notice('场景图片加载失败，尚未修改进度。',true);return;}
+        try{
+          const previous=started?JSON.stringify(state()):localStorage.getItem(N.SAVE_KEY);
+          if(previous)localStorage.setItem('nanlan_before_import',previous);
+          storage.setItem(N.SAVE_KEY,JSON.stringify(candidate));engine.state=candidate;engine.memoryOnly=false;localStorage.removeItem("nanlan_last_night");
+          storedRaw=JSON.stringify(candidate);started=true;path=[];keys={};moving=false;$('start').hidden=true;$('hud').hidden=false;
+          closeDialog();refreshHud();render();notice('进度已导入。'+nextHint());
+        }catch(e){notice('保存失败，原有进度未被替换。可检查浏览器存储后重试。',true);}
+      },'confirm-import');
+      button('取消，保留当前进度',closeDialog,'cancel-import',true);
+}
+function setReadingSize(on){document.documentElement.classList.toggle('large-read',on);$('readSize').setAttribute('aria-pressed',String(on));}
+try{setReadingSize(localStorage.getItem('nanlan_large_text')==='1');}catch{}
+function toggleReadingSize(){const on=!document.documentElement.classList.contains('large-read');setReadingSize(on);try{localStorage.setItem('nanlan_large_text',on?'1':'0');}catch{}}
+$('readSize').onclick=toggleReadingSize;
+async function toggleGameScreen(){try{if(document.fullscreenElement)await document.exitFullscreen();else await document.documentElement.requestFullscreen();}catch{notice(deskText('当前窗口无法切换全屏。','This window cannot switch to full screen.'),true);}}
+if(document.fullscreenEnabled){$('screenMode').hidden=false;$('screenMode').onclick=toggleGameScreen;document.addEventListener('fullscreenchange',()=>{$('screenMode').textContent=document.fullscreenElement?'退出全屏 / Windowed':'全屏 / Full screen';});}
+function bedtimeReview(){try{const check=new N.Engine(storage,world);check.load(localStorage.getItem('nanlan_last_night'));reviewSave(check);}catch{notice(deskText('睡前存档无法读取。','The bedtime save could not be read.'),true);}}
 function importSave(){
   const input=document.createElement('input');input.type='file';input.accept='.json,application/json';input.hidden=true;document.body.append(input);input.oncancel=()=>input.remove();
   input.onchange=async()=>{
@@ -1523,19 +1562,7 @@ function importSave(){
     try{
       if(file.size>2*1024*1024)throw new Error('存档文件过大，请选择游戏导出的 JSON 文件。');
       const raw=await file.text(),check=new N.Engine(storage,world);check.load(raw);
-      const candidate=check.state,q=N.current(candidate);
-      activity('导入进度 · 确认内容','地点：'+world[candidate.scene].name+'\n任务：'+(q?q+' '+N.titles[q]:candidate.flags.volume2Complete?'第二卷已完成':'第一卷已完成')+'\n家用：'+candidate.coins+' 文\n\n确认后替换本页进度。原进度将保留一份备份，可在行囊下载。');
-      button('确认导入这份进度',async()=>{
-        if(!await loadSceneAssets(candidate.scene)){notice('场景图片加载失败，尚未修改进度。',true);return;}
-        try{
-          const previous=started?JSON.stringify(state()):localStorage.getItem(N.SAVE_KEY);
-          if(previous)localStorage.setItem('nanlan_before_import',previous);
-          storage.setItem(N.SAVE_KEY,JSON.stringify(candidate));engine.state=candidate;engine.memoryOnly=false;
-          storedRaw=JSON.stringify(candidate);started=true;path=[];keys={};moving=false;$('start').hidden=true;$('hud').hidden=false;
-          closeDialog();refreshHud();render();notice('进度已导入。'+nextHint());
-        }catch(e){notice('保存失败，原有进度未被替换。可检查浏览器存储后重试。',true);}
-      },'confirm-import');
-      button('取消，保留当前进度',closeDialog,'cancel-import',true);
+      reviewSave(check);
     }catch(e){activity('无法导入这份存档',e.userMessage||e.message||'请使用本游戏导出的 JSON 存档；当前进度未改变。');}
     input.remove();
   };input.click();
@@ -1579,7 +1606,7 @@ async function beginGame(confirmed=false){
   try{
     if(!await loadImage('gate')){$('loadWarning').hidden=false;$('loadWarning').textContent='旧宅门前图片未能载入，请稍后再试。';return;}
     if(storedRaw&&!engine.memoryOnly)storage.setItem('nanlan_v20_previous',storedRaw);
-    engine.reset(gender);started=true;active=true;$('start').hidden=true;$('hud').hidden=false;storedRaw=null;
+    engine.reset(gender);if(!engine.memoryOnly)localStorage.removeItem('nanlan_last_night');started=true;active=true;$('start').hidden=true;$('hud').hidden=false;storedRaw=null;
     refreshHud();showArrivalBeat();
   }catch(e){
     activity('浏览器暂时无法保存','当前浏览器没有可用的本地存储。你可以检查浏览器设置后重试，或选择仅本次试玩；试玩模式关闭网页后不会保留进度。');

@@ -4,11 +4,13 @@
 const responses=['陆掌柜：「上一回你肯等我收紧篓耳，这回每捆我都提两遍。多留二十分钟，招牌我自己护。」','陆掌柜：「轻用的我已另扎细绳。上次你肯替我问用途，我就把能做与不能做的都写明。」','陆掌柜：「退回的原件我认。往后我只接一件，见过收条再添；余下的，请工棚帮着排。」'];
 function sheet(rows){const el=document.createElement('dl');el.className='v4-accounts';for(const [a,b] of rows){const x=document.createElement('dt'),y=document.createElement('dd');x.textContent=a;y.textContent=String(b);el.append(x,y);}$('panelExtra').append(el);}
 function note(t){const p=document.createElement('p');p.className='production-note';p.textContent=t;$('panelExtra').append(p);}
-function travel(label,sc,id){navButton(label,()=>{closeDialog();startNavigation(sc,id);},'season-route-'+id);}
+let arrival=null;
+function atStop(o){if(!arrival)return false;const hit=state().scene===arrival.sc&&o.id===arrival.id;if(o.type==='door'&&!hit)return false;arrival=null;if(!hit)return false;show();return true;}
+function travel(label,sc,id){navButton(label,()=>{closeDialog();arrival=id==='bedRest'?null:{sc,id};startNavigation(sc,id);},'season-route-'+id);}
 function op(label,name,p={},next=show){return actButton(label,'v4Guild'+name,{sequence:state().revision,...p},next,'guild-'+name+'-'+(p.choice??p.size??p.space??0));}
 function clock(t){const m=Math.floor(t)%1440;return '第 '+(Math.floor(t/1440)+1)+' 日 '+String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0');}
 function wait(){const s=state(),due=V.guildDue(s),night=(N.clock(s).day-1)*1440+1320;if(due<=s.worldTick)return;note('下一次约定 · '+clock(due));if(s.worldTick<night)op('守候至 '+clock(Math.min(night,due)),'Wait');travel('回东厢房过夜，再来看班期','bed','bedRest');}
-function buttonHere(label,scene,id,fn){if(state().scene!==scene){travel(label,scene,id);return;}fn();}
+function buttonHere(label,scene,id,fn){const obj=world[scene].objects.find(o=>o.id===id);if(state().scene!==scene||!obj||!engine.near(obj)){travel(label,scene,id);return;}fn();}
 function openForm(size){
  const s=state(),a=V.guildInfo(s,size),t=s.story4,raw=V.stores(s);
  activity('派单之前 · 各家能交多少','丝束三十二文，窄篓二十二文。先领对岸三分之一订金，再依供货份额预付工料款的四分之一。李家选自供时只取未预留的行囊实货。','guild-order');
@@ -53,5 +55,5 @@ function show(){
  if(sc==='guild'&&t.cloth<4)op('添一卷干油布 · 七文，一航用一卷','BuyCloth');
  button('回看立所第一航',window.NanlanV4.ledger,'season-founding',true,false);
 }
-window.NanlanGuild={show};
+window.NanlanGuild={show,atStop};
 })();

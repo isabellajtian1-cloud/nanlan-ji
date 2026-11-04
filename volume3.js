@@ -99,6 +99,7 @@ function play(o,r,stage=0){
  if(k==='return'&&s.story3.shift)note(stamp(s.story3.shift.end));
  if(k==='order')note(L('每件用竹一份、工钱四文、日间工时四十分钟。','Each piece needs one bamboo, four coins of wages and forty working minutes.'));
  if(k==='grade')note(L('样品留在手边，粗竹承重，薄竹衬底。','Keep the sample close. Stout strips bear weight and thin strips line the base.'));
+ if(k==='batch'&&s.story3.job&&s.worldTick>=s.story3.job.due)sceneClue(deskText('先看看小满收工后的货架','Inspect Xiaoman’s finished rack'),s.story3.choices.hire===0?deskText('最底下垫了两片旧竹，包绳的结都朝外。小满让你伸手摸摸底面：「潮气上不来。你教过我的。」','Two old slats lift the parcels off the shelf. Every knot faces out. Xiaoman invites you to feel underneath. “Dry. Just as you showed me.”'):deskText('两家的货各压着一联签。小满把其中一联递给你：「都是一样的篓，可交钱的时候，不能认错人。」','Each household’s baskets have their own slip. Xiaoman hands you one. “The baskets look alike. The people we owe must never be mixed up.”'),'xiaoman-rack');
  if(k==='batch'&&s.story3.job)note(L('收工时刻','Work due')+' · '+stamp(s.story3.job.due));
  if(k==='receive'&&s.story3.freight)note(L('预计到埠','Arrival')+' · '+stamp(s.story3.freight.due));
  if(k==='water'||k==='sail'||k==='alert')note(N.tide(s).low?L('潮桩已露，船身低于系缆石。','The gauge is exposed. The boat lies below the mooring stone.'):L('水正涨，缆绳渐渐绷紧。','The water is rising and the rope pulls taut.'));

@@ -70,6 +70,10 @@ window.NanlanV2={
       if(q!=='V2_02'){showQuest();notice(nextHint());return;}
       const slot=o?.slot||'morning',a=M.slots[slot];title('南街 · '+a.label+'客流札记',a.text+'\n\n当前游戏时间：第'+N.clock(s).day+'日。按约观察会推进到对应时段；菜畦与其他事务同步经过这段时间。');
       if(q==='V2_02')action((f[a.flag]?'已记下 · ':'赴约观察 · ')+a.label,'v2Observe',{slot},!f[a.flag],'这一时段已真实记录，可前往下一个观察点。');
+      if(slot==='noon'&&f[a.flag]){
+        sceneClue(deskText('顺着脚夫的目光看','Follow the porter’s gaze'),deskText('脚夫把宽篓横过来试了试。桥口有人提货，他只好侧身退回街上。','The porter turns the broad basket sideways. Someone is collecting a parcel in the doorway. He backs out into the street.'),'watch-porter');
+        sceneClue(deskText('留下看柜边那双手','Watch the hands at the counter'),deskText('一位妇人把窄篓套上臂弯，另一只手还牵着孩子。她没问大篓的价。','A woman slips the narrow basket over one arm. Her other hand holds a child’s. She never asks the price of the broad basket.'),'watch-counter');
+      }
       table(['已经看见','记录'],t.observations.map(x=>[M.slots[x.slot].label,x.text]));return;
     }
     if(kind==='v2Lease'){

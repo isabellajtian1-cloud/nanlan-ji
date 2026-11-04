@@ -125,7 +125,8 @@ function panel(o,stage=0,pick){
  if(!to||to.sc!==s.scene||to.id!==o.id){activity(o.label,s.flags.volume4Complete?endings[t.choices.reply][1]:'手边的货、已答应的交期和每一笔船脚，都可以在总账里找到。','v4-place');nextRoute(o);}
  else{
   const k=r[0],i=V.chapter[k],ch=V.script[i],idx=V.chapters[i].indexOf(r),preferred={v4Merchant:'seaMerchant',v2Neighbor:'neighbor',v3Boatman:'boatman',v3Bench:'xiaoman',v4Visitor:'visitor',v4Letter:'father',v4Lamp:'grandfather',v4Bell:'yu'}[o.id];
-  const line=ch.beats.find(b=>b[0]===preferred)||ch.beats[Math.min(idx,ch.beats.length-1)];
+  const lines=idx===0&&heard.has(i)&&ch.beats.length>1?ch.beats.slice(1):ch.beats;
+  const line=lines.find(b=>b[0]===preferred)||lines[Math.min(idx,lines.length-1)];
   activity(cast[line[0]]||ch.title[0],line[1],'v4-story');$('next').hidden=true;$('dialogKicker').textContent=ch.title[0];if(line[0]==='player')portraitPlayer();
   note(r[3]);details(k);const parts=moments[k];
   const gesture=gestures[k];

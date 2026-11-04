@@ -374,6 +374,7 @@ function refreshHud(){
   $('clock').setAttribute('aria-label','查看日期、昼夜与潮汐：'+t.short);
   $('energy').textContent=Math.floor(s.stamina);$('energyBar').style.width=s.stamina+'%';$('coins').textContent=s.coins;
   refreshQuestBanner(s,q);$('nightNote').hidden=!(s.mode==='daily'&&N.clock(s).minute>=1320);
+  $('nightNote').querySelector('strong').textContent=N.voyage.get(s)?.away?(window.NanlanI18n?.language==='en'?'Take me to the guest courtyard':'带我到宿院歇一夜'):(window.NanlanI18n?.language==='en'?'Take me to the bed in the East Wing':'带我回卧房（东厢房）床榻');
   refreshToolbar();
 }
 const toolDefs=[

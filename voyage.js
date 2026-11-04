@@ -150,6 +150,6 @@ function offer(o){
  if(o.action==='voyageScene'){if(o.id==='voyageGuestBook')supplies(o);else ledger();return true;}
  return false;
 }
-$('nightNote').addEventListener('click',e=>{if(V.get(state())?.away){e.preventDefault();e.stopImmediatePropagation();route(L('到宿院歇一夜','Rest at the guest courtyard'),'qLodge','voyageGuestBook');}},true);
+$('nightNote').addEventListener('click',e=>{if(V.get(state())?.away){e.preventDefault();e.stopImmediatePropagation();closeDialog(true);startNavigation('qLodge','voyageGuestBook');}},true);
 window.NanlanVoyageUI={offer,visible,ledger,extras,panel,extraPanel};
 })();

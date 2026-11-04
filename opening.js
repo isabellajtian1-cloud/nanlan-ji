@@ -1,10 +1,70 @@
 /* Illustrated arrival. Presentation only: no quest flags, inventory or clock writes. */
 (()=>{'use strict';
 const shots=[
- {duration:10000,asset:'oldTrail',environment:'oldTrail',roles:[],title:['南行的尽头','At the End of the Southern Road'],line:['离京后的长路，终于走到了岭南。\n一家人的文书与行李仍在身边，熟悉的院门却留在了远处。','The long road from the Capital has brought your family to Lingnan.\nYour papers and belongings are still with you. The familiar gate is far behind.']},
- {duration:9000,asset:'gate',environment:'gate',roles:['father'],title:['父亲 · 旧宅门前','Father · Before the Old House'],line:['「到了。箱笼先别全搬。门锁、屋瓦和能落脚的地方，都要亲眼看过再说。」','“We have arrived. Leave the trunks for a moment. Let us first see the lock, the roof, and where we can settle.”']},
- {duration:10000,asset:'gate',environment:'gate',roles:['guard'],title:['官兵 · 文书交接','The Escort · The Handover'],line:['「李家迁居南澜，文书、行李在此交清。\n院门的钥匙也在这里。交接妥当，我等便返京。」','“The Li household is to settle in Nanlan. Here are your papers and belongings.\nThe gate key is here as well. Once the handover is complete, we return to the Capital.”']},
- {duration:9000,asset:'gate',environment:'gate',roles:['mother','grandfather'],title:['母亲 · 先让一家人安顿','Mother · A Place for Everyone'],line:['「路上的事，进屋再说。先扶你祖父坐下。」\n\n门还合着。新的日子，就从走近家人开始。','“We can speak of the road once we are inside. First, help your grandfather find a seat.”\n\nThe gate is still closed. Your new days begin beside your family.']}
+ {
+  "duration": 11000,
+  "image": "opening-capital-v662.webp",
+  "asset": "study",
+  "environment": "study",
+  "roles": [],
+  "title": [
+   "京城 · 曾经的家",
+   "The Capital · The Home You Knew"
+  ],
+  "line": [
+   "京城的旧宅里，祖父案头的书还未收尽，母亲窗下的针线也只做到一半。\n一道迁往岭南的文书，让一家人开始收拾行装。",
+   "In your family’s home in the Capital, books still lay on Grandfather’s desk. Mother’s embroidery stood unfinished by the window.\nThen came the order to leave for Lingnan."
+  ]
+ },
+ {
+  "duration": 12000,
+  "image": "opening-southbound-v662.webp",
+  "asset": "oldTrail",
+  "environment": "oldTrail",
+  "roles": [],
+  "title": [
+   "南行 · 一路车声",
+   "Southbound · The Turning Wheels"
+  ],
+  "line": [
+   "马车载着箱笼、书卷，也载着一家人的牵挂。越往南，山色越青，雨声也越密。\n母亲替祖父掖好衣角：「到了地方，先让一家人吃上一顿热饭。」",
+   "The cart carried trunks, books, and all your family’s worries. Farther south, the hills grew greener and the rain more frequent.\nMother tucked Grandfather’s robe around him. “When we arrive, a hot meal for everyone comes first.”"
+  ]
+ },
+ {
+  "duration": 11000,
+  "asset": "gate",
+  "environment": "gate",
+  "roles": [
+   "father",
+   "guard"
+  ],
+  "title": [
+   "南澜 · 长路停在门前",
+   "Nanlan · Where the Road Ends"
+  ],
+  "line": [
+   "长路终于在一扇旧院门前停下。官兵将文书与钥匙交到父亲手中。\n父亲望了望屋瓦：「箱笼先别全搬。先看看，哪里能让大家安顿。」",
+   "At last, the long road ended before an old courtyard gate. The escort handed Father the papers and the key.\nFather looked up at the roof. “Leave the trunks for now. Let us see where everyone can settle.”"
+  ]
+ },
+ {
+  "duration": 10000,
+  "asset": "gate",
+  "environment": "gate",
+  "roles": [
+   "mother",
+   "grandfather"
+  ],
+  "title": [
+   "从这里 · 再安一个家",
+   "Here · A Home to Make Together"
+  ],
+  "line": [
+   "祖父把一路护着的书抱稳：「先进去吧。屋子可以慢慢修，日子也能慢慢过。」\n门后的模样还不知道。先走近家人，一起看看这处新住处。",
+   "Grandfather gathered the book he had kept safe along the road. “Let us go in. We can mend the house, and find our way, a little at a time.”\nYou have yet to see what lies beyond the gate. Join your family and discover your new home together."
+  ]
+ }
 ];
 let host=null,index=0,elapsed=0,playing=true,running=false,frame=0,last=0,lastAdvance=-Infinity,onFinish=null,focusBefore=null,wasActive=false,oldInert=false;
 const en=()=>window.NanlanI18n?.language==='en',P=p=>p[en()?1:0];
@@ -20,7 +80,7 @@ function build(){
  host.querySelector('#openingAuto').onclick=()=>{playing=!playing;last=0;labels();};
 }
 function labels(){
- host.querySelector('#openingKicker').textContent=P(['明代 · 岭南 · 初到南澜','Ming China · Lingnan · Arrival in Nanlan']);
+ host.querySelector('#openingKicker').textContent=P(['明代 · 从京城到南澜','Ming China · From the Capital to Nanlan']);
  host.querySelector('#openingSkip').textContent=P(['跳过并开始','Skip and Play']);
  host.querySelector('#openingAuto').textContent=playing?P(['自动播放 开','Autoplay On']):P(['自动播放 暂停','Autoplay Paused']);
  host.querySelector('#openingAuto').setAttribute('aria-pressed',String(playing));
@@ -29,8 +89,8 @@ function labels(){
 }
 function paint(){
  const s=shots[index],A=window.NANLAN_DATA.assets;host.dataset.shot=String(index);
- const img=document.createElement('img');img.alt='';img.src=A[s.asset]||A.gate;img.draggable=false;img.onerror=()=>{img.onerror=null;img.src=A.gate;};
- host.querySelector('.opening-landscape').replaceChildren(img);
+ const img=document.createElement('img');img.alt='';img.src=s.image||A[s.asset]||A.gate;img.draggable=false;img.onerror=()=>{img.onerror=null;img.src=A[s.asset]||A.gate;};
+ const shade=document.createElement('div');shade.className='opening-shade';host.querySelector('.opening-landscape').replaceChildren(img,shade);
  const cast=host.querySelector('.opening-portraits');cast.replaceChildren();cast.style.animation='none';void cast.offsetWidth;cast.style.animation='';
  for(const role of s.roles){const portrait=document.createElement('img');portrait.src=A['npc_'+role];portrait.alt='';portrait.draggable=false;portrait.onerror=()=>{portrait.hidden=true;};cast.append(portrait);}
  host.querySelector('#openingTitle').textContent=P(s.title);host.querySelector('#openingLine').textContent=P(s.line);labels();

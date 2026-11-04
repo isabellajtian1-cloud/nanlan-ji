@@ -10,7 +10,7 @@
 .opening-top button{background:transparent;color:#5e4e31;font-size:13px}
 .opening-top button:hover{background:#dac596}
 .opening-landscape{position:relative;min-height:0;margin:0;overflow:hidden;background:#263d31 center/contain no-repeat;border-bottom:1px solid #b89d6c}
-.opening-landscape img{display:block;width:100%;height:100%;object-fit:contain;object-position:center;background:#263d31;animation:opening-pan 11s ease-out both;transform-origin:var(--opening-origin,50% 50%)}
+.opening-landscape img{display:block;width:100%;height:100%;object-fit:contain;object-position:center;background:#263d31;animation:opening-pan 12s ease-out both;transform-origin:var(--opening-origin,50% 50%)}
 #openingFilm[data-shot="0"]{--opening-origin:38% 52%}
 #openingFilm[data-shot="1"]{--opening-origin:55% 50%}
 #openingFilm[data-shot="2"]{--opening-origin:52% 55%}

@@ -16,6 +16,7 @@ const moments={
  voices:['让父亲讲完京中旧友的消息','听母亲说铺面、桑塘和街坊','请祖父说说旧匣和眼前这座宅子']
 };
 let useOriginal=false;
+const heard=new Set();
 function visible(s,o){
  if(o.id==='v4Bell')return !!s.flags.volume3Complete;
  if(o.id==='v4ToShip')return !!s.flags.v4_look;
@@ -82,6 +83,7 @@ function details(k){
 function reader(i,o,pos=0){
  const ch=V.script[i],b=ch.beats[pos];activity(cast[b[0]]||'帆影手记',b[1],'v4-voices');$('dialogKicker').textContent=ch.title[0]+' · '+(pos+1)+' / '+ch.beats.length;$('next').hidden=true;
  if(b[0]==='player')portraitPlayer();
+ if(pos+1<ch.beats.length)button(window.NanlanI18n?.language==='en'?'Turn to the work at hand':'先动手，稍后再听',()=>panel(o),'v4-scene-skip',true,false);
  button(pos+1<ch.beats.length?'听下一句':'回到手边的事',()=>pos+1<ch.beats.length?reader(i,o,pos+1):panel(o),'v4-voices-next');
 }
 function portraitPlayer(){const img=document.createElement('img'),fig=document.createElement('figure'),frame=document.createElement('div');frame.className='portrait-frame';img.src=DATA.assets['npc_'+(state().gender==='male'?'playerMale':'playerFemale')];img.alt='你';frame.append(img);fig.append(frame);const el=$('dialogPortraits');el.replaceChildren(fig);el.hidden=false;}
@@ -101,7 +103,24 @@ function outcome(o,k,i){
  nextRoute(o);if(k==='home'||k==='pay')button('翻开公所总账',ledger,'v4-read-ledger',true);
  button('合上手记，沿路走走',closeDialog,'v4-close',true,false);
 }
-function panel(o,stage=0){
+// Brief, replayable scene gestures. Only the existing story action commits progress.
+const gestures={
+ hold:[
+  ['扣住篓耳试提','Lift the basket by its handle','篓底刚离案，拇指底下便滑过一截竹篾。小满托住篓底：「别松手。你摸，那道旧折正好藏在耳根。」','As the basket clears the bench, a strip slips beneath your thumb. Xiaoman catches the base. “Keep hold. Feel the old crease under the handle?”'],
+  ['翻过来摸篾尾','Turn it over and feel the weave','篓身编得密，唯独耳根有一截篾尾短了半指。陆掌柜把货单翻回正面，低声说：「这件是我扎的。签子留着。」','The weave is tight except for one short end beneath the handle. Master Lu turns the docket over. “I tied this one. Leave my mark on it.”']],
+ post:[
+  ['自己把信递上船','Hand the letter aboard','跳板随浪低了一寸。你把信递过去，等船家把它收进干布袋，才肯松手。','The gangplank dips. You wait until the boatman has the letter inside his dry pouch before you let go.'],
+  ['请船家念一遍封面','Ask the boatman to read the address','船家把封面逐字念了一遍。父亲听到末尾那个姓，轻轻应了一声，仿佛老友就在对岸。','The boatman reads the address aloud. At the family name, Father answers softly, as though his old friend stood across the water.']],
+ home:[
+  ['替祖父拢住灯火','Shield the flame for Grandfather','你双手拢住灯盏。火苗站稳了，祖父才松开手：「从前总是我替你挡风。如今倒换过来了。」','You cup your hands around the lamp. When the flame steadies, Grandfather lets go. “I used to keep the wind off for you. Look at us now.”'],
+  ['给迟归的人留一盏灯','Leave a light for the last one home','你把灯往窗边挪了半尺。母亲进门时先看见那点亮，手里的针线篮还没放下，就说：「在巷口便瞧见了。」','You move the lamp closer to the window. Mother comes in with her sewing basket still on her arm. “I could see it from the lane.”']]
+};
+function sceneGesture(k,o,pick){
+ const en=window.NanlanI18n?.language==='en',rows=gestures[k];
+ if(pick===undefined){rows.forEach((row,j)=>button(row[en?1:0],()=>panel(o,1,j),'v4-gesture-'+j,false,false));return;}
+ note(rows[pick][en?3:2]);
+}
+function panel(o,stage=0,pick){
  const s=state(),t=s.story4,to=objective(),r=to?.r;
  if(!to||to.sc!==s.scene||to.id!==o.id){activity(o.label,s.flags.volume4Complete?endings[t.choices.reply][1]:'手边的货、已答应的交期和每一笔船脚，都可以在总账里找到。','v4-place');nextRoute(o);}
  else{
@@ -109,8 +128,10 @@ function panel(o,stage=0){
   const line=ch.beats.find(b=>b[0]===preferred)||ch.beats[Math.min(idx,ch.beats.length-1)];
   activity(cast[line[0]]||ch.title[0],line[1],'v4-story');$('next').hidden=true;$('dialogKicker').textContent=ch.title[0];if(line[0]==='player')portraitPlayer();
   note(r[3]);details(k);const parts=moments[k];
-  if(k==='hold'&&stage>0&&s.worldTick>=t.due)note('负重一提，接口滑了一线。');
-  if(parts&&stage<parts.length){if(k!=='hold'||s.worldTick>=t.due)button(parts[stage],()=>panel(o,stage+1),'v4-hands-'+stage,false,false);}
+  const gesture=gestures[k];
+  if(gesture&&pick!==undefined)sceneGesture(k,o,pick);
+  if(gesture&&stage===0){if(!V.waitUntil(s)||s.worldTick>=V.waitUntil(s))sceneGesture(k,o);}
+  else if(!gesture&&parts&&stage<parts.length){if(k!=='hold'||s.worldTick>=t.due)button(parts[stage],()=>panel(o,stage+1),'v4-hands-'+stage,false,false);}
   else if(r.length>4){for(let c=0;c<r.length-4;c++)objectAction(r[c+4],'v4Step',{key:k,choice:c},()=>outcome(o,k,i));}
   else{const label=k==='resolve'?(t.ships.some(b=>!b.signed)?'核对另班回报并签收':V.remaining(t)?'装上另班余货，付本航船脚':'核清全航损耗和回执'):r[3];objectAction(label,'v4Step',{key:k},()=>outcome(o,k,i));}
   waits(o);
@@ -126,6 +147,8 @@ function offer(o){
  if(useOriginal){useOriginal=false;return false;}const s=state();
  if(o.id==='v4Bell'&&V.canStart(s)){prologue(o);return true;}
  if(!s.story4||o.type==='door')return false;const to=objective();
+ if(to&&to.sc===s.scene&&to.id===o.id){const i=V.chapter[to.r[0]];
+   if(V.chapters[i][0][0]===to.r[0]&&!heard.has(i)){heard.add(i);const opening=V.script[i].beats[0];activity(cast[opening[0]],opening[1],'v4-arrival');$('dialogKicker').textContent=V.titles[V.order[i]];if(opening[0]==='player')portraitPlayer();button(window.NanlanI18n?.language==='en'?'Turn to the work at hand':'走近些，动手吧',()=>panel(o),'v4-arrival-next');return true;}}
  if(o.action==='v4Scene'||to&&to.sc===s.scene&&to.id===o.id){panel(o);return true;}return false;
 }
 window.NanlanV4={offer,visible,ledger};

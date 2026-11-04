@@ -26,7 +26,7 @@ function visible(s,o){
 function objectAction(label,key,choice,again){return actButton(label,'v5Step',{key,choice,sequence:state().revision},again,'clear-water-'+key+(choice??''));}
 function prologue(o){
  activity(L('后堂 · 一碗带咸味的水','Back Hall · A Bowl Touched by Salt'),L('天刚亮，陈伯把一只盖着粗布的碗放到后堂桌上。井绳晒干后结着细白，碗里的水尝来微咸。无人说这是灾，也没人把它当作寻常。','At first light, Uncle Chen sets a cloth-covered bowl on the back-hall table. Fine white crystals cling to the dried well rope, and the water tastes faintly of salt. No one calls it a disaster; no one dismisses it.'));
- note(L('第五卷从井边的一碗水开始。公所续单与前四卷日常仍可照常经营。','Volume V begins with one bowl from the village well. Guild orders and all earlier daily play remain available.'));
+ note(L('清渠支线从井边的一碗水开始。岁序主线与公所续单仍可照常查看。','This waterway side story begins with a bowl from the village well. Enduring Seasons and guild business remain available.'));
  actButton(L('接过水样，去井边亲自看','Take the sample and inspect the well'),'v5Start',{sequence:state().revision},()=>{closeDialog();notice(L('陈伯在村井旁等你。','Uncle Chen is waiting by the village well.'));},'v5-start');
  button(L('先把手边事情做完','Return to Today’s Work'),closeDialog,'v5-later',true,false);
 }

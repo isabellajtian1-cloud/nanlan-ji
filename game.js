@@ -352,7 +352,7 @@ function refreshQuestBanner(s=state(),q=N.current(s)){
     renderQuestSteps($('quest'),false,s,q);lastQuestSignature=questSignature;
   }
   $('questAct').textContent=q?.startsWith('S5_')||s.flags.season5Complete&&!q?'岁序长青':s.flags.volume5Started?'清水归渠':s.flags.volume4Started?'海天帆影':s.flags.volume3Started?'山海成行':s.flags.volume2Started?'南街的新日子':q?(Number(q.slice(1))<=4?'先安顿一家人':'在南澜生活'):'这一季已经写完';
-  $('questHeading').textContent=q?N.titles[q]:s.flags.volume5Complete?'清水满缸 · 日常继续':s.flags.volume4Complete?'海天帆影 · 家灯长明':s.flags.volume3Complete?'山海之间 · 日常继续':s.flags.volume2Complete?'南街灯起 · 日常继续':'岁末满庭 · 新春家议';
+  $('questHeading').textContent=q?N.titles[q]:s.flags.season5Complete?'岁序长青 · 来年有约':s.flags.volume5Complete?'清水满缸 · 日常继续':s.flags.volume4Complete?'海天帆影 · 家灯长明':s.flags.volume3Complete?'山海之间 · 日常继续':s.flags.volume2Complete?'南街灯起 · 日常继续':'岁末满庭 · 新春家议';
   $('questHint').textContent=hint;
 }
 function refreshHud(){
@@ -426,7 +426,7 @@ function selectTool(index){
 }
 function showQuest(){
   const s=state(),q=N.current(s);
-  activity(q?N.titles[q]:s.flags.volume5Complete?'清水满缸 · 日常继续':s.flags.volume4Complete?'海天帆影 · 家灯长明':s.flags.volume3Complete?'山海之间 · 日常继续':s.flags.volume2Complete?'南街灯起 · 日常继续':'岁末满庭 · 新春家议',q?'点一条眼前的具体事项，人物会沿已经走通的路前往。事情要按生活里的先后去办，不必另找“下一步”按钮。\n\n事情办妥后：'+N.rewards[q][1]:nextHint());
+  activity(q?N.titles[q]:s.flags.season5Complete?'岁序长青 · 来年有约':s.flags.volume5Complete?'清水满缸 · 日常继续':s.flags.volume4Complete?'海天帆影 · 家灯长明':s.flags.volume3Complete?'山海之间 · 日常继续':s.flags.volume2Complete?'南街灯起 · 日常继续':'岁末满庭 · 新春家议',q?'点一条眼前的具体事项，人物会沿已经走通的路前往。事情要按生活里的先后去办，不必另找“下一步”按钮。\n\n事情办妥后：'+N.rewards[q][1]:nextHint());
   $('dialogKicker').textContent='只记下已经发生与眼前要做的事';
   if(q){const list=document.createElement('div');renderQuestSteps(list,true);$('panelExtra').append(list);}
   button('回看已经走过的路',showQuestCatalog,'catalog',true);

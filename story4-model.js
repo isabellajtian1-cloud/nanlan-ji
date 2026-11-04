@@ -183,7 +183,11 @@ function guildAction(s,key,p,h){
    need(raw.silk>=silk&&raw.bamboo>=bamboo,'村中可调的丝料或竹篾不够，等下次备料、缩批或以自货分担。');
    t.stores={day:day(s),silk:raw.silk-silk,bamboo:raw.bamboo-bamboo};
    if(p.own){needGoods(s,'fineSilk',1,h);needGoods(s,'narrowBasket',1,h);spend(s,{fineSilk:1,narrowBasket:1});}
-   privateCost(a.maintenance,'开仓清扫、垫仓和搬运的实际费用');
+   if(p.workWithNeighbors===true){
+     need(rural.rank(s)>0&&s.flags.v2RegularFulfilled,'先得村中记名，并办妥南街熟客的留货。');
+     rural.work(s,20,2,need);
+   }
+   privateCost(a.maintenance-(p.workWithNeighbors===true?2:0),'开仓清扫、垫仓和搬运的实际费用');
    const v=t.repeat={...initial(),round:t.round+1,size:p.size,inputs:{silk,bamboo},phase:'await',due:Math.ceil(s.worldTick)+a.lead,choices:{charter:t.choices.charter},prepaid:[0,0,0,0],defect:a.prior===1?'light':a.prior===0?'sound':'sound',policy:a.prior,gross:a.gross,needsCheck:a.prior===0?1:2};
    const g=view(s,v);v.lots=[lot(p.own?'house':'farm','fineSilk',1),lot(p.own?'house':'makers','narrowBasket',1),lot('farm','fineSilk',a.silk-1),lot('lu','narrowBasket',a.lu),lot('makers','narrowBasket',a.baskets-a.lu-1)];
    // A new receiving pair can misfile an unmarked lot on a later voyage. The

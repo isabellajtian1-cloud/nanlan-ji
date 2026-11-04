@@ -7,7 +7,7 @@ function note(t){const p=document.createElement('p');p.className='production-not
 let arrival=null;
 function atStop(o){if(!arrival)return false;const hit=state().scene===arrival.sc&&o.id===arrival.id;if(o.type==='door'&&!hit)return false;arrival=null;if(!hit)return false;show();return true;}
 function travel(label,sc,id){navButton(label,()=>{closeDialog();arrival=id==='bedRest'?null:{sc,id};startNavigation(sc,id);},'season-route-'+id);}
-function op(label,name,p={},next=show){return actButton(label,'v4Guild'+name,{sequence:state().revision,...p},next,'guild-'+name+'-'+(p.choice??p.size??p.space??0));}
+function op(label,name,p={},next=show){return actButton(label,'v4Guild'+name,{sequence:state().revision,...p},next,'guild-'+name+'-'+(p.choice??p.size??p.space??0)+(name==='Open'?'-'+Number(p.own)+'-'+Number(!!p.workWithNeighbors):''));}
 function clock(t){const m=Math.floor(t)%1440;return '第 '+(Math.floor(t/1440)+1)+' 日 '+String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0');}
 function wait(){const s=state(),due=V.guildDue(s),night=(N.clock(s).day-1)*1440+1320;if(due<=s.worldTick)return;note('下一次约定 · '+clock(due));if(s.worldTick<night)op('守候至 '+clock(Math.min(night,due)),'Wait');travel('回东厢房过夜，再来看班期','bed','bedRest');}
 function buttonHere(label,scene,id,fn){const obj=world[scene].objects.find(o=>o.id===id);if(state().scene!==scene||!obj||!engine.near(obj)){travel(label,scene,id);return;}fn();}
@@ -17,6 +17,11 @@ function openForm(size){
  sheet([['约货 · 特级丝 / 精篓',a.silk+' / '+a.baskets],['需用仓格 / 现有仓格',a.slots+' / '+V.capacity(t)],['陆家可接精篓',a.lu],['本批货款 / 船东订金',a.gross+' / '+Math.floor(a.gross/3)+' 文'],['开仓清扫、铺垫与搬运',a.maintenance+' 文'],['约定交到公库',clock(s.worldTick+a.lead)],['可调丝料 / 竹篾',raw.silk+' / '+raw.bamboo]]);
  sheet([['李家可自交 · 丝 / 篓','1 / 1'],['桑户 · 李家自交 / 全部代供',(a.silk-1)+' / '+a.silk],['工棚 · 李家自交 / 全部代供',(a.baskets-a.lu-1)+' / '+(a.baskets-a.lu)]]);
  note('丝绞与留样比匀细、查接头；篓口合样尺，篓耳须能负重。');note(responses[a.prior]);note('一束用一份可缫丝料，一件用两份竹篾。每日新备两份丝料、四份竹篾，各有存放上限。');note('样尺验篓口，试提验篓耳；轻用篓单列，须经船东同意。货到之前可离开照看家里。');
+ if(a.slots<=V.capacity(t)&&N.rural.rank(s)>0&&s.flags.v2RegularFulfilled){
+ const tr=deskText;note(tr('熟客替李家递了话。街坊肯合班搬货：你亲自帮二十分钟，费两点体力，本单少雇两文脚力。','A regular has vouched for you. Work with the neighbours for twenty minutes and two stamina to save two coins in porter wages.'));
+ sheet([[tr('合班开仓费','Shared opening cost'),a.maintenance-2],[tr('合班交货时辰','Delivery after shared loading'),clock(s.worldTick+20+a.lead)]]);
+ op(tr('合班搬货 · 李家自供','Share the work · supply our own goods'),'Open',{size,own:true,workWithNeighbors:true});
+ op(tr('合班搬货 · 只经办','Share the work · coordinate only'),'Open',{size,own:false,workWithNeighbors:true});}
  if(a.slots<=V.capacity(t)){op('李家自供丝篓各一，照单拨料','Open',{size,own:true});op('本户只经办，按各家实供开单','Open',{size,own:false});}else note('公库放不下这张单，先缩量或验收新干货架。');
  button('回到公所总账',show,'season-back',true,false);
 }

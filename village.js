@@ -45,8 +45,24 @@ function meeting(g){
  if(r[g]==='broken')note(L('青禾把包药纸收回抽屉。「明日，请先同我说一声。」','Xu puts the papers away. “Next time, please tell me first.”'));
  if(R.rank(s))note(R.rank(s)===2?L('陈伯已答应替李家担保榕荫铺的押钱。','Chen has offered to stand surety for the banyan shop.'):L('村簿上已经写下了李家的名字。','The Li family now has a place in the village register.'));
 }
+function villageWord(){
+ const s=state(),r=s.rural,level=R.rank(s),known=['chen','xu','cen'].some(k=>r[k]==='done');
+ activity(L('陈伯 · 街坊怎样说起你','Uncle Chen · What the neighbours remember'),level===2?L('「这家人的字，我肯在旁边押个名。」','“I would put my own name beside theirs.”'):level===1?L('「翻开村簿吧，你家的名字已经记下了。」','“Open the village register. Your household has a line of its own.”'):L('「坐。你来南澜这些日子，哪一件事是谁亲眼见的，咱就说哪一件。」','“Sit a while. Let me tell you what folk here have actually seen.”'),'village-word');
+ if(r.chen==='done')note(L('井边那户还记得，是你把菜送到了灶边。','At the well they remember who brought greens right to their hearth.'));
+ if(r.xu==='done')note(L('青禾替你说过话：「说好午前，两份鲜草一份没少。」','Qinghe spoke for you. “Before noon, as promised. Both bundles.”'));
+ if(r.cen==='done')note(L('阿岑说，挑担人认得你们留下的水痕。','Cen says the porters still look for the water marks you checked.'));
+ if(s.flags.v2RegularFulfilled)note(L('南街的熟客认你的留货签，说回来取时，东西还在。','A regular on South Street remembers finding the promised goods waiting.'));
+ if(s.flags.v3_audit)note(L('小满提过那次独立当班。你回来同她一笔笔核过账。','Xiaoman remembers the shift she ran and the accounts you checked together afterward.'));
+ if(s.flags.v4_pay)note(L('河埠传回了话：第一航的钱，各家当面分清了。','Word came from the landing. Every household saw the first voyage settled.'));
+ if(r.seedLoan){note(L('陈伯翻到借种那一行。收成后把原数留给下一户就好。','Chen finds your loan. After harvest, leave the same amount for the next household.')+' ×'+r.seedLoan);
+ if(N.available(s,'seed')>=r.seedLoan)action(L('照原数还种','Return the borrowed seed'),'neighborRepay',{},villageWord);else note(L('行囊里还没留足菜种，收获后再来。','Set aside enough seed after harvest and come back.'));}
+ else if(r.xu==='broken'||r.seedPledgeBroken)note(L('「青禾还记着那两份另卖的药。改日早些去找她，重新约好并送到，我再把种袋托你。」','“Qinghe remembers the herbs sold elsewhere. Make a fresh promise one morning and keep it. Then I can lend you seed.”'));
+ else if(known){const n=level===2?2:1;note(L('「公种袋借你下地，收了照数还。误了时节也不收息。」','“Sow some seed from our common pouch. Return as much after harvest. No interest if the season slips.”'));action(L('向公种袋借菜种','Borrow from the village seed pouch')+' ×'+n,'neighborBorrow',{},villageWord);}
+ else note(L('「清早来走走。灶上缺菜、药要趁鲜、水涨时哪条路能走，都是街坊用得着的事。」','“Come by early. A hearth needs greens, herbs must travel fresh, and someone must check the high road after rain.”'));
+}
 function npc(o){
  const g={villager:'chen',doctor:'xu',aCen:'cen'}[o.id];if(!g)return;
+ if(g==='chen'&&state().flags.metChen)button(L('坐下听听乡里口碑','Sit and hear village word'),villageWord,'village-word',true);
  if(R.offered(state(),g)||state().rural[g])button(labels[g](L),()=>meeting(g),'neighbor-'+g,true);
 }
 function stop(o){

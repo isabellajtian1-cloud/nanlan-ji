@@ -10,6 +10,9 @@
   function normalise(s,need){
     s.rural??=fresh();
     const r=s.rural;
+    if(r.xu==='broken')r.seedPledgeBroken=true;
+    need(r.seedPledgeBroken===undefined||r.seedPledgeBroken===true,'乡约见证记录无效。');
+    need(r.seedLoan===undefined||[0,1,2].includes(r.seedLoan),'乡约借种记录无效。');
     for(const group of groups){
       need(['','working','promised','broken','done'].includes(r[group]),'乡约见证记录无效。');
       need(r.gifts&&r.dates&&r.declined&&typeof r.gifts==='object'&&typeof r.dates==='object'&&typeof r.declined==='object','乡约手记无效。');
@@ -83,13 +86,19 @@
       if(name==='neighborKeep')need(s.worldTick%1440+15<=720,'这一趟赶不上午约，可以先去说明。');
       r.xu=name==='neighborSell'?'broken':'';r.declined.xu=day(s);
       if(name==='neighborWithdraw')return;
-      spend(s,{herb:2});if(name==='neighborSell'){s.coins+=6;log(s,'sale',6,'将原约给许青禾的两份鲜草另售','herb');return;}
-      work(s,15,1,need);finish(s,'xu');return;
+      spend(s,{herb:2});if(name==='neighborSell'){r.seedPledgeBroken=true;s.coins+=6;log(s,'sale',6,'将原约给许青禾的两份鲜草另售','herb');return;}
+      work(s,15,1,need);delete r.seedPledgeBroken;finish(s,'xu');return;
     }
     if(name==='neighborMark'){
       at(s,'mountain');const bit=p.stop===1?1:p.stop===2?2:0;
       need(bit&&r.cen==='working'&&!(r.marks&bit),'先随阿岑认路，或看看另一处水痕。');
       work(s,15,2,need);r.marks|=bit;if(r.marks===3){finish(s,'cen');spend(s,{bamboo:1});}return;
+    }
+    if(name==='neighborBorrow'||name==='neighborRepay'){
+      at(s,'village');const owed=r.seedLoan||0;
+      if(name==='neighborRepay'){need(owed>0&&available(s,'seed')>=owed,'先留足借来的菜种，再来归还。');spend(s,{seed:owed});delete r.seedLoan;return;}
+      need(!owed&&!r.seedPledgeBroken&&r.xu!=='broken'&&groups.some(k=>r[k]==='done'),'等街坊有一件能替你作证的事，再来商量借种。');
+      r.seedLoan=rank(s)===2?2:1;give(s,{seed:r.seedLoan});return;
     }
     if(name==='neighborGift'){
       need(groups.includes(g)&&r[g]==='done'&&!r.gifts[g]&&day(s)>=r.dates[g]+3,'等约定的清晨再来。');at(s,location[g]);r.gifts[g]=true;return;

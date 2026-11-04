@@ -131,7 +131,7 @@ function renderCompletionFeedback(time){
   ctx.restore();
 }
 function dialogueCast(title){
-  const people=[['罗小满','xiaoman'],['何行舟','boatman'],['周成','zhou'],['方掌柜','fang'],['祖父','grandfather'],['父亲','father'],['母亲','mother'],['陈伯','chen'],['许青禾','doctor'],['阿岑','cen'],['程婉','wan'],['沈晚渔','yu'],['邱管事','qiu'],['林师傅','lin'],['郑掌柜','landlord'],['陆掌柜','neighbor'],['茶馆掌柜','tea'],['罗掌柜','tea'],['南街熟客','customer'],['官兵','guard']];
+  const people=[['梁问炊','liang'],['罗小满','xiaoman'],['何行舟','boatman'],['周成','zhou'],['方掌柜','fang'],['祖父','grandfather'],['父亲','father'],['母亲','mother'],['陈伯','chen'],['许青禾','doctor'],['阿岑','cen'],['程婉','wan'],['沈晚渔','yu'],['邱管事','qiu'],['林师傅','lin'],['郑掌柜','landlord'],['陆掌柜','neighbor'],['茶馆掌柜','tea'],['罗掌柜','tea'],['南街熟客','customer'],['官兵','guard']];
   const matched=people.find(([name])=>title.startsWith(name));if(matched)return [matched];
   if(/^(家议|正厅 · 家宴后的铺讯|正厅 · 临时安置|第一卷完成)/.test(title))return [['母亲','mother'],['父亲','father'],['祖父','grandfather']];
   if(title==='旧宅门前 · 交接')return [['官兵','guard'],['祖父','grandfather']];
@@ -148,6 +148,7 @@ function showDialoguePortraits(title){
   window.NanlanAudio?.setDialogue(cast.length>0);
 }
 function activity(title,text,kind='general'){
+  globalThis.NanlanScholar?.interrupt();
   if(typeof cancelNavigation==='function')cancelNavigation();
   previousFocus=document.activeElement;active=false;path=[];keys={};moving=false;dialogKind=kind;
   showDialoguePortraits(title);$('speaker').textContent=title;$('line').textContent=text;$('panelExtra').replaceChildren();$('choices').replaceChildren();
@@ -185,6 +186,7 @@ function navButton(label,fn,id){
   const b=button(label,fn,id,true,false);b.dataset.navigation='true';return b;
 }
 function closeDialog(force=false){
+  globalThis.NanlanScholar?.interrupt();
   if(force===true)window.NanlanDesktop?.discard();else if(window.NanlanDesktop?.restore())return;
   window.NanlanAudio?.setDialogue(false);
   $('dialog').hidden=true;$('dialog').classList.remove('arrival-mode');dialogKind=null;dialogObject=null;path=[];keys={};
@@ -196,7 +198,7 @@ function nearObject(o){return !o||engine.near(o);}
 async function perform(name,p={},rerender){
   if(dialogObject&&!nearObject(dialogObject)){const failed={ok:false,message:'请先走到物件旁，再进行操作。'};notice(failed.message,true);closeDialog();return failed;}
   if(name==='openGate'&&!await loadImage('yard')){const failed={ok:false,message:'庭院图片未能载入，请重试。原有进度已保留。'};notice(failed.message,true);return failed;}
-  if(['shareFirst','shareFeast'].includes(name)&&!await loadImage(state().gender==='male'?'familyMealMale':'familyMealFemale')){const failed={ok:false,message:'用餐画面未加载完成，请再试一次；饭菜尚未扣除。'};notice(failed.message,true);return failed;}
+  if(['shareFirst','shareFeast','liangShare'].includes(name)&&!await loadImage(state().gender==='male'?'familyMealMale':'familyMealFemale')){const failed={ok:false,message:'用餐画面未加载完成，请再试一次；饭菜尚未扣除。'};notice(failed.message,true);return failed;}
   const gathered=['collect','harvest','clearWeed','silkLeaves','silkHarvest','silkHarvestFish','silkKit'].includes(name),beforeBag=gathered?{...state().bag}:null;
   const result=engine.act(name,p);
   if(!result.ok){window.NanlanAudio?.play('blocked');notice(result.message,true);$('saveState').textContent=result.message.startsWith('保存失败')?'本次动作尚未保存':'当前目标尚待完成';return result;}
@@ -434,6 +436,8 @@ function showTextMap(){
   button('查看所有场景原画',showGallery,'map-gallery',true);
 }
 function itemSource(id){
+  if(id==='duckStone'||id==='grassHopper')return globalThis.NanlanKids.desc[id];
+  if(id==='shootRice'||id==='crustRice')return '按梁先生的饭方，用米、竹笋、枯枝和桶内水焖制。';
   if(['mulberrySapling','silkwormEgg','fishFry','fishFeed'].includes(id))return '初养物资可在乡邻余粮补购，也可在收获时选择留种留苗。';
   if(['mulberryLeaf','rawSilk','fineSilk','pondFish','silkwormCompost'].includes(id))return '后院桑基生产所得；生丝、桑叶与塘鱼可装车运往南街。';
   if(id==='wetLeaf')return '回南天采下的桑叶，可在桑畦摊晾。';
@@ -455,6 +459,8 @@ const inventorySheets=[
   {file:'inventory-crafts-v392.png',rows:[0,425,800,1254],items:['driedHerb','bambooWare','shellCraft','rope','ledgerOriginal','ledgerCopy','receipt','reply','narrowBasket']}
 ];
 function inventoryArt(id){
+  if(id==='duckStone'||id==='grassHopper')return globalThis.NanlanKids.art(id);
+  if(id==='shootRice'||id==='crustRice')return '<img class="scholar-food-icon" alt="" src="'+(id==='crustRice'?'scholar-rice.webp':'scholar-rice-plain.webp')+'">';
   if(id==='pondMud'||id==='wetLeaf')return window.NanlanProduction?.itemArt(id==='pondMud'?'silkwormCompost':'mulberryLeaf')||'';
   if(window.NanlanProductionModel?.itemIds.includes(id))return window.NanlanProduction?.itemArt(id)||'';
   if(['sealTimber','sealPebble'].includes(id))return window.NanlanSeals?.art(id,'inventory-art')||'';
@@ -479,6 +485,7 @@ function showBag(){
     row.innerHTML=inventoryArt(id)+'<div><strong>'+N.itemNames[id]+' ×'+N.quantity(s,id)+(N.available(s,id)!==N.quantity(s,id)?'（预留 '+(N.quantity(s,id)-N.available(s,id))+'）':'')+'</strong><small>'+itemSource(id)+'</small></div>';grid.append(row);
   }$('panelExtra').append(grid);
   if(!keys.length){const empty=document.createElement('p');empty.textContent='行囊暂时没有物资，采集所得会显示在这里。';$('panelExtra').append(empty);}
+  if(s.scholar?.recipe)globalThis.NanlanScholar?.bag();
   if(N.quantity(s,'hotMeal')&&N.done(s,'M04'))actButton('吃一份热饭 · 恢复 35 体力','eat',{},showBag);
   if(s.flags.volume2Started)button('桑基生产与全家新衣',()=>window.NanlanProduction.progress(),'bag-production',true);
   if(s.flags.volume2Started)button('查看铺号印匣与留底凭单',()=>window.NanlanSeals.show(),'bag-seals',true);
@@ -490,6 +497,7 @@ function showBag(){
 function showMealBowl(){
   const s=state(),count=N.quantity(s,'hotMeal');
   activity('青花饭钵',count?'饭钵里还留着 '+count+' 份热饭。这里仅放用餐之物；其他物资请按 B 查看随身行囊。':'饭钵现在是空的。做好热饭后，会在这里看到并食用。其他物资请按 B 查看随身行囊。');
+  if(s.scholar?.recipe)globalThis.NanlanScholar?.eatButtons(showMealBowl);
   const card=document.createElement('div');card.className='held-item-card';card.innerHTML=inventoryArt('hotMeal')+'<div><strong>热饭 ×'+count+'</strong><small>食用一份可恢复 35 体力</small></div>';$('panelExtra').append(card);
   if(count&&N.done(s,'M04'))actButton('吃一份热饭 · 恢复 35 体力','eat',{},showMealBowl);
   else if(count)prerequisiteNote('请在完成 M04「南澜的第一顿饭」后，再食用留存的热饭。');
@@ -532,7 +540,7 @@ function showPeople(){
   activity('相识之人',s?'这里只记下你已经见过的人。一起做过的事越多，人物谱里的话也会随之改变。':'故事尚未开始。门前等着你的，是一同赶了很久路的家人。');
   const grid=document.createElement('div');grid.className='people-grid';
   DATA.profiles.forEach(([id,name,role,description])=>{
-    const known=(['xiaoman','boatman','zhou','fang'].includes(id)&&state().story3?.side['met_'+id])||['protagonist','grandfather','father','mother'].includes(id)||(id==='chen'&&f.metChen)||(id==='doctor'&&f.metDoctor)||(id==='cen'&&f.metCen)||(id==='yu'&&f.metYu)||(id==='wan'&&s&&N.reached(s,'M08'))||(id==='qiu'&&s&&N.reached(s,'M17'))||(id==='vendor'&&s&&N.reached(s,'M05'))||(id==='lin'&&f.v2Leased)||(id==='landlord'&&(f.v2InspectEast||f.v2InspectWest))||(id==='neighbor'&&f.v2NeighborHeard)||(id==='tea'&&f.v2Opened)||(id==='customer'&&f.v2Opened);
+    const known=(id==='liang'&&s?.scholar?.met)||(['xiaoman','boatman','zhou','fang'].includes(id)&&state().story3?.side['met_'+id])||['protagonist','grandfather','father','mother'].includes(id)||(id==='chen'&&f.metChen)||(id==='doctor'&&f.metDoctor)||(id==='cen'&&f.metCen)||(id==='yu'&&f.metYu)||(id==='wan'&&s&&N.reached(s,'M08'))||(id==='qiu'&&s&&N.reached(s,'M17'))||(id==='vendor'&&s&&N.reached(s,'M05'))||(id==='lin'&&f.v2Leased)||(id==='landlord'&&(f.v2InspectEast||f.v2InspectWest))||(id==='neighbor'&&f.v2NeighborHeard)||(id==='tea'&&f.v2Opened)||(id==='customer'&&f.v2Opened);
     if(!known)return;
     const early={
       protagonist:'跟着家人走到南澜。眼下先把行李安顿下来，往后的路由你亲自选择。',
@@ -578,6 +586,7 @@ function showArchive(){
   const s=state();activity('书案 · 获准整理的旧页',!s.flags.ledgerPermission?'书箱属于旧住客。在 M08 确认归属、征得程婉同意以前，先只看看自己的笔记，不翻阅私人物件。':
     s.flags.bookReturned&&!s.flags.copyApproved?'原簿已经交还程婉。等获准留下誊写副本，再来回看。':
     '这里只整理获准晾晒或誊写的页。原簿始终属于程婉；重复整理不产生额外物资。\n\n已整理 '+Object.keys(s.pages).length+'/4 片。');
+  if(s.children)globalThis.NanlanKids?.home(showArchive);
   if(s.flags.ledgerPermission&&(!s.flags.bookReturned||s.flags.copyApproved)){
     const texts=['纸边写着借灯时日，名字暂缺一角。','一栏记下归还器具，旁边画着小花。','雨痕间留着相助的人名，等当事人核对。','同一件事的几页放在一起，先不把数字都当作欠账。'];
     texts.forEach((line,index)=>button((s.pages[index]?'✓ 回看':'整理')+' · 第 '+(index+1)+' 片',()=>{activity('获准的第 '+(index+1)+' 片',line+(s.flags.historyConfirmed?'\n\n这些记号记着旧时互助，原簿已回到程婉手中。':'\n\n眼下只认出纸页的次序，往事还需当事人说清。'));if(!s.pages[index])actButton('理好页序，记一条笔记','sortPage',{index},showArchive,'sort-'+index);else button('返回书案',showArchive,'archive-back',true);},'page-'+index,true));
@@ -770,6 +779,7 @@ function showCook(){
   if(s.flags.volume2Started)actButton('煮一锅鲜鱼饭 · 塘鱼1、枯枝1、桶内水1','silkCookFish',{sequence:s.revision},showCook);
   if(N.reached(s,'M20'))actButton('准备岁末家宴','cookFeast',{},showCook);
   paint(kitchenObstacle(s));
+  if(s.scholar?.recipe)globalThis.NanlanScholar?.kitchen();
   if(!spot.disabled)spot.focus({preventScroll:true});
 }
 function showBed(){
@@ -910,6 +920,8 @@ function objectGate(o){
 function visibleObjects(scene=state().scene,includeCooling=false){
   const s=state(),f=s.flags,q=N.current(s);
   return world[scene].objects.filter(o=>{
+    if(o.action==='kidsCamp'&&N.children.camp(s)!==scene)return false;
+    if(o.id==='scholarLiang'&&!N.scholar.present(s))return false;
     if(globalThis.NanlanV3&&!globalThis.NanlanV3.visible(s,scene,o))return false;
     if(o.id.startsWith('neighbor-home')&&(s.rural.chen!=='working'||s.rural.homes&(1<<(o.stop-1))))return false;
     if(o.id.startsWith('neighbor-mark')&&(s.rural.cen!=='working'||s.rural.marks&(1<<(o.stop-1))))return false;
@@ -976,6 +988,8 @@ function refreshInteractionHint(){
 async function interact(o){
   if(!o||transitioning)return;
   if(!nearObject(o)){notice('先走近'+o.label+'。');return;}
+  if(o.action==='kidsCamp'){dialogObject=o;globalThis.NanlanKids.play();return;}
+  if(o.action==='liangTea'){dialogObject=o;await globalThis.NanlanScholar.meet();return;}
   if(globalThis.NanlanV3?.offer(o)){dialogObject=o;return;}
   if(o.type==='door'){const why=objectGate(o);if(why){notice(why,true);return;}await switchScene(o.to);return;}
   if(o.type==='locked'||o.type==='property'){activity(o.label,o.lines||'这个地点暂未开放，后续篇章会有新安排。');dialogObject=o;return;}
@@ -1026,6 +1040,8 @@ async function interact(o){
   else if(a==='table'){
     activity('正厅 · 一家人的饭桌',q==='M04'?'第一锅饭已经端来。家人先吃上热饭，这处落脚的房子便开始像个家。':'饭桌旁可以商量家事，来信、座次和一顿饭都会留下记录。');
     if(q==='M04'){actButton('先给家人盛饭','shareFirst',{choice:'family'},()=>showFamilyMeal(false),'share-family');actButton('分一碗留给陈伯，再与家人同食','shareFirst',{choice:'chen'},()=>showFamilyMeal(false),'share-chen');}
+    if(s.children)globalThis.NanlanKids?.home(()=>interact(o));
+    if(s.scholar?.recipe)globalThis.NanlanScholar?.table();
     if(f.firstShared)button('回看一家人围桌吃饭',()=>showFamilyMeal(!!f.feastShared,true),'meal-memory',true);
     if(q==='M19'&&!f.giftChosen){actButton('选一株草药随信','chooseGift',{item:'herb'},()=>interact(o),'gift-herb');actButton('选一枚贝壳随信','chooseGift',{item:'shell'},()=>interact(o),'gift-shell');}
     if(q==='M20'){
@@ -1339,6 +1355,7 @@ function npcPresentation(o,t){
  return {role,flip,near,lean:reduced?0:Math.sin(phase)*.006,breath:reduced?1:1+Math.sin(phase*.85)*.003};
 }
 function drawNaturalPerson(o,t){
+  if(o.role==='children'){drawPerson('children',o.x,o.y,62,false);return;}
  const pose=npcPresentation(o,t),col=['grandfather','father','mother','cen'].indexOf(pose.role);
  const silk=window.NanlanProduction?.portrait(pose.role),sheet=images.npcIdle;
  ctx.save();ctx.translate(o.x,o.y);ctx.rotate(pose.lean);ctx.scale(1,pose.breath);ctx.translate(-o.x,-o.y);
@@ -1394,6 +1411,7 @@ function render(){
     if(o.x<left-70||o.x>right+70)continue;
     const locked=!!objectGate(o)||o.type==='locked'||o.type==='property',selected=o.id===focusedObjectId||o===destination,isObjective=o===objective;
     if(o.id==='silkPond'){hitTargets.push({o,rect:null,anchor:{x:245,y:385,w:130,h:140}});continue;}
+    if(s.scene==='study'&&o.id==='books')globalThis.NanlanKids?.draw('study');
     if(o.v3Art!=null){globalThis.NanlanV3?.drawProp(o);}
     if(s.scene==='village'&&o.id==='villageLetter'){
       const im=images.villageLetter,w=50,h=34;
@@ -1424,7 +1442,7 @@ function render(){
       continue;
     }
     if(s.scene==='hall'&&o.id==='mealTable'){
-      const im=images.diningTable;if(im?.naturalWidth)ctx.drawImage(im,o.x-120,o.y-160,240,160);
+      const im=images.diningTable;if(im?.naturalWidth)ctx.drawImage(im,o.x-120,o.y-160,240,160);globalThis.NanlanKids?.draw('hall');
       hitTargets.push({o,rect:null,anchor:{x:o.x-108,y:o.y-146,w:216,h:146}});
       continue;
     }

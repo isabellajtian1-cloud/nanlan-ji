@@ -1,6 +1,6 @@
 # V3.9.21 GitHub 图片路径清单
 
-选择方案 2：全站资源使用根目录相对路径。下表列出全部 85 个被改写的图片地址；图片内容未改动。
+选择方案 2：全站资源使用根目录相对路径。下表列出全部 91 个被改写的图片地址；图片内容未改动。
 
 | 原路径 | 上传包路径 | 引用文件 |
 | --- | --- | --- |
@@ -9,6 +9,7 @@
 | assets/bed-leak-v22.webp | bed-leak-v22.webp | data.js |
 | assets/bed-patched-v22.webp | bed-patched-v22.webp | data.js |
 | assets/character.png | character.png | data.js |
+| assets/children-keepsakes.webp | children-keepsakes.webp | data.js、production.css |
 | assets/coast.webp | coast.webp | data.js |
 | assets/county.webp | county.webp | data.js |
 | assets/family-meal-female-v394.png | family-meal-female-v394.png | game.js |
@@ -26,6 +27,7 @@
 | assets/inventory-crafts-v392.png | inventory-crafts-v392.png | game.js |
 | assets/inventory-household-v392.png | inventory-household-v392.png | game.js |
 | assets/kitchen-hearth-v3927.webp | kitchen-hearth-v3927.webp | game.js |
+| assets/liang-wenchui.webp | liang-wenchui.webp | data.js |
 | assets/market.webp | market.webp | data.js |
 | assets/mountain.webp | mountain.webp | data.js |
 | assets/mountainside.webp | mountainside.webp | data.js |
@@ -65,6 +67,9 @@
 | assets/resource-shoot-v27.webp | resource-shoot-v27.webp | data.js |
 | assets/resource-stone-v27.webp | resource-stone-v27.webp | data.js |
 | assets/resource-wood-v27.webp | resource-wood-v27.webp | data.js |
+| assets/scholar-hearth.webp | scholar-hearth.webp | production.css |
+| assets/scholar-rice-plain.webp | scholar-rice-plain.webp | game.js、scholar.js |
+| assets/scholar-rice.webp | scholar-rice.webp | game.js、scholar.js |
 | assets/seals-v398.png | seals-v398.png | data.js、seals.js |
 | assets/store-pickups-v39.png | store-pickups-v39.png | game.js |
 | assets/store.webp | store.webp | data.js |
@@ -82,6 +87,7 @@
 | assets/v3-workshop.webp | v3-workshop.webp | data.js |
 | assets/v3-xiaoman.webp | v3-xiaoman.webp | data.js |
 | assets/v3-zhou.webp | v3-zhou.webp | data.js |
+| assets/village-children.webp | village-children.webp | data.js |
 | assets/village-letter-v3915.webp | village-letter-v3915.webp | game.js |
 | assets/village.webp | village.webp | data.js |
 | assets/water-jar-v3912.webp | water-jar-v3912.webp | game.js |

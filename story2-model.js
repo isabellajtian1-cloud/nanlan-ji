@@ -86,8 +86,13 @@
   function addStock(s,item,q,cost){const n=s.shop.stock[item]||0;s.shop.cost[item]=(n*(s.shop.cost[item]??baseCost(item))+q*cost)/(n+q);s.shop.stock[item]=n+q;}
   function sale(s,item,q,unit,kind,reserved=false){
     need(reserved?(s.shop.reserved[item]||0)>=q:stockAvailable(s,item)>=q,'可售实货不足；请补货或查看预留。');const d=day(s);need(!d.closed,'今日已闭店，请回卧房睡一夜，明日再营业。');
+    const cost=(s.shop.cost[item]??baseCost(item))*q;s.shop.stock[item]-=q;if(reserved)s.shop.reserved[item]-=q;
+    bookSale(s,item,q,unit,cost,kind);
+  }
+  function bookSale(s,item,q,unit,cost,kind){
+    const d=day(s);need(!d.closed,'今日已闭店，请回卧房睡一夜，明日再营业。');
     if(item==='rawSilk'&&kind==='shopSale')d.rawSilkSold=(d.rawSilkSold||0)+q;
-    const total=unit*q,cost=(s.shop.cost[item]??baseCost(item))*q;s.shop.stock[item]-=q;if(reserved)s.shop.reserved[item]-=q;
+    const total=unit*q;
     d.sales=round(d.sales+total);d.cost=round(d.cost+cost);d.quantity+=q;s.shop.revenue+=total;s.shop.sold+=q;s.coins+=total;log(s,kind,total,'南街 '+h.itemNames[item]+' ×'+q+'（单价 '+unit+' 文）',item);give(s,{receipt:1});s.flags.v2FirstSale=true;
   }
   function closeDay(s,requestedDay=clock(s).day){need(Number.isInteger(requestedDay)&&requestedDay>0&&requestedDay<=clock(s).day,'请选择已经发生的营业日。');const d=s.story2.days[String(requestedDay)];need(d&&d.quantity>0,'该日需有真实交付后才能盘点。');need(!d.closed,'这一营业日已经结算。');const result=summary(s,requestedDay);d.rent=result.rent;d.wear=result.wear;d.profit=result.profit;d.closed=true;s.story2.closings.push(d.day);s.flags.v2FirstCounted=true;log(s,'shopClose',0,'第'+d.day+'日闭账：收入'+d.sales+'，商品成本'+round(d.cost)+'，费用分摊'+round(d.rent+d.wear+d.expenses)+'，经营结果'+d.profit+'文；预付租金不重复扣款');if(requestedDay===clock(s).day)advance(s,(clock(s).day-1)*1440+1080);}
@@ -172,5 +177,5 @@
     if(name==='v2FamilyEnd'){quest(s,'V2_18');at(s,'hall');need(f.v2ThreeDays&&f.v2Cooperated,'先兑现邻铺协作，并完成三个不同营业日的闭账。');need(!Object.entries(t.orders).some(([k,o])=>k!=='silkSample'&&o.delivered<o.quantity),'还有已接受订单未交清；先按原报价交付，再结卷。');need(['steady','neighbors','travel'].includes(p.choice),'请选择下一步方向。');s.choices.nextSeason=p.choice;f.v2FamilyEnd=true;return;}
     need(false,'这项南街事务尚未开放。');
   }
-  return {sale,cabinetPlan,order,titles,steps,rewards,products,shops,slots,emptyShop,emptyStory,normalise,reconcile,act,price,basePrice,baseCost,stockAvailable,customers,summary,leaseQuote,familyAtShop};
+  return {sale,bookSale,cabinetPlan,order,titles,steps,rewards,products,shops,slots,emptyShop,emptyStory,normalise,reconcile,act,price,basePrice,baseCost,stockAvailable,customers,summary,leaseQuote,familyAtShop};
 });

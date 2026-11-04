@@ -54,7 +54,7 @@
   const itemNames = {
     mulberrySapling:'桑苗',mulberryLeaf:'桑叶',silkwormEgg:'蚕种',fishFry:'鱼苗',fishFeed:'鱼食',pondFish:'塘鱼',rawSilk:'普通生丝',fineSilk:'特级生丝',silkwormCompost:'蚕沙',pondMud:'塘泥',wetLeaf:'带露桑叶',
     sealTimber:'印材坚木',sealPebble:'海磨印石',yardKey:'院门钥匙',bedroll:'床褥',repair:'修补材料',rice:'米粮',ingredient:'食材',seed:'种子',
-    lychee:'荔枝',longan:'龙眼',mandarin:'柑橘',ginseng:'人参',agarwood:'沉香',huali:'海南黄花梨',wood:'枯枝',weed:'杂草',herb:'鲜草药',bamboo:'竹材',stone:'山石',mushroom:'蘑菇',shoot:'竹笋',
+    lychee:'荔枝',longan:'龙眼',mandarin:'柑橘',ginseng:'人参',agarwood:'沉香',huali:'海南黄花梨',wood:'枯枝',weed:'杂草',herb:'鲜草药',bamboo:'竹材',stone:'山石',mushroom:'蘑菇',shoot:'竹笋',duckStone:'不会凫水的小石鸭',grassHopper:'听门的草蚂蚱',shootRice:'笋香焖饭',crustRice:'笋香焖饭（薄脆锅巴）',
     shell:'贝壳',seaweed:'海藻',clam:'蛤蜊',vegetable:'菜蔬',hotMeal:'一锅热饭',feast:'家宴饭菜',
     driedHerb:'干药草',bambooWare:'竹制小器',shellCraft:'贝壳小饰',rope:'草绳',
     ledgerOriginal:'代管的借灯簿',ledgerCopy:'获准誊写的副本',receipt:'买卖凭单',reply:'家书回信'
@@ -78,6 +78,8 @@
   recipes.narrowBasket={label:'编制改良窄口竹篓',cost:{bamboo:2,rope:1},out:{narrowBasket:1}};
   const storyFactory=typeof module==='object'&&module.exports?require('./story2-model.js'):globalThis.NanlanStoryModel;
   const storyV2=storyFactory({rural,copy,requireThat,requireScene,expectQuest,spend,give,once,log,clock,done,available,prices,recipes,products,itemNames});
+  const children=typeof module==='object'&&module.exports?require('./children-model.js'):globalThis.NanlanChildrenModel;
+  const scholar=typeof module==='object'&&module.exports?require('./scholar-model.js'):globalThis.NanlanScholarModel;
   const v3=typeof module==='object'&&module.exports?require('./story3-model.js'):globalThis.NanlanStory3;
   const V3_ORDER=v3.order;
   const V2_ORDER=storyV2.order;
@@ -219,6 +221,8 @@
     for(let n=0;n<ORDER.length;n++)requireThat(value.quests[ORDER[n]].status===(first<0||n<first?'COMPLETED':n===first?'ACTIVE':'LOCKED'),'存档任务顺序无效。');
     requireThat(Array.isArray(value.transactions)&&Array.isArray(value.journal)&&Array.isArray(value.keyring),'存档账目无效。');
     if(value.order)requireThat(products.includes(value.order.product)&&Number.isInteger(value.order.delivered)&&value.order.delivered>=0&&value.order.delivered<=2&&Number.isInteger(value.order.reserved)&&value.order.reserved>=0&&value.order.reserved<=2-value.order.delivered&&value.order.reserved<=quantity(value,value.order.product),'存档预留库存无效。');
+    children.normalise(value,requireThat);
+    scholar.normalise(value,requireThat);
     v3.normalise(value,requireThat);
     return copy(value);
   }
@@ -265,6 +269,8 @@
           s.choices['chatCount:'+role]=count+1;s.choices['chatLast:'+role]=p.choice;
           return;
         }
+        if(name.startsWith('kids'))return children.act(s,name,p,{requireThat,requireScene,spend,give});
+        if(name.startsWith('liang'))return scholar.act(s,name,p,{requireThat,requireScene,spend,give,log,prices,supplyPrices,bookSale:storyV2.bookSale});
         if(name.startsWith('v3'))return seals.settle(s,name,p,()=>v3.act(s,name,p,{requireThat,requireScene,spend,give,available,log,rural,shop:storyV2,tide}),requireThat);
         if(name.startsWith('neighbor'))return rural.act(s,name,p,{requireThat,requireScene,spend,give,available,log});
         if(name.startsWith('silk'))return production.act(s,name,p,{requireThat,requireScene,spend,give,log,familyAtShop:storyV2.familyAtShop});
@@ -405,6 +411,6 @@
       });
     }
   }
-  return {Engine,v3,V3_ORDER,rural,initial,current,done,reached,sceneGate,clock,tide,crop,gardenPlot,quantity,available,normaliseLoaded,
+  return {Engine,children,scholar,v3,V3_ORDER,rural,initial,current,done,reached,sceneGate,clock,tide,crop,gardenPlot,quantity,available,normaliseLoaded,
     rareResources,resourceCooldown,resourceRequirement,daylight,SAVE_KEY,ORDER,V2_ORDER,shopPrice,shopCustomers,story2:storyV2,shopProducts:storyV2.products,titles,steps,rewards,itemNames,products,prices,supplyPrices,recipes};
 });

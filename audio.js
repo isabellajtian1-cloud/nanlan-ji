@@ -1,6 +1,6 @@
 /* Original score and soundscapes: compose_soundscape.py. No third-party recordings. */
 (()=>{'use strict';
-const A=window.NANLAN_DATA?.assets||{},$=id=>document.getElementById(id),names=['click','blocked','door','water','repair','gather','rest','success','test','step','sealWood','sealStone'];
+const A=window.NANLAN_DATA?.assets||{},$=id=>document.getElementById(id),names=['click','blocked','door','water','repair','gather','rest','success','test','step','sealWood','sealStone','riceSimmer','riceLid','riceRake','riceCrust'];
 let enabled=true,volume=.75,started=false,scene='gate',night=false,playing=false,error='',lastClick=0,lastStep=0,dialogue=false;
 const levels={music:.65,ambient:.3,effect:.5},tracks={home:'灯下归家',village:'榕荫小路',town:'南街开市',mountain:'青岚寻径',sea:'潮生远帆','home-night':'月过回廊','village-night':'榕月虫声','town-night':'灯市渐阑','mountain-night':'青岚宿云','sea-night':'月照潮痕'};
 const layers={music:{players:[],active:0,key:'',ticket:0},ambient:{players:[],active:0,key:'',ticket:0}};let effect,effectGain=1,environmentTicket=0;
@@ -36,5 +36,6 @@ document.addEventListener('keydown',e=>{if(enabled&&!started&&['Enter',' ','w','
 document.addEventListener('visibilitychange',()=>{if(document.hidden)pause();else if(started&&enabled){gains();void environment();}});window.addEventListener('pagehide',pause);window.addEventListener('pageshow',()=>{if(started&&enabled)void environment();});
 for(const id of ['sound','startSound'])if($(id))$(id).onclick=openPanel;$('audioClose').onclick=()=>{$('audioPanel').hidden=true;};$('audioToggle').onclick=toggle;$('audioTest').onclick=()=>enable(true);$('audioMusicTest').onclick=()=>enable(false);$('audioMusicOnly').onclick=()=>{levels.ambient=0;levels.effect=0;$('ambientVolume').value=0;$('effectVolume').value=0;try{localStorage.setItem('nanlan_ambient_volume','0');localStorage.setItem('nanlan_effect_volume','0');}catch(_){}gains();void enable(false);};
 for(const [id,key]of [['audioVolume','master'],['musicVolume','music'],['ambientVolume','ambient'],['effectVolume','effect']]){const el=$(id);el.value=Math.round((key==='master'?volume:levels[key])*100);el.oninput=e=>{const v=Math.max(0,Math.min(1,Number(e.target.value)/100));if(key==='master')volume=v;else levels[key]=v;gains();try{localStorage.setItem(key==='master'?'nanlan_volume':'nanlan_'+key+'_volume',String(v));}catch(_){}status();};}
-window.NanlanAudio={play,setEnvironment,setDialogue,toggle,unlock,profile};status();
+function stopKitchen(){if(effect&&/rice(?:Simmer|Lid|Rake|Crust)\.wav(?:[?#]|$)/.test(effect.src))effect.pause();}
+window.NanlanAudio={stopKitchen,play,setEnvironment,setDialogue,toggle,unlock,profile};status();
 })();

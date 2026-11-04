@@ -22,7 +22,7 @@ window.NanlanDesktop={restore,discard(){bagSession=false;returnView=null;},toggl
 $('bagOpen').onclick=toggleBag;
 window.addEventListener('keydown',e=>{
  if(e.ctrlKey||e.metaKey||e.altKey||e.isComposing||e.target?.isContentEditable||['INPUT','TEXTAREA','SELECT'].includes(e.target?.tagName))return;
- const k=e.key.toLowerCase();if(dialogKind==='silk-reel'&&k===' '&&e.target?.closest('.silk-reel-board'))return;const stop=()=>{e.preventDefault();e.stopImmediatePropagation();};
+ const k=e.key.toLowerCase();if(dialogKind==='scholar-hearth'&&k===' '&&e.target?.closest('.scholar-pot'))return;if(dialogKind==='silk-reel'&&k===' '&&e.target?.closest('.silk-reel-board'))return;const stop=()=>{e.preventDefault();e.stopImmediatePropagation();};
  if(!$('audioPanel').hidden)return;
  if(k==='b'&&started){stop();if(!e.repeat)toggleBag();return;}
  if(k==='escape'&&bagSession){stop();if(!e.repeat)restore();return;}

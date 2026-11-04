@@ -103,7 +103,7 @@ window.NanlanV2={
     if(kind==='v2Shop'){
       const d=M.summary(s).day;title((s.production.shopName||M.shops[t.site]?.name||'南街铺面')+' · 柜台与账目','主打：'+itemName(shop.featured)+'\n货架：'+stockText()+'\n今日尚可接待 '+N.shopCustomers(s)+' 位普通来客。'+(d?.closed?'\n今日已经打烊，回东厢房睡一夜，明日继续。':'\n街坊、匠工与行商关心的东西不同；谈妥后才付钱拿货。'));
       if(!s.production.shopName)nav('去书房补题自家字号','study','books');
-      ledger();window.NanlanV3?.shelves();if(s.story3)button('查看山海交接手记',window.NanlanV3.journal,'v3-orders',true);if(f.v2Opened)window.NanlanVillage?.counter();button('打开铺号印匣与采料路线',()=>window.NanlanSeals.show(),'v2-seal-box',true);
+      ledger();if(s.scholar?.pots&&f.v2Opened)globalThis.NanlanScholar?.counter();window.NanlanV3?.shelves();if(s.story3)button('查看山海交接手记',window.NanlanV3.journal,'v3-orders',true);if(f.v2Opened)window.NanlanVillage?.counter();button('打开铺号印匣与采料路线',()=>window.NanlanSeals.show(),'v2-seal-box',true);
       if(q==='V2_09'){button('查看并调整逐件价签',()=>window.NanlanV2.show('v2Pricing'),'v2-pricing');if(!f.v2PriceConfirmed)action('核对到店成本，确认开门报价','v2ConfirmPrices');else action('亲手开门迎客','v2Open',{},!!s.production.shopName,'先回书房请祖父题字号。');}
       if(q==='V2_10'&&!f.v2CustomerHeard)action('听旧客问：改过的窄篮还在么？','v2HearCustomer');
       if(f.v2Opened&&!d?.closed){for(const id of Object.keys(shop.stock))if(M.stockAvailable(s,id)>0)action('成交 '+itemName(id)+' ×1 · '+N.shopPrice(s,id)+'文','v2Sell',{item:id,quote:N.shopPrice(s,id)},N.shopCustomers(s)>0,'今日普通来客已散；可交已约订单或回家过夜。');action('这一位先不买，接待下一位','v2NextCustomer',{},N.shopCustomers(s)>0,'今日普通来客已散。');button('调整未成交货物价签',()=>window.NanlanV2.show('v2Pricing'),'v2-retail-pricing',true);}

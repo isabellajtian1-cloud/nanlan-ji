@@ -9,3 +9,16 @@
 .v3-prop{background-image:url('v3-props.webp');background-size:200% 200%;width:94px;height:94px;float:right;margin:0 .5em .4em 1em}
 .v3-family{display:block;max-width:min(100%,28rem);max-height:15rem;object-fit:contain;margin:auto}
 .v3-shelf{display:flex;gap:.7rem;flex-wrap:wrap}.v3-shelf figure{display:grid;justify-items:center;margin:.2rem}.v3-shelf figure svg,.v3-shelf figure img{height:3.5rem;width:3.5rem}.v3-shelf figcaption{font-size:.85rem}
+
+.scholar-pot{position:relative;isolation:isolate;aspect-ratio:2/1;max-height:42vh;max-width:100%;margin:.5rem auto;background:#68503b url("scholar-hearth.webp") center/100% 100% no-repeat;border:1px solid #a78964;border-radius:.65rem;overflow:hidden;touch-action:manipulation}
+.scholar-pot button{touch-action:none;user-select:none;-webkit-user-select:none;position:absolute;transform:translate(-50%,-50%);z-index:2;min-width:72px;min-height:46px;background:#443323ed;color:#fff3d4;border:1px solid #dfc595;border-radius:.6rem;font:inherit}
+.scholar-wood{left:31%;top:81%}.scholar-lid{left:62%;top:34%}.scholar-pot button:focus-visible{outline:3px solid #fff1bc}
+.scholar-cue{position:absolute;bottom:.2rem;right:.4rem;margin:0;max-width:62%;color:#fff3d6;background:#392d22dc;border-radius:.35rem;padding:.2rem .5rem;font-size:.88rem}
+.scholar-embers{position:absolute;left:27%;top:69%;width:11%;height:10%;border-radius:50%;background:radial-gradient(ellipse,#ffb84995,transparent 65%);opacity:0}.scholar-pot[data-phase=heat] .scholar-embers{opacity:1}
+.scholar-steam{position:absolute;left:47%;top:6%;width:29%;height:31%;pointer-events:none;opacity:0}.scholar-pot[data-phase=heat] .scholar-steam{opacity:.9}.scholar-steam i{position:absolute;left:15%;bottom:0;width:12%;height:78%;border-radius:50%;background:linear-gradient(0deg,#fffbdb00,#fff9df,#fffdfa20);filter:blur(2px);animation:scholarSteam .7s ease-in-out infinite alternate}.scholar-steam i+i{left:80%;animation-delay:-.4s}.one-plume .scholar-steam i{left:51%;height:93%}.one-plume .scholar-steam i+i{opacity:0}
+@keyframes scholarSteam{to{transform:translateY(-6%) skewX(-8deg);opacity:.62}}
+@media(prefers-reduced-motion:reduce){.scholar-steam i{animation:none}}
+.scholar-food-icon{width:48px;height:48px;object-fit:contain}.scholar-bowl{display:block;width:min(38%,150px);margin:.4rem auto;border-radius:.6rem}.scholar-marks{color:#745a42;letter-spacing:.06em}
+.kids-portrait{float:right;width:min(34%,170px);height:118px;object-fit:contain;object-position:center bottom;margin:0 0 .5rem .8rem}
+.kids-lines{display:flow-root}.kids-lines p{margin:.45rem 0;line-height:1.65}.kids-lines strong{color:#705331;margin-right:.55em}.kids-receipt{display:flex;align-items:center;color:#4c6248;gap:.6rem}
+.kids-gift-art{display:inline-block;width:48px;height:48px;vertical-align:middle;background:url('children-keepsakes.webp') 0 center/200% 100% no-repeat}.kids-gift-art.hopper{background-position:100% center}

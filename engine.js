@@ -285,9 +285,14 @@
           s.choices['chatCount:'+role]=count+1;s.choices['chatLast:'+role]=p.choice;
           return;
         }
+        if(name==='bondTalk'){
+          const o=this.world[s.scene]?.objects.find(o=>o.id===p.object);
+          requireThat(o&&bonds.roleOf(o)===p.role&&this.near(o),'请先走到这位人物身旁。');
+          return bonds.talk(s,p.role,{requireThat});
+        }
         if(name==='bondVisit'){
           const o=this.world[s.scene]?.objects.find(o=>o.id===p.object);
-          requireThat(o&&conversations.roles[o.id]===p.role&&this.near(o),'请先走到这位人物身旁。');
+          requireThat(o&&bonds.roleOf(o)===p.role&&this.near(o),'请先走到这位人物身旁。');
           return bonds.act(s,p,{requireThat,spend});
         }
         if(name.startsWith('kids'))return children.act(s,name,p,{requireThat,requireScene,spend,give});

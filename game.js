@@ -1067,12 +1067,12 @@ async function interact(o){
   if(!o||transitioning)return;
   if(!nearObject(o)){notice('先走近'+o.label+'。');return;}
   if(o.action==='kidsCamp'){dialogObject=o;globalThis.NanlanKids.play();return;}
-  if(o.action==='liangTea'){dialogObject=o;await globalThis.NanlanScholar.meet();return;}
-  if(globalThis.NanlanSeasons?.offer(o)){dialogObject=o;return;}
-  if(globalThis.NanlanGuild?.atStop(o)){dialogObject=o;return;}
-  if(globalThis.NanlanV5?.offer(o)){dialogObject=o;return;}
-  if(globalThis.NanlanV4?.offer(o)){dialogObject=o;return;}
-  if(globalThis.NanlanV3?.offer(o)){dialogObject=o;return;}
+  if(o.action==='liangTea'){dialogObject=o;await globalThis.NanlanScholar.meet();window.NanlanBondUI?.npc(o);return;}
+  if(globalThis.NanlanSeasons?.offer(o)){dialogObject=o;window.NanlanBondUI?.npc(o);return;}
+  if(globalThis.NanlanGuild?.atStop(o)){dialogObject=o;window.NanlanBondUI?.npc(o);return;}
+  if(globalThis.NanlanV5?.offer(o)){dialogObject=o;window.NanlanBondUI?.npc(o);return;}
+  if(globalThis.NanlanV4?.offer(o)){dialogObject=o;window.NanlanBondUI?.npc(o);return;}
+  if(globalThis.NanlanV3?.offer(o)){dialogObject=o;window.NanlanBondUI?.npc(o);return;}
   if(o.type==='door'){const why=objectGate(o);if(why){notice(why,true);return;}await switchScene(o.to);return;}
   if(o.type==='locked'||o.type==='property'){activity(o.label,o.lines||'这个地点暂未开放，后续篇章会有新安排。');dialogObject=o;return;}
   if(o.type==='npc'){npc(o);dialogObject=o;return;}
@@ -1088,7 +1088,7 @@ async function interact(o){
   if(a==='gardenDirect'){await handleGardenPlot(o);return;}
   if(a==='silkProduction'){window.NanlanProduction.show();dialogObject=o;return;}
   if(a?.startsWith('seal')){window.NanlanSeals.gather(o);return;}
-  if(a?.startsWith('v2')){window.NanlanV2.show(a,o);dialogObject=o;addConversation(o);window.NanlanSeals?.npc(o);window.NanlanProduction?.npc(o);window.NanlanVillage?.npc(o);return;}
+  if(a?.startsWith('v2')){window.NanlanV2.show(a,o);dialogObject=o;addConversation(o);window.NanlanSeals?.npc(o);window.NanlanProduction?.npc(o);window.NanlanVillage?.npc(o);window.NanlanBondUI?.npc(o);return;}
   if(f.volume2Started&&o.id==='goodsCrates'){window.NanlanV2.show('v2Cargo',o);dialogObject=o;return;}
   if(a==='arrival'){
     activity('旧宅门前 · 交接','官兵：「文书与行李都在此。李家远迁岭南，并未籍没家产。我等交接完便返京。」\n\n祖父：「走了这么远，倒到了门口才觉得腿沉。」\n你：「进去坐一坐。」\n\n门还没有开。你先帮谁一把？');

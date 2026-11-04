@@ -12,9 +12,9 @@ const total=shots.reduce((n,s)=>n+s.duration,0);
 function build(){
  if(host)return;
  host=document.createElement('section');host.id='openingFilm';host.hidden=true;host.setAttribute('role','dialog');host.setAttribute('aria-modal','true');host.setAttribute('aria-labelledby','openingTitle');host.dataset.noLocalize='';
- host.innerHTML='<div class="opening-landscape"></div><div class="opening-shade"></div><div class="opening-top"><p id="openingKicker"></p><button type="button" id="openingSkip"></button></div><div class="opening-caption"><div class="opening-portraits" aria-hidden="true"></div><div class="opening-copy"><h2 id="openingTitle"></h2><p id="openingLine" aria-live="polite"></p></div></div><div class="opening-controls"><small id="openingHint"></small><div><button type="button" id="openingAuto" aria-pressed="true"></button><button type="button" id="openingNext"></button></div></div><div class="opening-progress" aria-hidden="true"><span></span></div>';
+ host.innerHTML='<div class="opening-shell"><div class="opening-top"><p id="openingKicker"></p><button type="button" id="openingSkip"></button></div><figure class="opening-landscape"><div class="opening-shade"></div></figure><div class="opening-caption"><div class="opening-portraits" aria-hidden="true"></div><div class="opening-copy"><h2 id="openingTitle"></h2><p id="openingLine" aria-live="polite"></p></div></div><div class="opening-controls"><small id="openingHint"></small><div><button type="button" id="openingAuto" aria-pressed="true"></button><button type="button" id="openingNext"></button></div></div><div class="opening-progress" aria-hidden="true"><span></span></div></div>';
  document.body.append(host);
- const backdrop=host.querySelector('.opening-landscape');backdrop.style.backgroundImage='url("'+window.NANLAN_DATA.assets.gate+'")';backdrop.style.backgroundSize='cover';backdrop.style.backgroundPosition='center';
+ const backdrop=host.querySelector('.opening-landscape');backdrop.style.backgroundImage='url("'+window.NANLAN_DATA.assets.gate+'")';backdrop.style.backgroundSize='contain';backdrop.style.backgroundRepeat='no-repeat';backdrop.style.backgroundPosition='center';
  host.querySelector('#openingSkip').onclick=finish;
  host.querySelector('#openingNext').onclick=advance;
  host.querySelector('#openingAuto').onclick=()=>{playing=!playing;last=0;labels();};

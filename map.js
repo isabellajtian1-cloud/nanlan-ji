@@ -3,11 +3,11 @@ const mapPositions={
   gate:[190,535],yard:[190,365],hall:[190,110],study:[65,235],bed:[325,235],store:[325,445],
   village:[520,520],market:[570,735],county:[850,735],pharmacy:[820,575],generalStore:[1075,735],teahouse:[1070,585],
   foothill:[535,340],mountain:[710,225],bambooGrove:[710,70],mountainside:[935,195],summit:[1080,70],
-  coast:[855,450],tidalflat:[1090,410]
+  coast:[855,450],tidalflat:[1090,410],wharf:[880,345],oldTrail:[425,156],workshop:[348,615],qingxi:[1040,275]
 };
 const mapGroups=[['宅院与房间',['gate','yard','hall','study','bed','store']],
   ['村镇与县城',['village','market','county','pharmacy','generalStore','teahouse']],
-  ['青岚山',['foothill','mountain','bambooGrove','mountainside','summit']],['南澜海湾',['coast','tidalflat']]];
+  ['青岚山',['foothill','mountain','bambooGrove','mountainside','summit']],['南澜海湾',['coast','tidalflat']],['山海之间',['wharf','oldTrail','workshop','qingxi']]];
 const deferredPlaces=['county','pharmacy','generalStore','teahouse'];
 let selectedMapPlace='yard',selectedMapObject=null,navigationTarget=null,navigationObject=null,mapReturnFocus=null,mapZoom=1;
 function mapAccess(id){
@@ -21,6 +21,7 @@ function mapKnown(id){
 }
 function objectiveForStep(flag,label){
   const s=state(),f=s.flags;
+  if(flag?.startsWith('v3_')){const [scene,object]=N.v3.target(s,flag.slice(3));return {scene,object,label};}
   if(['v2Sign','v2Opened'].includes(flag)&&!s.production?.shopName)return {scene:'study',object:'books',label:'请祖父题下自家字号'};
   const targets={...(typeof window!=='undefined'?window.NanlanV2?.targets:{}),handover:['gate','familyLuggage'],keyTaken:['gate','keyHandover'],gateOpen:['gate','closedGate'],
     windowInspected:['bed','window'],leakInspected:['bed','leak'],firstRepair:['bed','window'],bedReady:['bed','bedRest'],
@@ -45,6 +46,7 @@ function objectiveForStep(flag,label){
 }
 function nextObjective(){
   const s=state(),q=N.current(s),f=s.flags;
+  if(!q&&N.v3?.canStart(s))return {scene:'generalStore',object:'v3Chest',label:'去南街看看门边的竹箱'};
   if(!q)return N.done(s,'M20')&&!s.flags.volume2Started?{scene:'hall',object:'v2Family',label:'新春家议 · 开启第二卷'}:{scene:'yard',object:'herbPlot',label:'回家照料小畦'};
   const entry=N.steps[q].find(([id])=>!f[id]);return objectiveForStep(entry?.[0],entry?.[1]||N.titles[q]);
 }

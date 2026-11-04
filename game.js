@@ -53,6 +53,7 @@ function loadImage(id){
 }
 async function loadSceneAssets(scene){
   const required=[scene];
+  if(world[scene]?.objects?.some(o=>o.v3Art!=null))required.push('v3Props');
   if(scene==='yard')required.push('gardenStages','productionStages','productionItems','waterJar');
   if(state().actorState?.outfit==='nanlanSilk')required.push('familySilk',state().gender==='male'?'walkMaleSilk':'walkFemaleSilk');
   if(['mountain','coast'].includes(scene))required.push('seals');
@@ -103,7 +104,7 @@ const storyHooks={
   V2_15:'两张订单都交了，后仓却比预想中空得更快。',
   V2_16:'南澜来的货终于稳定，父亲和母亲却同时说：活不能再这样分。',
   V2_17:'分工刚写定，街上灯火次第亮起。门外有人请你出去看看。',
-  V2_18:'南街安稳下来，沈晚渔却捎来一句：新航线起风了。'
+  V2_18:'门前有只陌生的竹箱，旧牌上还系着一段山里的青绳。'
 };
 function reward(id,silent=false){
   if(!silent)window.NanlanAudio?.play('success');
@@ -130,7 +131,7 @@ function renderCompletionFeedback(time){
   ctx.restore();
 }
 function dialogueCast(title){
-  const people=[['祖父','grandfather'],['父亲','father'],['母亲','mother'],['陈伯','chen'],['许青禾','doctor'],['阿岑','cen'],['程婉','wan'],['沈晚渔','yu'],['邱管事','qiu'],['林师傅','lin'],['郑掌柜','landlord'],['陆掌柜','neighbor'],['茶馆掌柜','tea'],['罗掌柜','tea'],['南街熟客','customer'],['官兵','guard']];
+  const people=[['罗小满','xiaoman'],['何行舟','boatman'],['周成','zhou'],['方掌柜','fang'],['祖父','grandfather'],['父亲','father'],['母亲','mother'],['陈伯','chen'],['许青禾','doctor'],['阿岑','cen'],['程婉','wan'],['沈晚渔','yu'],['邱管事','qiu'],['林师傅','lin'],['郑掌柜','landlord'],['陆掌柜','neighbor'],['茶馆掌柜','tea'],['罗掌柜','tea'],['南街熟客','customer'],['官兵','guard']];
   const matched=people.find(([name])=>title.startsWith(name));if(matched)return [matched];
   if(/^(家议|正厅 · 家宴后的铺讯|正厅 · 临时安置|第一卷完成)/.test(title))return [['母亲','mother'],['父亲','father'],['祖父','grandfather']];
   if(title==='旧宅门前 · 交接')return [['官兵','guard'],['祖父','grandfather']];
@@ -249,6 +250,9 @@ function actionMessage(name){
 }
 function nextHint(s=state(),q=N.current(s)){
   const f=s.flags;
+  if(q?.startsWith('V3_'))return N.v3.first(s)?.[3]||N.titles[q];
+  if(s.flags.volume3Complete)return '山海手记已写成，还可以接手余单、生产与赴集。';
+  if(N.v3?.canStart(s))return '南街门边多了一只旧牌竹箱。得空去铺子看看。';
   const v2=window.NanlanV2?.hint(s,q);if(v2)return v2;
   const hints={
     M01:!f.handover?'先在门前点家人与行李，选好怎样帮忙。':!f.keyTaken?'接过官兵递来的院门钥匙。':'靠近旧宅院门，亲手开门。',
@@ -332,8 +336,8 @@ function refreshQuestBanner(s=state(),q=N.current(s)){
   if(questSignature!==lastQuestSignature){
     renderQuestSteps($('quest'),false,s,q);lastQuestSignature=questSignature;
   }
-  $('questAct').textContent=s.flags.volume2Started?'南街的新日子':q?(Number(q.slice(1))<=4?'先安顿一家人':'在南澜生活'):'这一季已经写完';
-  $('questHeading').textContent=q?N.titles[q]:s.flags.volume2Complete?'南街灯起 · 日常继续':'岁末满庭 · 新春家议';
+  $('questAct').textContent=s.flags.volume3Started?'山海成行':s.flags.volume2Started?'南街的新日子':q?(Number(q.slice(1))<=4?'先安顿一家人':'在南澜生活'):'这一季已经写完';
+  $('questHeading').textContent=q?N.titles[q]:s.flags.volume3Complete?'山海之间 · 日常继续':s.flags.volume2Complete?'南街灯起 · 日常继续':'岁末满庭 · 新春家议';
   $('questHint').textContent=hint;
 }
 function refreshHud(){
@@ -396,7 +400,7 @@ function selectTool(index){
 }
 function showQuest(){
   const s=state(),q=N.current(s);
-  activity(q?N.titles[q]:s.flags.volume2Complete?'南街灯起 · 日常继续':'岁末满庭 · 新春家议',q?'点一条眼前的具体事项，人物会沿已经走通的路前往。事情要按生活里的先后去办，不必另找“下一步”按钮。\n\n事情办妥后：'+N.rewards[q][1]:nextHint());
+  activity(q?N.titles[q]:s.flags.volume3Complete?'山海之间 · 日常继续':s.flags.volume2Complete?'南街灯起 · 日常继续':'岁末满庭 · 新春家议',q?'点一条眼前的具体事项，人物会沿已经走通的路前往。事情要按生活里的先后去办，不必另找“下一步”按钮。\n\n事情办妥后：'+N.rewards[q][1]:nextHint());
   $('dialogKicker').textContent='只记下已经发生与眼前要做的事';
   if(q){const list=document.createElement('div');renderQuestSteps(list,true);$('panelExtra').append(list);}
   button('回看已经走过的路',showQuestCatalog,'catalog',true);
@@ -404,7 +408,7 @@ function showQuest(){
 }
 function showQuestCatalog(){
   const s=state();
-  const current=N.current(s),known=[...N.ORDER,...N.V2_ORDER].filter(id=>s.quests[id]?.status==='COMPLETED'||id===current);
+  const current=N.current(s),known=[...N.ORDER,...N.V2_ORDER,...(N.V3_ORDER||[])].filter(id=>s.quests[id]?.status==='COMPLETED'||id===current);
   activity('走过的路',known.length>1?'从旧宅门前走到今日，许多事是做过以后才明白。这里不会提前写下还没发生的故事。':'旧宅的门还没有推开。先把眼前的一件事做好，新的页章自然会出现。','quest');
   const box=document.createElement('div');box.className='quest-catalog';
   for(const id of known){
@@ -500,7 +504,7 @@ function showAccounts(){
 function showPantry(){
   const fresh=$('dialog').hidden,s=state();if(fresh)for(const item of Object.keys(pantryDraft))pantryDraft[item]=0;
   activity('乡邻余粮 · 补给','挑选实际需要的物资，可以混合选择并自行填写数量。确认前只计算合计，不会扣除家用。\n\n目前家用 '+s.coins+' 文。');
-  if(s.production.kit)window.NanlanVillage?.supplies();
+  if(s.production.kit)window.NanlanVillage?.supplies();globalThis.NanlanV3?.supplies();
   const board=document.createElement('div');board.className='pantry-board';const controls=[];
   for(const item of Object.keys(N.supplyPrices)){
     const price=N.supplyPrices[item],row=document.createElement('div');row.className='pantry-row';
@@ -528,7 +532,7 @@ function showPeople(){
   activity('相识之人',s?'这里只记下你已经见过的人。一起做过的事越多，人物谱里的话也会随之改变。':'故事尚未开始。门前等着你的，是一同赶了很久路的家人。');
   const grid=document.createElement('div');grid.className='people-grid';
   DATA.profiles.forEach(([id,name,role,description])=>{
-    const known=['protagonist','grandfather','father','mother'].includes(id)||(id==='chen'&&f.metChen)||(id==='doctor'&&f.metDoctor)||(id==='cen'&&f.metCen)||(id==='yu'&&f.metYu)||(id==='wan'&&s&&N.reached(s,'M08'))||(id==='qiu'&&s&&N.reached(s,'M17'))||(id==='vendor'&&s&&N.reached(s,'M05'))||(id==='lin'&&f.v2Leased)||(id==='landlord'&&(f.v2InspectEast||f.v2InspectWest))||(id==='neighbor'&&f.v2NeighborHeard)||(id==='tea'&&f.v2Opened)||(id==='customer'&&f.v2Opened);
+    const known=(['xiaoman','boatman','zhou','fang'].includes(id)&&state().story3?.side['met_'+id])||['protagonist','grandfather','father','mother'].includes(id)||(id==='chen'&&f.metChen)||(id==='doctor'&&f.metDoctor)||(id==='cen'&&f.metCen)||(id==='yu'&&f.metYu)||(id==='wan'&&s&&N.reached(s,'M08'))||(id==='qiu'&&s&&N.reached(s,'M17'))||(id==='vendor'&&s&&N.reached(s,'M05'))||(id==='lin'&&f.v2Leased)||(id==='landlord'&&(f.v2InspectEast||f.v2InspectWest))||(id==='neighbor'&&f.v2NeighborHeard)||(id==='tea'&&f.v2Opened)||(id==='customer'&&f.v2Opened);
     if(!known)return;
     const early={
       protagonist:'跟着家人走到南澜。眼下先把行李安顿下来，往后的路由你亲自选择。',
@@ -548,7 +552,7 @@ function showHelp(){
   if(s&&N.reached(s,'M07'))sections.push('种植与等待\n翻地、播种、浇水后，作物会随游戏时间生长。等待时可以探索、制作或回访已经认识的人。');
   if(s&&N.reached(s,'M10'))sections.push('制作与买卖\n制品可以带到集市。预留给订单的货仍在行囊里，但不能重复散卖。每次实际收支都会留下记录。');
   if(s?.flags.volume2Started)sections.push('南街生活\n铺面经营、运输、结账和后院生产会在用到时逐一说明。人物对货物与凭单的反应，也会透露彼此的信任变化。');
-  activity('怎样在南澜生活',sections.join('\n\n'));
+  activity('怎样在南澜生活',sections.join('\n\n'));if(s)globalThis.NanlanV3?.guide();
 }
 function showGallery(){
   previousFocus=document.activeElement;active=false;path=[];keys={};$('gallery').hidden=false;
@@ -789,6 +793,7 @@ function showTrade(){
   const s=state(),q=N.current(s);
   activity('你的摊布 · 实货与承诺','主打：'+(N.itemNames[s.featured]||'还未选定')+'\n现有制品：'+N.products.map(k=>N.itemNames[k]+' '+N.quantity(s,k)).join(' · ')+
     (s.order?'\n小批单：'+N.itemNames[s.order.product]+' ×2，已交 '+s.order.delivered+'，预留 '+s.order.reserved:'')+'\n\n每次买卖和交付都会扣掉实货、记一张凭单。预留给小批单的货物不能散卖。');
+  if(s.flags.stallBooked)globalThis.NanlanV3?.stallDisplay();
   if(q==='M10'&&!s.flags.productDisplayed)N.products.forEach(product=>actButton('摆上 '+N.itemNames[product]+' · 行囊 '+N.quantity(s,product),'displayProduct',{product},showTrade,'display-'+product));
   if(s.flags.productDisplayed)actButton('卖出 '+N.itemNames[s.featured]+' ×1 · '+N.prices[s.featured]+' 文','sell',{sequence:s.transactions.length},showTrade,'sell');
   for(const item of Object.keys(N.prices))if(N.available(s,item)>0)actButton('出售余货 '+N.itemNames[item]+' ×1 · '+N.prices[item]+' 文','sellExtra',{item,sequence:s.transactions.length},showTrade,'extra-'+item);
@@ -905,12 +910,14 @@ function objectGate(o){
 function visibleObjects(scene=state().scene,includeCooling=false){
   const s=state(),f=s.flags,q=N.current(s);
   return world[scene].objects.filter(o=>{
+    if(globalThis.NanlanV3&&!globalThis.NanlanV3.visible(s,scene,o))return false;
     if(o.id.startsWith('neighbor-home')&&(s.rural.chen!=='working'||s.rural.homes&(1<<(o.stop-1))))return false;
     if(o.id.startsWith('neighbor-mark')&&(s.rural.cen!=='working'||s.rural.marks&(1<<(o.stop-1))))return false;
     if(o.id==='neighbor-windfall'&&!s.rural.gifts.cen)return false;
     if(o.id==='sealTimberNode'&&(!s.seals?.woodRoute||s.seals.wood||s.bag.sealTimber))return false;
     if(o.id==='sealPebbleNode'&&(!s.seals?.stoneRoute||s.seals.stone||s.bag.sealPebble))return false;
     if(o.id==='v2Family'&&!N.done(s,'M20'))return false;
+    if(o.id==='doctor'&&s.flags.volume3Started)return true;
     if(o.id==='doctor'&&f.volume2Started&&!s.rural.xu&&!N.rural.offered(s,'xu'))return false;
     if(o.id==='shenYu'&&f.metYu)return false;
     if(o.id==='v2Customer'&&(!f.v2Opened||N.shopCustomers(s)<=0)&&!['V2_10','V2_14'].includes(q))return false;
@@ -969,6 +976,7 @@ function refreshInteractionHint(){
 async function interact(o){
   if(!o||transitioning)return;
   if(!nearObject(o)){notice('先走近'+o.label+'。');return;}
+  if(globalThis.NanlanV3?.offer(o)){dialogObject=o;return;}
   if(o.type==='door'){const why=objectGate(o);if(why){notice(why,true);return;}await switchScene(o.to);return;}
   if(o.type==='locked'||o.type==='property'){activity(o.label,o.lines||'这个地点暂未开放，后续篇章会有新安排。');dialogObject=o;return;}
   if(o.type==='npc'){npc(o);dialogObject=o;return;}
@@ -1311,6 +1319,7 @@ function paintDifferenceLayers(){
 }
 const npcRoles={countyInn:'landlord',v2Neighbor:'neighbor',v2ObserveMorning:'customer',v2ObserveNoon:'customer',v2ObserveAfternoon:'customer',v2Supplier:'cen',v2MotherCounter:'mother',v2FatherCounter:'father',grandfather:'grandfather',father:'father',fatherHill:'father',mother:'mother',motherHall:'mother',villager:'chen',doctor:'doctor',aCen:'cen',shenYu:'yu',shenYuCoast:'yu',chengWan:'wan',qiu:'qiu',bambooStall:'vendor',villagePantry:'vendor',pharmacyKeeper:'doctor',teahouseKeeper:'tea',v2Customer:'customer',keyHandover:'guard',familyLuggage:'father'};
 function npcRole(o){
+  if(o.role)return o.role;
   if(o.id==='v2Repair')return state().flags.v2Leased&&!state().flags.v2Sign?'lin':null;
   return npcRoles[o.id]||null;
 }
@@ -1385,6 +1394,7 @@ function render(){
     if(o.x<left-70||o.x>right+70)continue;
     const locked=!!objectGate(o)||o.type==='locked'||o.type==='property',selected=o.id===focusedObjectId||o===destination,isObjective=o===objective;
     if(o.id==='silkPond'){hitTargets.push({o,rect:null,anchor:{x:245,y:385,w:130,h:140}});continue;}
+    if(o.v3Art!=null){globalThis.NanlanV3?.drawProp(o);}
     if(s.scene==='village'&&o.id==='villageLetter'){
       const im=images.villageLetter,w=50,h=34;
       // Keep the small letter tray in scale with people; retain a forgiving touch target.

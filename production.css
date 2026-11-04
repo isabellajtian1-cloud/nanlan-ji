@@ -5,3 +5,7 @@
 .silk-reel-board button{padding:.7rem;background:#405d48;color:#fff5d7;border:2px solid #9f8858;border-radius:.5rem}
 .silk-reel-board button.thread-loose{background:#f5da99;color:#3b392a;outline:3px double #95682c}
 .silk-reel-board progress{width:100%;accent-color:#61754f}.silk-reel-board span{min-height:1em}
+
+.v3-prop{background-image:url('v3-props.webp');background-size:200% 200%;width:94px;height:94px;float:right;margin:0 .5em .4em 1em}
+.v3-family{display:block;max-width:min(100%,28rem);max-height:15rem;object-fit:contain;margin:auto}
+.v3-shelf{display:flex;gap:.7rem;flex-wrap:wrap}.v3-shelf figure{display:grid;justify-items:center;margin:.2rem}.v3-shelf figure svg,.v3-shelf figure img{height:3.5rem;width:3.5rem}.v3-shelf figcaption{font-size:.85rem}

@@ -1,6 +1,6 @@
 # V3.9.21 GitHub 图片路径清单
 
-选择方案 2：全站资源使用根目录相对路径。下表列出全部 76 个被改写的图片地址；图片内容未改动。
+选择方案 2：全站资源使用根目录相对路径。下表列出全部 85 个被改写的图片地址；图片内容未改动。
 
 | 原路径 | 上传包路径 | 引用文件 |
 | --- | --- | --- |
@@ -73,6 +73,15 @@
 | assets/teahouse.webp | teahouse.webp | data.js |
 | assets/tidalflat.webp | tidalflat.webp | data.js |
 | assets/toolbar-ming-v394.png | toolbar-ming-v394.png | game.js |
+| assets/v3-boatman.webp | v3-boatman.webp | data.js |
+| assets/v3-fair.webp | v3-fair.webp | data.js |
+| assets/v3-fang.webp | v3-fang.webp | data.js |
+| assets/v3-props.webp | v3-props.webp | data.js、production.css |
+| assets/v3-trail.webp | v3-trail.webp | data.js |
+| assets/v3-wharf.webp | v3-wharf.webp | data.js |
+| assets/v3-workshop.webp | v3-workshop.webp | data.js |
+| assets/v3-xiaoman.webp | v3-xiaoman.webp | data.js |
+| assets/v3-zhou.webp | v3-zhou.webp | data.js |
 | assets/village-letter-v3915.webp | village-letter-v3915.webp | game.js |
 | assets/village.webp | village.webp | data.js |
 | assets/water-jar-v3912.webp | water-jar-v3912.webp | game.js |

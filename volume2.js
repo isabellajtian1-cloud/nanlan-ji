@@ -28,7 +28,7 @@ window.NanlanV2={
     return (step?step[1]+'。':'')+({V2_02:'三个时段都有预约观察入口，会同步推进时间。',V2_03:'两间铺面都在县城南街；亲自比较后选定。',V2_07:'仓房货箱装货发车 → 铺内货架验收。',V2_10:'先听旧客问窄篮，再在柜台成交。',V2_14:'缺可售货时先补货，或解除自己设置的时段留货。',V2_15:'仓房制作 → 装货转运 → 铺内交单。',V2_18:'三次闭账要在不同游戏日期发生；今日已闭店就回东厢房睡一夜。'}[q]||'点击「在地图中找目标」，可查看实际地点。');
   },
   show(kind,o=null,selected=null){
-    const s=state(),f=s.flags,t=s.story2,shop=s.shop,q=N.current(s),M=N.story2,again=()=>window.NanlanV2.show(kind,o,selected);
+    const s=state(),f=s.flags,t=s.story2,shop=s.shop,q=s.flags.volume3Started?null:N.current(s),M=N.story2,again=()=>window.NanlanV2.show(kind,o,selected);
     const num=n=>Number(n.toFixed(2)),itemName=id=>N.itemNames[id]||id;
     const stockText=()=>Object.entries(shop.stock).filter(([,n])=>n>0).map(([id,n])=>itemName(id)+' ×'+n).join('、')||'暂无实收库存';
     const goods=cost=>Object.entries(cost).every(([id,n])=>N.available(s,id)>=n);
@@ -103,7 +103,7 @@ window.NanlanV2={
     if(kind==='v2Shop'){
       const d=M.summary(s).day;title((s.production.shopName||M.shops[t.site]?.name||'南街铺面')+' · 柜台与账目','主打：'+itemName(shop.featured)+'\n货架：'+stockText()+'\n今日尚可接待 '+N.shopCustomers(s)+' 位普通来客。'+(d?.closed?'\n今日已经打烊，回东厢房睡一夜，明日继续。':'\n街坊、匠工与行商关心的东西不同；谈妥后才付钱拿货。'));
       if(!s.production.shopName)nav('去书房补题自家字号','study','books');
-      ledger();if(f.v2Opened)window.NanlanVillage?.counter();button('打开铺号印匣与采料路线',()=>window.NanlanSeals.show(),'v2-seal-box',true);
+      ledger();window.NanlanV3?.shelves();if(s.story3)button('查看山海交接手记',window.NanlanV3.journal,'v3-orders',true);if(f.v2Opened)window.NanlanVillage?.counter();button('打开铺号印匣与采料路线',()=>window.NanlanSeals.show(),'v2-seal-box',true);
       if(q==='V2_09'){button('查看并调整逐件价签',()=>window.NanlanV2.show('v2Pricing'),'v2-pricing');if(!f.v2PriceConfirmed)action('核对到店成本，确认开门报价','v2ConfirmPrices');else action('亲手开门迎客','v2Open',{},!!s.production.shopName,'先回书房请祖父题字号。');}
       if(q==='V2_10'&&!f.v2CustomerHeard)action('听旧客问：改过的窄篮还在么？','v2HearCustomer');
       if(f.v2Opened&&!d?.closed){for(const id of Object.keys(shop.stock))if(M.stockAvailable(s,id)>0)action('成交 '+itemName(id)+' ×1 · '+N.shopPrice(s,id)+'文','v2Sell',{item:id,quote:N.shopPrice(s,id)},N.shopCustomers(s)>0,'今日普通来客已散；可交已约订单或回家过夜。');action('这一位先不买，接待下一位','v2NextCustomer',{},N.shopCustomers(s)>0,'今日普通来客已散。');button('调整未成交货物价签',()=>window.NanlanV2.show('v2Pricing'),'v2-retail-pricing',true);}

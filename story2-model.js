@@ -91,7 +91,7 @@
     d.sales=round(d.sales+total);d.cost=round(d.cost+cost);d.quantity+=q;s.shop.revenue+=total;s.shop.sold+=q;s.coins+=total;log(s,kind,total,'南街 '+h.itemNames[item]+' ×'+q+'（单价 '+unit+' 文）',item);give(s,{receipt:1});s.flags.v2FirstSale=true;
   }
   function closeDay(s,requestedDay=clock(s).day){need(Number.isInteger(requestedDay)&&requestedDay>0&&requestedDay<=clock(s).day,'请选择已经发生的营业日。');const d=s.story2.days[String(requestedDay)];need(d&&d.quantity>0,'该日需有真实交付后才能盘点。');need(!d.closed,'这一营业日已经结算。');const result=summary(s,requestedDay);d.rent=result.rent;d.wear=result.wear;d.profit=result.profit;d.closed=true;s.story2.closings.push(d.day);s.flags.v2FirstCounted=true;log(s,'shopClose',0,'第'+d.day+'日闭账：收入'+d.sales+'，商品成本'+round(d.cost)+'，费用分摊'+round(d.rent+d.wear+d.expenses)+'，经营结果'+d.profit+'文；预付租金不重复扣款');if(requestedDay===clock(s).day)advance(s,(clock(s).day-1)*1440+1080);}
-  function familyAtShop(s,person){return !!(s.flags.v2RosterPlanned&&s.choices.shopRoster===(person==='mother'?'motherStore':'playerStore')&&clock(s).minute>=540&&clock(s).minute<1080&&!s.story2.days[String(clock(s).day)]?.closed);}
+  function familyAtShop(s,person){const j=s.story3?.shift;if(j&&s.worldTick>=j.start&&s.worldTick<j.end&&j.person===person)return true;return !!(s.flags.v2RosterPlanned&&s.choices.shopRoster===(person==='mother'?'motherStore':'playerStore')&&clock(s).minute>=540&&clock(s).minute<1080&&!s.story2.days[String(clock(s).day)]?.closed);}
   const farmGoods=['rawSilk','fineSilk','pondFish'];
   function blend(costs,id,old,q,unit){if(farmGoods.includes(id))costs[id]=(old*(costs[id]??baseCost(id))+q*unit)/(old+q);}
   function expireSample(s){
@@ -169,8 +169,8 @@
     if(name==='v2SupplyReceive'){quest(s,'V2_16');at(s,'village');need(f.v2SupplyTerms,'先谈清规格和结算。');return once(s,'story2Supply',()=>{const fee=s.choices.supply==='graded'?6:8;need(s.coins-fee>=t.reserve,'这批货需 '+fee+' 文，另有家用保留；可先回款或调整家计。');s.coins-=fee;give(s,{bambooWare:1,herb:1});log(s,'buy',-fee,'按约定验收村中竹器与草木，实际交付两件');f.v2SupplyReceived=true;});}
     if(name==='v2Roster'){quest(s,'V2_17');at(s,'hall');need(['playerStore','motherStore'].includes(p.choice),'请共同商议轮值。');s.choices.shopRoster=p.choice;f.v2RosterPlanned=true;return;}
     if(name==='v2Cooperate'){quest(s,'V2_18');at(s,'county');return once(s,'story2Cooperate',()=>{spend(s,{bambooWare:1});s.coins+=h.prices.bambooWare;log(s,'neighborSale',h.prices.bambooWare,'实际交给邻铺的一件转介竹器','bambooWare');f.v2Cooperated=true;});}
-    if(name==='v2FamilyEnd'){quest(s,'V2_18');at(s,'hall');need(f.v2ThreeDays&&f.v2Cooperated,'先兑现邻铺协作，并完成三个不同营业日的闭账。');need(!Object.values(t.orders).some(o=>o.delivered<o.quantity),'还有已接受订单未交清；先按原报价交付，再结卷。');need(['steady','neighbors','travel'].includes(p.choice),'请选择下一步方向。');s.choices.nextSeason=p.choice;f.v2FamilyEnd=true;return;}
+    if(name==='v2FamilyEnd'){quest(s,'V2_18');at(s,'hall');need(f.v2ThreeDays&&f.v2Cooperated,'先兑现邻铺协作，并完成三个不同营业日的闭账。');need(!Object.entries(t.orders).some(([k,o])=>k!=='silkSample'&&o.delivered<o.quantity),'还有已接受订单未交清；先按原报价交付，再结卷。');need(['steady','neighbors','travel'].includes(p.choice),'请选择下一步方向。');s.choices.nextSeason=p.choice;f.v2FamilyEnd=true;return;}
     need(false,'这项南街事务尚未开放。');
   }
-  return {cabinetPlan,order,titles,steps,rewards,products,shops,slots,emptyShop,emptyStory,normalise,reconcile,act,price,basePrice,baseCost,stockAvailable,customers,summary,leaseQuote,familyAtShop};
+  return {sale,cabinetPlan,order,titles,steps,rewards,products,shops,slots,emptyShop,emptyStory,normalise,reconcile,act,price,basePrice,baseCost,stockAvailable,customers,summary,leaseQuote,familyAtShop};
 });

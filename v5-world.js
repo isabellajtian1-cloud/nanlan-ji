@@ -6,6 +6,7 @@ add('backHall',{id:'v5Ledger',x:646,y:410,label:'井边水样与清渠簿',type:
 add('village',{id:'v5Well',x:610,y:500,label:'村井与取水名簿',type:'activity',action:'v5Scene'});
 add('coast',{id:'v5SaltMark',x:826,y:502,label:'潮后白痕',type:'activity',action:'v5Scene'});
 add('yard',{id:'v5Jar',x:845,y:365,label:'水缸与取样碗',type:'activity',action:'v5Scene'});
+add('yard',{id:'dryRackVisual',x:735,y:432,label:'自家晾架 · 晾晒',type:'activity',action:'dryRack'});
 add('summit',{id:'v5Spring',x:343,y:390,label:'高处山泉',type:'activity',action:'v5Scene'});
 add('hall',{id:'v5FamilyTable',x:625,y:468,label:'分水家议',type:'activity',action:'v5Scene'});
 add('store',{id:'v5TroughStock',x:710,y:514,label:'引水竹料',type:'activity',action:'v5Scene'});

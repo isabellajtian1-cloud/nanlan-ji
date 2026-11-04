@@ -1,6 +1,6 @@
 # V3.9.21 GitHub 图片路径清单
 
-选择方案 2：全站资源使用根目录相对路径。下表列出全部 91 个被改写的图片地址；图片内容未改动。
+选择方案 2：全站资源使用根目录相对路径。下表列出全部 97 个被改写的图片地址；图片内容未改动。
 
 | 原路径 | 上传包路径 | 引用文件 |
 | --- | --- | --- |
@@ -45,6 +45,8 @@
 | assets/npc-playerMale-v30.webp | npc-playerMale-v30.webp | data.js |
 | assets/npc-qiu-v30.webp | npc-qiu-v30.webp | data.js |
 | assets/npc-tea-v30.webp | npc-tea-v30.webp | data.js |
+| assets/npc-v4-merchant.webp | npc-v4-merchant.webp | data.js |
+| assets/npc-v4-visitor.webp | npc-v4-visitor.webp | data.js |
 | assets/npc-vendor-v30.webp | npc-vendor-v30.webp | data.js |
 | assets/npc-wan-v30.webp | npc-wan-v30.webp | data.js |
 | assets/npc-yu-v30.webp | npc-yu-v30.webp | data.js |
@@ -87,6 +89,10 @@
 | assets/v3-workshop.webp | v3-workshop.webp | data.js |
 | assets/v3-xiaoman.webp | v3-xiaoman.webp | data.js |
 | assets/v3-zhou.webp | v3-zhou.webp | data.js |
+| assets/v4-anchorage.webp | v4-anchorage.webp | data.js |
+| assets/v4-backhall-bare.webp | v4-backhall-bare.webp | data.js |
+| assets/v4-backhall.webp | v4-backhall.webp | data.js |
+| assets/v4-guild.webp | v4-guild.webp | data.js |
 | assets/village-children.webp | village-children.webp | data.js |
 | assets/village-letter-v3915.webp | village-letter-v3915.webp | game.js |
 | assets/village.webp | village.webp | data.js |

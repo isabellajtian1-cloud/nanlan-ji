@@ -22,3 +22,7 @@
 .kids-portrait{float:right;width:min(34%,170px);height:118px;object-fit:contain;object-position:center bottom;margin:0 0 .5rem .8rem}
 .kids-lines{display:flow-root}.kids-lines p{margin:.45rem 0;line-height:1.65}.kids-lines strong{color:#705331;margin-right:.55em}.kids-receipt{display:flex;align-items:center;color:#4c6248;gap:.6rem}
 .kids-gift-art{display:inline-block;width:48px;height:48px;vertical-align:middle;background:url('children-keepsakes.webp') 0 center/200% 100% no-repeat}.kids-gift-art.hopper{background-position:100% center}
+
+.v4-accounts{display:grid;grid-template-columns:minmax(8em,1fr) auto;gap:.18rem 1rem;margin:.65rem 0;padding:.65rem .85rem;background:#f0e2bf;border-left:3px solid #95753c;color:#443c2e}
+.v4-accounts dd{margin:0;text-align:right;font-variant-numeric:tabular-nums}.v4-lots{width:100%;border-collapse:collapse;font-size:.92em;color:#443c2e}
+.v4-lots th,.v4-lots td{padding:.35em .2em;border-bottom:1px solid #bfad85;text-align:center}.v4-lots th{background:#e8d8b5}

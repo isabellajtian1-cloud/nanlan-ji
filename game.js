@@ -53,6 +53,7 @@ function loadImage(id){
 }
 async function loadSceneAssets(scene){
   const required=[scene];
+  if(scene==='backHall')required.push('backHallReady');
   if(world[scene]?.objects?.some(o=>o.v3Art!=null))required.push('v3Props');
   if(scene==='yard')required.push('gardenStages','productionStages','productionItems','waterJar');
   if(state().actorState?.outfit==='nanlanSilk')required.push('familySilk',state().gender==='male'?'walkMaleSilk':'walkFemaleSilk');
@@ -131,7 +132,7 @@ function renderCompletionFeedback(time){
   ctx.restore();
 }
 function dialogueCast(title){
-  const people=[['梁问炊','liang'],['罗小满','xiaoman'],['何行舟','boatman'],['周成','zhou'],['方掌柜','fang'],['祖父','grandfather'],['父亲','father'],['母亲','mother'],['陈伯','chen'],['许青禾','doctor'],['阿岑','cen'],['程婉','wan'],['沈晚渔','yu'],['邱管事','qiu'],['林师傅','lin'],['郑掌柜','landlord'],['陆掌柜','neighbor'],['茶馆掌柜','tea'],['罗掌柜','tea'],['南街熟客','customer'],['官兵','guard']];
+  const people=[['苏茂','seaMerchant'],['京中故交','visitor'],['梁问炊','liang'],['罗小满','xiaoman'],['何行舟','boatman'],['周成','zhou'],['方掌柜','fang'],['祖父','grandfather'],['父亲','father'],['母亲','mother'],['陈伯','chen'],['许青禾','doctor'],['阿岑','cen'],['程婉','wan'],['沈晚渔','yu'],['邱管事','qiu'],['林师傅','lin'],['郑掌柜','landlord'],['陆掌柜','neighbor'],['茶馆掌柜','tea'],['罗掌柜','tea'],['南街熟客','customer'],['官兵','guard']];
   const matched=people.find(([name])=>title.startsWith(name));if(matched)return [matched];
   if(/^(家议|正厅 · 家宴后的铺讯|正厅 · 临时安置|第一卷完成)/.test(title))return [['母亲','mother'],['父亲','father'],['祖父','grandfather']];
   if(title==='旧宅门前 · 交接')return [['官兵','guard'],['祖父','grandfather']];
@@ -252,6 +253,9 @@ function actionMessage(name){
 }
 function nextHint(s=state(),q=N.current(s)){
   const f=s.flags;
+  if(q?.startsWith('V4_'))return N.v4.first(s)?.[3]||N.titles[q];
+  if(s.flags.volume4Complete)return '公所账已分清，家书已寄出；后堂留着一家人的灯。';
+  if(N.v4?.canStart(s))return '海湾有人指着一面陌生的帆，可去岸边看看。';
   if(q?.startsWith('V3_'))return N.v3.first(s)?.[3]||N.titles[q];
   if(s.flags.volume3Complete)return '山海手记已写成，还可以接手余单、生产与赴集。';
   if(N.v3?.canStart(s))return '南街门边多了一只旧牌竹箱。得空去铺子看看。';
@@ -338,8 +342,8 @@ function refreshQuestBanner(s=state(),q=N.current(s)){
   if(questSignature!==lastQuestSignature){
     renderQuestSteps($('quest'),false,s,q);lastQuestSignature=questSignature;
   }
-  $('questAct').textContent=s.flags.volume3Started?'山海成行':s.flags.volume2Started?'南街的新日子':q?(Number(q.slice(1))<=4?'先安顿一家人':'在南澜生活'):'这一季已经写完';
-  $('questHeading').textContent=q?N.titles[q]:s.flags.volume3Complete?'山海之间 · 日常继续':s.flags.volume2Complete?'南街灯起 · 日常继续':'岁末满庭 · 新春家议';
+  $('questAct').textContent=s.flags.volume4Started?'海天帆影':s.flags.volume3Started?'山海成行':s.flags.volume2Started?'南街的新日子':q?(Number(q.slice(1))<=4?'先安顿一家人':'在南澜生活'):'这一季已经写完';
+  $('questHeading').textContent=q?N.titles[q]:s.flags.volume4Complete?'海天帆影 · 家灯长明':s.flags.volume3Complete?'山海之间 · 日常继续':s.flags.volume2Complete?'南街灯起 · 日常继续':'岁末满庭 · 新春家议';
   $('questHint').textContent=hint;
 }
 function refreshHud(){
@@ -402,7 +406,7 @@ function selectTool(index){
 }
 function showQuest(){
   const s=state(),q=N.current(s);
-  activity(q?N.titles[q]:s.flags.volume3Complete?'山海之间 · 日常继续':s.flags.volume2Complete?'南街灯起 · 日常继续':'岁末满庭 · 新春家议',q?'点一条眼前的具体事项，人物会沿已经走通的路前往。事情要按生活里的先后去办，不必另找“下一步”按钮。\n\n事情办妥后：'+N.rewards[q][1]:nextHint());
+  activity(q?N.titles[q]:s.flags.volume4Complete?'海天帆影 · 家灯长明':s.flags.volume3Complete?'山海之间 · 日常继续':s.flags.volume2Complete?'南街灯起 · 日常继续':'岁末满庭 · 新春家议',q?'点一条眼前的具体事项，人物会沿已经走通的路前往。事情要按生活里的先后去办，不必另找“下一步”按钮。\n\n事情办妥后：'+N.rewards[q][1]:nextHint());
   $('dialogKicker').textContent='只记下已经发生与眼前要做的事';
   if(q){const list=document.createElement('div');renderQuestSteps(list,true);$('panelExtra').append(list);}
   button('回看已经走过的路',showQuestCatalog,'catalog',true);
@@ -410,7 +414,7 @@ function showQuest(){
 }
 function showQuestCatalog(){
   const s=state();
-  const current=N.current(s),known=[...N.ORDER,...N.V2_ORDER,...(N.V3_ORDER||[])].filter(id=>s.quests[id]?.status==='COMPLETED'||id===current);
+  const current=N.current(s),known=[...N.ORDER,...N.V2_ORDER,...(N.V3_ORDER||[]),...(N.V4_ORDER||[])].filter(id=>s.quests[id]?.status==='COMPLETED'||id===current);
   activity('走过的路',known.length>1?'从旧宅门前走到今日，许多事是做过以后才明白。这里不会提前写下还没发生的故事。':'旧宅的门还没有推开。先把眼前的一件事做好，新的页章自然会出现。','quest');
   const box=document.createElement('div');box.className='quest-catalog';
   for(const id of known){
@@ -540,7 +544,7 @@ function showPeople(){
   activity('相识之人',s?'这里只记下你已经见过的人。一起做过的事越多，人物谱里的话也会随之改变。':'故事尚未开始。门前等着你的，是一同赶了很久路的家人。');
   const grid=document.createElement('div');grid.className='people-grid';
   DATA.profiles.forEach(([id,name,role,description])=>{
-    const known=(id==='liang'&&s?.scholar?.met)||(['xiaoman','boatman','zhou','fang'].includes(id)&&state().story3?.side['met_'+id])||['protagonist','grandfather','father','mother'].includes(id)||(id==='chen'&&f.metChen)||(id==='doctor'&&f.metDoctor)||(id==='cen'&&f.metCen)||(id==='yu'&&f.metYu)||(id==='wan'&&s&&N.reached(s,'M08'))||(id==='qiu'&&s&&N.reached(s,'M17'))||(id==='vendor'&&s&&N.reached(s,'M05'))||(id==='lin'&&f.v2Leased)||(id==='landlord'&&(f.v2InspectEast||f.v2InspectWest))||(id==='neighbor'&&f.v2NeighborHeard)||(id==='tea'&&f.v2Opened)||(id==='customer'&&f.v2Opened);
+    const known=(id==='seaMerchant'&&f.v4_board)||(id==='visitor'&&f.v4_visitor)||(id==='liang'&&s?.scholar?.met)||(['xiaoman','boatman','zhou','fang'].includes(id)&&state().story3?.side['met_'+id])||['protagonist','grandfather','father','mother'].includes(id)||(id==='chen'&&f.metChen)||(id==='doctor'&&f.metDoctor)||(id==='cen'&&f.metCen)||(id==='yu'&&f.metYu)||(id==='wan'&&s&&N.reached(s,'M08'))||(id==='qiu'&&s&&N.reached(s,'M17'))||(id==='vendor'&&s&&N.reached(s,'M05'))||(id==='lin'&&f.v2Leased)||(id==='landlord'&&(f.v2InspectEast||f.v2InspectWest))||(id==='neighbor'&&f.v2NeighborHeard)||(id==='tea'&&f.v2Opened)||(id==='customer'&&f.v2Opened);
     if(!known)return;
     const early={
       protagonist:'跟着家人走到南澜。眼下先把行李安顿下来，往后的路由你亲自选择。',
@@ -560,7 +564,7 @@ function showHelp(){
   if(s&&N.reached(s,'M07'))sections.push('种植与等待\n翻地、播种、浇水后，作物会随游戏时间生长。等待时可以探索、制作或回访已经认识的人。');
   if(s&&N.reached(s,'M10'))sections.push('制作与买卖\n制品可以带到集市。预留给订单的货仍在行囊里，但不能重复散卖。每次实际收支都会留下记录。');
   if(s?.flags.volume2Started)sections.push('南街生活\n铺面经营、运输、结账和后院生产会在用到时逐一说明。人物对货物与凭单的反应，也会透露彼此的信任变化。');
-  activity('怎样在南澜生活',sections.join('\n\n'));if(s)globalThis.NanlanV3?.guide();
+  activity('怎样在南澜生活',sections.join('\n\n'));if(s)globalThis.NanlanV3?.guide();if(s?.story4)button('翻开公所总账',globalThis.NanlanV4.ledger,'v4-guide',true);
 }
 function showGallery(){
   previousFocus=document.activeElement;active=false;path=[];keys={};$('gallery').hidden=false;
@@ -920,6 +924,7 @@ function objectGate(o){
 function visibleObjects(scene=state().scene,includeCooling=false){
   const s=state(),f=s.flags,q=N.current(s);
   return world[scene].objects.filter(o=>{
+    if(globalThis.NanlanV4&&!globalThis.NanlanV4.visible(s,o))return false;
     if(o.action==='kidsCamp'&&N.children.camp(s)!==scene)return false;
     if(o.id==='scholarLiang'&&!N.scholar.present(s))return false;
     if(globalThis.NanlanV3&&!globalThis.NanlanV3.visible(s,scene,o))return false;
@@ -990,6 +995,7 @@ async function interact(o){
   if(!nearObject(o)){notice('先走近'+o.label+'。');return;}
   if(o.action==='kidsCamp'){dialogObject=o;globalThis.NanlanKids.play();return;}
   if(o.action==='liangTea'){dialogObject=o;await globalThis.NanlanScholar.meet();return;}
+  if(globalThis.NanlanV4?.offer(o)){dialogObject=o;return;}
   if(globalThis.NanlanV3?.offer(o)){dialogObject=o;return;}
   if(o.type==='door'){const why=objectGate(o);if(why){notice(why,true);return;}await switchScene(o.to);return;}
   if(o.type==='locked'||o.type==='property'){activity(o.label,o.lines||'这个地点暂未开放，后续篇章会有新安排。');dialogObject=o;return;}
@@ -1225,9 +1231,9 @@ function approach(o){
 }
 let edgeExitCooldown=0,edgeExitAttempt=null;
 function keyboardExitDirection(o){
-  if(['study','home','backFoothill','sideBack','sideBamboo','coastBack','tideBack'].includes(o.id))return [-1,0];
-  if(['mountainGate','toGeneral','coastTide'].includes(o.id))return [1,0];
-  if(['villageGate','exit-yard','bayRoad','toVillage','countyBack','exit-county','footVillage','grovePath','summitBack','groveBack'].includes(o.id))return [0,1];
+  if(['study','home','backFoothill','sideBack','sideBamboo','coastBack','tideBack','v4ToCoast'].includes(o.id))return [-1,0];
+  if(['mountainGate','toGeneral','coastTide','v4ToShip','v4ToBackHall'].includes(o.id))return [1,0];
+  if(['villageGate','exit-yard','bayRoad','toVillage','countyBack','exit-county','footVillage','grovePath','summitBack','groveBack','v4ToTown','v4ToHall'].includes(o.id))return [0,1];
   return [0,-1];
 }
 function tryKeyboardExit(dx,dy,dt){
@@ -1398,7 +1404,7 @@ function personBounds(role,x,y){
 }
 function render(){
   const r=canvas.getBoundingClientRect();ctx.setTransform(1,0,0,1,0,0);ctx.fillStyle='#20392d';ctx.fillRect(0,0,canvas.width,canvas.height);setupCamera();ctx.imageSmoothingEnabled=true;
-  const s=state(),baseKey=s.scene==='bed'&&s.flags.leakPatched?'bedPatched':world[s.scene].asset;
+  const s=state(),baseKey=s.scene==='backHall'&&s.flags.v4_room?'backHallReady':s.scene==='bed'&&s.flags.leakPatched?'bedPatched':world[s.scene].asset;
   const base=images[baseKey]||images[world[s.scene].asset];if(base?.naturalWidth)ctx.drawImage(base,0,0,W,H);
   paintDifferenceLayers();hitTargets=[];
   const left=Math.max(8,-camera.ox/camera.scale+8),right=Math.min(W-8,(camera.vw-camera.ox)/camera.scale-8);

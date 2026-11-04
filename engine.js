@@ -81,10 +81,12 @@
   const children=typeof module==='object'&&module.exports?require('./children-model.js'):globalThis.NanlanChildrenModel;
   const scholar=typeof module==='object'&&module.exports?require('./scholar-model.js'):globalThis.NanlanScholarModel;
   const v3=typeof module==='object'&&module.exports?require('./story3-model.js'):globalThis.NanlanStory3;
-  const V3_ORDER=v3.order;
+  const v4=typeof module==='object'&&module.exports?require('./story4-model.js'):globalThis.NanlanStory4;
+  const V4_ORDER=v4.order,V3_ORDER=v3.order;
   const V2_ORDER=storyV2.order;
   Object.assign(titles,storyV2.titles);Object.assign(steps,storyV2.steps);Object.assign(rewards,storyV2.rewards);
   Object.assign(titles,v3.titles);Object.assign(steps,v3.steps);Object.assign(rewards,v3.rewards);
+  Object.assign(titles,v4.titles);Object.assign(steps,v4.steps);Object.assign(rewards,v4.rewards);
   const shopPrice=storyV2.price,shopCustomers=storyV2.customers;
   function volume2Action(s,name,p){return seals.settle(s,name,p,()=>storyV2.act(s,name,p),requireThat);}
 
@@ -98,10 +100,10 @@
       rural:rural.fresh(),production:production.fresh(),actorState:production.freshActors(),seals:seals.fresh(),shop:storyV2.emptyShop(),story2:storyV2.emptyStory(),practice:{},pages:{},visits:{gate:true},familyTalks:{},order:null,transactions:[],journal:[],
       tideAnchor:null,tideTutorialUsed:false,stallUntil:null,featured:null,lastNotice:'先和家人完成门前交接。'
     };
-    for(const id of Object.keys(titles).filter(id=>!V3_ORDER.includes(id))) s.quests[id]={status:V2_ORDER.includes(id)?'DEFERRED_V2':id==='M01'?'ACTIVE':'LOCKED'};
+    for(const id of Object.keys(titles).filter(id=>!V3_ORDER.includes(id)&&!V4_ORDER.includes(id))) s.quests[id]={status:V2_ORDER.includes(id)?'DEFERRED_V2':id==='M01'?'ACTIVE':'LOCKED'};
     return s;
   }
-  function current(s) { return (s.flags.volume3Started?V3_ORDER:s.flags.volume2Started?V2_ORDER:ORDER).find(id => s.quests[id]?.status==='ACTIVE') || null; }
+  function current(s) { return (s.flags.volume4Started?V4_ORDER:s.flags.volume3Started?V3_ORDER:s.flags.volume2Started?V2_ORDER:ORDER).find(id => s.quests[id]?.status==='ACTIVE') || null; }
   function done(s,id) { return s.quests[id]?.status==='COMPLETED'; }
   function reached(s,id) { return done(s,id) || current(s)===id; }
   function fail(message) { const error = new Error(message); error.userMessage=message; throw error; }
@@ -137,7 +139,7 @@
         s.lastNotice=id+' 完成 · '+description;
       }
       if(id==='M04'){s.mode='daily';s.worldTick=1080;s.storyBeat='入夜';for(const g of [s.garden,...(s.extraPlots||[])])if(g.plantedAt!==null){g.plantedAt=1080;if(g.wateredAt!==undefined)g.wateredAt=1080;}}
-      const order=s.flags.volume3Started?V3_ORDER:s.flags.volume2Started?V2_ORDER:ORDER;
+      const order=s.flags.volume4Started?V4_ORDER:s.flags.volume3Started?V3_ORDER:s.flags.volume2Started?V2_ORDER:ORDER;
       const next=order.slice(order.indexOf(id)+1).find(k=>!done(s,k));
       if(next)s.quests[next].status='ACTIVE';
       id=current(s);
@@ -147,6 +149,7 @@
     if(s.flags.volume2Started&&!current(s))s.flags.volume2Complete=true;
   }
   function sceneGate(s,to) {
+    const seaRoad=v4.gate(s,to);if(seaRoad!==null)return seaRoad;
     const road=v3.gate(s,to);if(road!==null)return road;
     if(['county','pharmacy','generalStore','teahouse'].includes(to))return s.flags.volume2Started?'':'请先完成 M20「岁末满庭」，再到正厅的「新春家议」开启第二卷。';
     if(to==='gate')return '';
@@ -224,6 +227,7 @@
     children.normalise(value,requireThat);
     scholar.normalise(value,requireThat);
     v3.normalise(value,requireThat);
+    v4.normalise(value,requireThat);
     return copy(value);
   }
   class Engine {
@@ -271,6 +275,7 @@
         }
         if(name.startsWith('kids'))return children.act(s,name,p,{requireThat,requireScene,spend,give});
         if(name.startsWith('liang'))return scholar.act(s,name,p,{requireThat,requireScene,spend,give,log,prices,supplyPrices,bookSale:storyV2.bookSale});
+        if(name.startsWith('v4'))return v4.act(s,name,p,{requireThat,requireScene,spend,give,available,log});
         if(name.startsWith('v3'))return seals.settle(s,name,p,()=>v3.act(s,name,p,{requireThat,requireScene,spend,give,available,log,rural,shop:storyV2,tide}),requireThat);
         if(name.startsWith('neighbor'))return rural.act(s,name,p,{requireThat,requireScene,spend,give,available,log});
         if(name.startsWith('silk'))return production.act(s,name,p,{requireThat,requireScene,spend,give,log,familyAtShop:storyV2.familyAtShop});
@@ -411,6 +416,6 @@
       });
     }
   }
-  return {Engine,children,scholar,v3,V3_ORDER,rural,initial,current,done,reached,sceneGate,clock,tide,crop,gardenPlot,quantity,available,normaliseLoaded,
+  return {Engine,v4,V4_ORDER,children,scholar,v3,V3_ORDER,rural,initial,current,done,reached,sceneGate,clock,tide,crop,gardenPlot,quantity,available,normaliseLoaded,
     rareResources,resourceCooldown,resourceRequirement,daylight,SAVE_KEY,ORDER,V2_ORDER,shopPrice,shopCustomers,story2:storyV2,shopProducts:storyV2.products,titles,steps,rewards,itemNames,products,prices,supplyPrices,recipes};
 });

@@ -256,6 +256,7 @@ function actionMessage(name){
 }
 function nextHint(s=state(),q=N.current(s)){
   const f=s.flags;
+  if(!f.volume2Started&&N.done(s,'M20'))return window.NanlanI18n?.language==='en'?'The feast is over. Open the South Street notice and meet your family in the hall to begin Volume II.':'家宴已毕。打开「南街铺讯」查看条件，到正厅与家人读铺讯，开启第二卷。';
   if(q?.startsWith('V6_')){const r=N.voyage.first(s);return r?r.actions[r.j][window.NanlanI18n?.language==='en'?1:0]:'';}
   if(f.voyageComplete)return window.NanlanI18n?.language==='en'?'The main story is complete. Family and friends have six invitations waiting in the back hall.':'六卷主线已完成，后堂还有家人和伙伴的六篇闲日邀约。';
   if(N.voyage.canStart(s))return window.NanlanI18n?.language==='en'?'A spring-tide letter waits in the back hall.':'后堂有一封春潮来信，何行舟邀你去青屿看看。';
@@ -362,6 +363,8 @@ function refreshQuestBanner(s=state(),q=N.current(s)){
   $('questAct').textContent=q?.startsWith('V6_')||s.flags.voyageComplete?'春潮有信':q?.startsWith('S5_')||s.flags.season5Complete&&!q?'岁序长青':s.flags.volume5Started?'清水归渠':s.flags.volume4Started?'海天帆影':s.flags.volume3Started?'山海成行':s.flags.volume2Started?'南街的新日子':q?(Number(q.slice(1))<=4?'先安顿一家人':'在南澜生活'):'这一季已经写完';
   $('questHeading').textContent=q?N.titles[q]:s.flags.voyageComplete?'主线完成 · 日常与番外继续':s.flags.season5Complete?'岁序长青 · 来年有约':s.flags.volume5Complete?'清水满缸 · 日常继续':s.flags.volume4Complete?'海天帆影 · 家灯长明':s.flags.volume3Complete?'山海之间 · 日常继续':s.flags.volume2Complete?'南街灯起 · 日常继续':'岁末满庭 · 新春家议';
   $('questHint').textContent=hint;
+  const entry=N.story2.entryStatus(s);$('volume2Entry').hidden=!entry.ready;
+  if(entry.ready){$('questAct').textContent=window.NanlanI18n?.language==='en'?'A New Beginning':'家宴后的新日子';$('questHeading').textContent=window.NanlanI18n?.language==='en'?'South Street Notice · Volume II Available':'南街铺讯 · 第二卷已可开启';}
 }
 function refreshHud(){
   const s=state(),q=N.current(s),t=timeText();
@@ -438,6 +441,7 @@ function showQuest(){
   activity(q?N.titles[q]:s.flags.season5Complete?'岁序长青 · 来年有约':s.flags.volume5Complete?'清水满缸 · 日常继续':s.flags.volume4Complete?'海天帆影 · 家灯长明':s.flags.volume3Complete?'山海之间 · 日常继续':s.flags.volume2Complete?'南街灯起 · 日常继续':'岁末满庭 · 新春家议',q?'点一条眼前的具体事项，人物会沿已经走通的路前往。事情要按生活里的先后去办，不必另找“下一步”按钮。\n\n事情办妥后：'+N.rewards[q][1]:nextHint());
   $('dialogKicker').textContent='只记下已经发生与眼前要做的事';
   if(q){const list=document.createElement('div');renderQuestSteps(list,true);$('panelExtra').append(list);}
+  if(!s.flags.volume2Started)navButton(window.NanlanI18n?.language==='en'?'Volume II · Requirements and Entry':'第二卷 · 解锁条件与前往方式',()=>window.NanlanV2.entry(),'quest-volume2-entry');
   button('回看已经走过的路',showQuestCatalog,'catalog',true);
   button('查看家人与邻里留下的回应',showJournal,'journal',true);
 }
@@ -906,6 +910,7 @@ function showConversation(o){
 function npc(o){npcStory(o);addConversation(o);window.NanlanSeals?.npc(o);window.NanlanProduction?.npc(o);window.NanlanVillage?.npc(o);window.NanlanBondUI?.npc(o);}
 function npcStory(o){
   const s=state(),f=s.flags,q=N.current(s),id=o.id;
+  if(!f.volume2Started&&N.done(s,'M20')&&['father','motherHall','grandfather'].includes(id)){window.NanlanV2.entry();return;}
   if(f.volume2Started&&['father','motherHall','grandfather'].includes(id)){window.NanlanV2.show('v2Family');return;}
     if(id==='grandfather'){
     const tone=s.choices.arrival==='grandfather'?'「你在门前扶的那一下，祖父记着。」\n\n':'';
@@ -1224,6 +1229,7 @@ function showFamilyMeal(feast=false,memory=false){
 }
 function showEnding(){
   activity('第一卷完成 · 岁末满庭','灯亮在回廊，家人与邻里坐在一处。你从门外接过行李，走过竹林、山路和海湾，也学会把家计与承诺说清楚。\n\n祖父留下了明春的课，父亲约定出门先报去向，母亲有了自己的小单。原簿回到程婉手里，获准的副本留在书案。\n\n这里终于成了愿意守护的家。\n\n第一卷已完成。到正厅的「新春家议」开启第二卷「南街灯起」。任务、物品和人物选择全部保留。','ending');
+  button(window.NanlanI18n?.language==='en'?'Read the Shop Notice · Begin Volume II':'与家人读铺讯 · 开启第二卷',()=>window.NanlanV2.entry(),'ending-volume2');
   button('回到家中，继续过日子',()=>{closeDialog();notice('岁末满庭之后，日常仍在继续。');},'ending-continue');
   button('回看一路留下的回应',showJournal,'ending-journal',true);
 }
@@ -1712,7 +1718,7 @@ $('continueGame').onclick=async()=>{
   transitioning=true;
   try{
     if(!await loadSceneAssets(check.state.scene)){$('loadWarning').hidden=false;$('loadWarning').textContent='场景物资图片未加载完整。请重试继续游戏，原存档已保留。';return;}
-    engine.load(storedRaw);started=true;active=true;$('start').hidden=true;$('hud').hidden=false;render();refreshHud();notice('进度已恢复。可点右下角提示继续任务。');
+    engine.load(storedRaw);started=true;active=true;$('start').hidden=true;$('hud').hidden=false;render();refreshHud();notice(!state().flags.volume2Started&&N.done(state(),'M20')?(window.NanlanI18n?.language==='en'?'Progress restored. Volume II is available; open the South Street notice in your task panel.':'进度已恢复。第二卷已可开启，打开任务栏里的「南街铺讯」，到正厅与家人商议。'):'进度已恢复。可点右下角提示继续任务。');
   }finally{transitioning=false;}
 };
 try{
@@ -1722,6 +1728,7 @@ try{
   if(oldRaw){$('oldSaveExport').hidden=false;$('loadWarning').hidden=false;$('loadWarning').textContent='旧版八章存档仍保留。新版按原企划重做任务顺序，请从门前开始新的第一卷；可先备份旧档。';}
 }catch(e){$('loadWarning').hidden=false;$('loadWarning').textContent='当前存档资料无法完整读取，原数据没有删除。可以先备份，再开始新旅程。';if(storedRaw||oldRaw)$('oldSaveExport').hidden=false;}
 $('oldSaveExport').onclick=()=>download('Nanlan_Previous_Save.json',oldRaw||storedRaw||'{}');
+$('volume2Entry').onclick=()=>window.NanlanV2.entry();
 $('questOpen').onclick=showQuest;$('nearbyOpen').onclick=showNearby;$('peopleOpen').onclick=showPeople;$('galleryOpen').onclick=showGallery;$('helpOpen').onclick=showHelp;
 $('interactionHint').onclick=()=>{if(!active)return;const o=visibleObjects().find(v=>v.id===$('interactionHint').dataset.object);if(!o)return;if(nearObject(o))interact(o);else approach(o);};
 $('startGuide').onclick=showStartGuide;

@@ -244,6 +244,8 @@
     v5.normalise(value,requireThat);
     season5.normalise(value,requireThat);
     voyage.normalise(value,requireThat);
+    // Finish only a fully recorded, active final feast; never invent missing steps.
+    if(!value.flags.volume2Started&&value.quests.M20?.status==='ACTIVE'&&ORDER.slice(0,-1).every(id=>done(value,id))&&steps.M20.every(([flag])=>value.flags[flag]))reconcile(value);
     return copy(value);
   }
   class Engine {

@@ -1,5 +1,41 @@
 /* Scene-bound second-volume story UI. All changes go through Engine.act. */
 window.NanlanV2={
+  entry(){
+    const s=state(),u=N.story2.entryStatus(s),en=window.NanlanI18n?.language==='en',L=(zh,enText)=>en?enText:zh;
+    activity(L('南街灯起 · 开启第二卷','South Street Lights · Begin Volume II'),
+      u.started?L(u.finished?'第二卷已经完成，南街铺面仍可继续经营。':'第二卷已经开始，进度已保留，可以接着当前事项继续。',u.finished?'Volume II is complete. Your South Street shop remains open for daily life.':'Volume II has begun. Your progress is preserved; continue the current activity.'):
+      u.ready?L('岁末家宴已经分享。一家人可以读铺讯、商议预算，再去县城南街看铺。','The year-end feast has been shared. Read the shop notice together, discuss the budget, and visit South Street.'):
+      L('先把第一卷眼前的事办完。岁末家宴亲手上桌、与家人分享后，便能商议南街的新日子。','Finish the matters at hand in Volume I. Sharing the year-end feast opens a new chapter on South Street.'),'volume2-entry');
+    dialogObject=null;
+    const list=document.createElement('div');list.className='time-cards';
+    for(const item of u.requirements){const p=document.createElement('p');p.textContent=(item.ready?'✓ ':'○ ')+(en?item.en:item.zh);list.append(p);}
+    if(!u.started){const p=document.createElement('p');p.textContent=L('不另设资金、好感、桑塘或养蚕门槛。开卷不收费；租铺与生产会在后面的实际操作中逐项确认。','No savings, friendship or silkworm requirement is added. Beginning the chapter costs nothing; rent and production are confirmed later.');list.append(p);}
+    if(!u.ready&&!u.started){
+      const current=document.createElement('p');current.textContent=L('眼前还需完成：','Still to do: ')+(en?window.NanlanI18n.t(N.titles[u.current]||'第一卷当前事项'):(N.titles[u.current]||'第一卷当前事项'));list.append(current);
+      for(const [flag,zh,enText]of u.remaining){const p=document.createElement('p');p.textContent='○ '+(en?enText:zh);list.append(p);}
+    }
+    if(!u.started&&u.ready){
+      const plan=document.createElement('p');plan.textContent=L('接下来怎样筹备：读铺讯、商议家用 → 看南街三个时段的客流 → 比较两间铺面 → 核对预算，量力签约备货。','The preparation route: read the notice and agree household funds → observe South Street at three times → compare two shops → review the budget before signing and stocking.');list.append(plan);
+      const funds=document.createElement('p');funds.textContent=L('钱不够也可以先调查。租金、押金、修缮、首货与运费会在付款前列明；可先继续制作、试摊，再回来筹备。','You may investigate before you can afford a lease. Rent, deposit, repairs, stock and transport are listed before payment. Craft and trade at your stall, then return when ready.');list.append(funds);
+    }
+    $('panelExtra').append(list);
+    const target=world.hall.objects.find(o=>o.id==='v2Family');
+    if(u.ready){
+      if(s.scene==='hall'&&nearObject(target)){
+        dialogObject=target;
+        button(L('读铺讯，和家人开启第二卷','Read the Notice · Begin Volume II'),()=>perform('v2Start',{},()=>{
+          window.NanlanV2.show('v2Family',target);refreshHud();
+          notice(L('第二卷已开启。先与家人商议生活保留和筹备预算，再去南街观察客流。','Volume II has begun. Agree a household reserve and budget, then observe South Street.'));
+        }),'volume2-begin');
+      }else navButton(L('前往正厅，与家人读铺讯','Go to the Hall and Read the Notice'),()=>{closeDialog(true);startNavigation('hall','v2Family');},'volume2-entry-route');
+    }else if(!u.started)navButton(L('前往眼前还没办妥的事','Go to the Unfinished Activity'),()=>{const target=nextObjective();closeDialog(true);chooseTaskRoute(target);},'volume2-finish-first');
+    else{
+      if(!u.finished)navButton(L('继续当前剧情事项','Continue the Current Activity'),()=>{const target=nextObjective();closeDialog(true);chooseTaskRoute(target);},'volume2-continue');
+      navButton(L('查看南街铺面与库存','Visit the South Street Shop'),()=>{closeDialog(true);startNavigation('generalStore','v2Shelf');},'volume2-shop');
+    }
+    navButton(L('稍后再说，回到场景','Return for Now'),()=>closeDialog(true),'volume2-entry-close');
+  },
+
   targets:{v2Entry:['hall','v2Family'],v2ReserveSet:['hall','v2Family'],v2ObserveMorning:['county','v2ObserveMorning'],v2ObserveNoon:['county','v2ObserveNoon'],v2ObserveAfternoon:['county','v2ObserveAfternoon'],v2InspectEast:['county','leaseEast'],v2InspectWest:['county','leaseWest'],v2ShopSelected:['county','leaseEast'],v2PlanRecorded:['hall','v2Family'],v2BudgetPlan:['hall','v2Family'],v2LeaseSigned:['county','countyInn'],v2Repaired:['generalStore','v2Repair'],v2Decorated:['generalStore','v2Repair'],v2Sign:['generalStore','v2Repair'],v2PackingDone:['store','goodsCrates'],v2ShipmentSent:['store','goodsCrates'],v2ShipmentReceived:['generalStore','v2Shelf'],v2DisplayChosen:['generalStore','v2Shelf'],v2HoldChosen:['generalStore','v2Shelf'],v2PriceConfirmed:['generalStore','generalStoreKeeper'],v2Opened:['generalStore','generalStoreKeeper'],v2CustomerHeard:['generalStore','v2Customer'],v2FirstSale:['generalStore','generalStoreKeeper'],v2BulkResolved:['generalStore','generalStoreKeeper'],v2FirstCounted:['generalStore','generalStoreKeeper'],v2ShopLamp:['generalStore','v2ShopLamp'],v2NeighborHeard:['county','v2Neighbor'],v2CompetitionPlan:['county','v2Neighbor'],v2RegularAgreed:['generalStore','v2Customer'],v2RegularFulfilled:['generalStore','generalStoreKeeper'],v2CapacityPlanned:['generalStore','generalStoreKeeper'],v2BatchDelivered:['generalStore','generalStoreKeeper'],v2SupplyTerms:['village','v2Supplier'],v2SupplyReceived:['village','v2Supplier'],v2RosterPlanned:['hall','v2Family'],v2Cooperated:['county','v2Neighbor'],v2ThreeDays:['generalStore','generalStoreKeeper'],v2FamilyEnd:['hall','v2Family']},
   scenes:{
     V2_01:'母亲从碗底抽出一张铺讯，背面记着镇集客人的意见。\n「先看看，什么人会来买。」\n父亲把家中的收支摊开。这回，先商量留给生活的钱，再决定带多少进城。',
@@ -54,7 +90,7 @@ window.NanlanV2={
     },'v2-next-place');}
     function pricesPanel(){const ids=Object.keys(shop.stock).filter(id=>shop.stock[id]>0);table(['商品','到店参考成本','当前售价','可售'],ids.map(id=>[itemName(id),num(shop.cost[id]??M.baseCost(id))+' 文',N.shopPrice(s,id)+' 文',M.stockAvailable(s,id)]));if(!ids.length)return;const id=ids.includes(selected)?selected:ids.includes(shop.featured)?shop.featured:ids[0];for(const item of ids)button('选 '+itemName(item)+' 调价',()=>window.NanlanV2.show('v2Pricing',o,item),'v2-price-item-'+item,true);for(const tier of [0,1,2])action(itemName(id)+' · '+['让利价','常价','较高价'][tier],'v2Price',{item:id,tier});}
     function ledger(){const v=M.summary(s),d=v.day;table(['账目','当前记录'],[['现金余额',s.coins+' 文'],['家用保留目标',t.reserve+' 文'],['实收存货参考价值',v.stockValue+' 文'],['已完成闭账',v.closedDays+' 个不同营业日'],['当日成交收入',(d?.sales||0)+' 文'],['当日已售成本',num(d?.cost||0)+' 文'],['当日租金与设施分摊',num(v.rent+v.wear)+' 文'],['当日经营结果',v.profit+' 文'],['今日状态',d?.closed?'已打烊并保存':'尚未闭账']]);const note=document.createElement('p');note.className='v2-note';note.textContent='成本采用材料参考价与实际运费；旧版历史销售不回算新日账。预付租金与可退押金不在闭店时重复扣款。';$('panelExtra').append(note);}
-    if(!f.volume2Started){title('正厅 · 家宴后的铺讯','母亲拿出早已记下的铺讯。父亲摊开收支，祖父问谁来拿主意。\n「先看看，什么人会来买。」\n第一卷的物资与选择都留在身边。');action('读铺讯，开启第二卷','v2Start',{},N.done(s,'M20'),'请先完成 M20 岁末家宴。');return;}
+    if(!f.volume2Started){window.NanlanV2.entry();return;}
     if(kind==='v2Family'){
       title('家议 · 铺讯与分工','母亲：「东西做出来，总得有人用。」\n父亲：「每一笔写清，剩下多少，再决定用多少。」\n祖父把纸留在桌上，等你拿主意。'+(t.legacy?'\n\n旧版租金、货物和完成记录已保留；新增剧情接续，不重付旧租金。':''));
       if(s.scene!=='hall'){nav('回正厅共同商议家计与分工','hall','v2Family');return;}

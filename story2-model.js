@@ -106,10 +106,18 @@
     }
   }
   function cabinetPlan(s){const days=Object.values(s.story2.days).filter(d=>d.rawSilkSold);return !!s.story2.sampleFulfilled&&days.length>=2&&days.reduce((total,d)=>total+d.rawSilkSold,0)>=4;}
+  function entryStatus(s){
+    const completed=h.done(s,'M20'),started=!!s.flags.volume2Started,finished=!!s.flags.volume2Complete;
+    const first=['M01','M02','M03','M04','M05','M06','M07','M08','M09','M10','M11','M13','M14','M15','M16','M17','M19','M20'].find(id=>!h.done(s,id));
+    const feast=[['seatingChosen','安排家宴座次','Arrange the seats'],['feastCooked','在灶边做好家宴','Prepare the feast at the stove'],['festivalLamps','在庭院挂好灯火','Hang the courtyard lanterns'],['feastShared','回正厅饭桌分享家宴','Share the feast at the hall table']];
+    return {completed,started,finished,ready:completed&&!started,current:first||null,
+      remaining:first==='M20'?feast.filter(([flag])=>!s.flags[flag]):[],
+      requirements:[{ready:completed,zh:'完成第一卷，亲手分享岁末家宴',en:'Complete Volume I by sharing the year-end feast'}]};
+  }
   function act(s,name,p){
     const f=s.flags,t=s.story2,shop=s.shop;
     const fresh=()=>need(p.sequence===s.revision,'这份记录已更新，请重新查看后确认。');
-    if(name==='v2Start'){at(s,'hall');need(h.done(s,'M20'),'请先完成 M20 岁末家宴。');return once(s,'v2Start',()=>{f.volume2Started=true;f.volume2Complete=false;f.v2Entry=true;order.forEach(id=>s.quests[id]={status:id===order[0]?'ACTIVE':'LOCKED'});s.journal.push({id:'卷二',text:'母亲拿出铺讯：“先看看，什么人会来买。”'});});}
+    if(name==='v2Start'){at(s,'hall');need(entryStatus(s).completed,'请先完成第一卷：安排座次、做好家宴、挂灯，再回正厅饭桌分享。');if(f.volume2Started)return false;f.volume2Started=true;f.volume2Complete=false;f.v2Entry=true;s.actions.v2Start=true;order.forEach(id=>s.quests[id]={status:id===order[0]?'ACTIVE':'LOCKED'});s.journal.push({id:'卷二',tick:s.worldTick,text:'母亲拿出铺讯：“先看看，什么人会来买。”'});return;}
     need(f.volume2Started,'先完成第一卷，再到正厅开启第二卷。');
     expireSample(s);
     if(['v2SampleAccept','v2SampleReserve','v2SampleDeliver','v2SilkCabinet'].includes(name)){
@@ -177,5 +185,5 @@
     if(name==='v2FamilyEnd'){quest(s,'V2_18');at(s,'hall');need(f.v2ThreeDays&&f.v2Cooperated,'先兑现邻铺协作，并完成三个不同营业日的闭账。');need(!Object.entries(t.orders).some(([k,o])=>k!=='silkSample'&&o.delivered<o.quantity),'还有已接受订单未交清；先按原报价交付，再结卷。');need(['steady','neighbors','travel'].includes(p.choice),'请选择下一步方向。');s.choices.nextSeason=p.choice;f.v2FamilyEnd=true;return;}
     need(false,'这项南街事务尚未开放。');
   }
-  return {sale,bookSale,cabinetPlan,order,titles,steps,rewards,products,shops,slots,emptyShop,emptyStory,normalise,reconcile,act,price,basePrice,baseCost,stockAvailable,customers,summary,leaseQuote,familyAtShop};
+  return {entryStatus,sale,bookSale,cabinetPlan,order,titles,steps,rewards,products,shops,slots,emptyShop,emptyStory,normalise,reconcile,act,price,basePrice,baseCost,stockAvailable,customers,summary,leaseQuote,familyAtShop};
 });

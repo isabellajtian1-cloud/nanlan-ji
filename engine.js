@@ -6,6 +6,7 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
   const SAVE_KEY = 'nanlan_v20';
+  const bonds=typeof module==='object'&&module.exports?require('./bonds-model.js'):globalThis.NanlanBonds;
   const conversations=typeof module==='object'&&module.exports?require('./conversations.js'):globalThis.NanlanConversations;
   const rural=typeof module==='object'&&module.exports?require('./rural-model.js'):globalThis.NanlanRural;
   const production=typeof module==='object'&&module.exports?require('./production-model.js'):globalThis.NanlanProductionModel;
@@ -280,8 +281,14 @@
           requireThat(p.choice===0||p.choice===1,'请选择一句回应。');
           const count=s.choices['chatCount:'+role]||0;
           requireThat(p.expected===count,'这段话已经记下，请重新打开闲谈。');
+          bonds.rememberChat(s,role,count);
           s.choices['chatCount:'+role]=count+1;s.choices['chatLast:'+role]=p.choice;
           return;
+        }
+        if(name==='bondVisit'){
+          const o=this.world[s.scene]?.objects.find(o=>o.id===p.object);
+          requireThat(o&&conversations.roles[o.id]===p.role&&this.near(o),'请先走到这位人物身旁。');
+          return bonds.act(s,p,{requireThat,spend});
         }
         if(name.startsWith('kids'))return children.act(s,name,p,{requireThat,requireScene,spend,give});
         if(name.startsWith('liang'))return scholar.act(s,name,p,{requireThat,requireScene,spend,give,log,prices,supplyPrices,bookSale:storyV2.bookSale});

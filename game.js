@@ -604,7 +604,11 @@ function showPeople(){
       mother:N.done(s,'M19')?'她既记挂一家人的起居，也有自己的手艺与经营判断。许多主意，她只是等合适的时候才说。':'刚到门前，她先看屋檐、窗格和家人的衣袖；她在意的事，要从这些细处慢慢看见。',
       chen:'在村口递来一碗茶的长者。说话朴实，似乎很清楚村里每个人的难处。',doctor:'懂草木的当地大夫。她没有急着讲大道理，只先教你认眼前能用的东西。',cen:'常在山脚出没的采山人，认路也认竹。他看重山里留下什么，胜过一次带走多少。',yu:'熟悉潮线的渔家姑娘。她说海水每天都不同，人的去路也不必只有一条。',wan:'来寻找旧物的年轻女子。她对书箱里的东西十分珍重，许多缘由仍未说尽。',qiu:'负责转运账目的管事。说话先看凭单，但并非只认冷冰冰的数字。',vendor:'村中经营余粮与杂货的乡邻。先做过几次买卖，才慢慢熟络起来。',lin:'做事讲究稳当的木匠。',landlord:'南街铺面的主人，谈事情很看重说清责任。',neighbor:'南街的邻铺掌柜，既是同行，也是每日抬头可见的邻居。',tea:'南街上做惯生意的掌柜，对货物与交期都有自己的尺度。',customer:'在南街来往的客人。每个人进门时，想找的东西都不一样。'
     };
-    const p=document.createElement('div');p.className='person-card';p.innerHTML='<img class="person-sprite" alt="'+clean(name)+'" src="'+DATA.assets['npc_'+(id==='protagonist'?((started?state().gender:gender)==='male'?'playerMale':'playerFemale'):id)]+'"><b>'+name+'</b><small>'+role+'</small><p>'+clean(early[id]||description)+'</p>';grid.append(p);
+    const p=document.createElement('div');p.className='person-card';p.innerHTML='<img class="person-sprite" alt="'+clean(name)+'" src="'+DATA.assets['npc_'+(id==='protagonist'?((started?state().gender:gender)==='male'?'playerMale':'playerFemale'):id)]+'"><b>'+name+'</b><small>'+role+'</small><p>'+clean(early[id]||description)+'</p>';if(s&&window.NanlanBonds?.roles.includes(id)){
+      const bond=document.createElement('small');bond.textContent=window.NanlanBonds.description(s,id,window.NanlanI18n?.language==='en');p.append(bond);
+      const memories=window.NanlanBonds.events[id].filter((_,i)=>s.choices[window.NanlanBonds.key(id,'event'+i)]!==undefined);
+      for(const memory of memories){const line=document.createElement('p');line.textContent=memory.title[window.NanlanI18n?.language==='en'?1:0];p.append(line);}
+    }grid.append(p);
   });$('panelExtra').append(grid);
 }
 function showHelp(){
@@ -881,7 +885,8 @@ function addConversation(o){
 }
 function showConversation(o){
   const C=NanlanConversations,role=C.roles[o.id],s=state(),t=C.topic(s,role),expected=s.choices['chatCount:'+role]||0;
-  activity(C.cast[role].name+' · 闲话',C.greeting(s,role));dialogObject=o;
+  activity(C.cast[role].name+' · 闲话',(window.NanlanBonds?.greeting(s,role,window.NanlanI18n?.language==='en')||'')+'\n\n'+C.greeting(s,role));dialogObject=o;
+  window.NanlanBondUI?.npc(o);
   for(const choice of [0,1])button(t[choice===0?1:3],async()=>{
     if(!nearObject(o)){notice('请先回到人物身旁。',true);closeDialog();return;}
     const result=engine.act('chat',{object:o.id,choice,expected});
@@ -893,7 +898,7 @@ function showConversation(o){
   },'chat-choice-'+choice);
   navButton('结束交谈，回到场景',closeDialog,'chat-leave');
 }
-function npc(o){npcStory(o);addConversation(o);window.NanlanSeals?.npc(o);window.NanlanProduction?.npc(o);window.NanlanVillage?.npc(o);}
+function npc(o){npcStory(o);addConversation(o);window.NanlanSeals?.npc(o);window.NanlanProduction?.npc(o);window.NanlanVillage?.npc(o);window.NanlanBondUI?.npc(o);}
 function npcStory(o){
   const s=state(),f=s.flags,q=N.current(s),id=o.id;
   if(f.volume2Started&&['father','motherHall','grandfather'].includes(id)){window.NanlanV2.show('v2Family');return;}

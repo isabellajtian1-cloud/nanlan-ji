@@ -15,7 +15,7 @@ async function job(name,p,again){
 function stepButton(label,c=0,extra={}){const r=V.first(state());button(label,()=>job('voyageStep',{i:r.i,j:r.j,choice:c,...extra},()=>panel()),'voyage-step-'+c);}
 function ledger(){
  const s=state(),t=V.get(s);activity(L('春潮有信 · 旅途册','Letters on the Spring Tide · Travel Book'),t?L('往返、行囊与共同经历在这里逐项保留。','Passage, luggage and shared memories are recorded here.'):L('第五卷的来季安排落实以后，何行舟会带来青屿的邀请。','Once next season is arranged, Xingzhou will bring an invitation from Qingyu.'),'voyage-ledger');
- if(!t){if(V.canStart(s))button(L('和家人拆开春潮来信','Open the spring-tide letter together'),()=>job('voyageStart',{},ledger),'voyage-start');else note(L('请先完成岁序长青，并与小满实际完成共事。','Complete Enduring Seasons and carry out an agreed task with Xiaoman first.'));return;}
+ if(!t){if(V.canStart(s))button(L('和家人拆开春潮来信','Open the spring-tide letter together'),()=>job('voyageStart',{},ledger),'voyage-start');else note(L('请先完成岁序长青，并至少实际完成一项伙伴共事或有效交接。','Complete Enduring Seasons and record at least one shared task or verified handover first.'));return;}
  const r=V.first(s),target=V.target(s);
  note(L('此刻：','Now: ')+L(t.away?'青屿旅途中':t.phase==='complete'?'主线已完成，日常继续':'在南澜，行程保留',t.away?'Away on Qingyu':t.phase==='complete'?'Main story complete; daily life continues':'In Nanlan; itinerary preserved'));
  note(L('回程封存：','Return fare reserved: ')+t.reserve+L(' 文 · 已付船脚：',' coins · Fares paid: ')+t.fares);

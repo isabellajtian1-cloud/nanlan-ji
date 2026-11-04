@@ -213,6 +213,8 @@ async function perform(name,p={},rerender){
   if(name==='openGate'){closeDialog();render();notice('院门打开了。先去东厢房检查窗格与漏点。');return result;}
   if(name==='v2Sign'&&window.NanlanProduction){window.NanlanProduction.mounted();return result;}
   if(rerender)rerender();else notice(result.duplicate?'这件事已经办好了。':actionMessage(name));
+  const nextChapter=result.completed&&N.chapterEntries(state()).find(e=>!e.started&&e.ready);
+  if(nextChapter&&!$('dialog').hidden)navButton(window.NanlanI18n?.language==='en'?'Next Chapter · View Entrance':'下一卷已可开启 · 查看入口',()=>window.NanlanChapters.show(nextChapter.number),'completed-next-chapter');
   if(gathered&&!result.duplicate){
     const received=Object.entries(state().bag).filter(([id,n])=>n>(beforeBag[id]||0)).map(([id,n])=>(N.itemNames[id]||id)+' ×'+(n-(beforeBag[id]||0)));
     if(received.length){
@@ -363,8 +365,8 @@ function refreshQuestBanner(s=state(),q=N.current(s)){
   $('questAct').textContent=q?.startsWith('V6_')||s.flags.voyageComplete?'春潮有信':q?.startsWith('S5_')||s.flags.season5Complete&&!q?'岁序长青':s.flags.volume5Started?'清水归渠':s.flags.volume4Started?'海天帆影':s.flags.volume3Started?'山海成行':s.flags.volume2Started?'南街的新日子':q?(Number(q.slice(1))<=4?'先安顿一家人':'在南澜生活'):'这一季已经写完';
   $('questHeading').textContent=q?N.titles[q]:s.flags.voyageComplete?'主线完成 · 日常与番外继续':s.flags.season5Complete?'岁序长青 · 来年有约':s.flags.volume5Complete?'清水满缸 · 日常继续':s.flags.volume4Complete?'海天帆影 · 家灯长明':s.flags.volume3Complete?'山海之间 · 日常继续':s.flags.volume2Complete?'南街灯起 · 日常继续':'岁末满庭 · 新春家议';
   $('questHint').textContent=hint;
-  const entry=N.story2.entryStatus(s);$('volume2Entry').hidden=!entry.ready;
-  if(entry.ready){$('questAct').textContent=window.NanlanI18n?.language==='en'?'A New Beginning':'家宴后的新日子';$('questHeading').textContent=window.NanlanI18n?.language==='en'?'South Street Notice · Volume II Available':'南街铺讯 · 第二卷已可开启';}
+  const entry=N.chapterEntries(s).find(e=>!e.started&&e.ready),en=window.NanlanI18n?.language==='en';$('volume2Entry').hidden=!entry;
+  if(entry){$('volume2Entry').textContent=en?'Volume '+entry.number+' · View Entrance':'第'+entry.number+'卷 · 查看开启入口';if(!q){$('questAct').textContent=en?'A New Beginning':'接下来的日子';$('questHeading').textContent=en?entry.en+' · Available':entry.title+' · 已可开启';}}
 }
 function refreshHud(){
   const s=state(),q=N.current(s),t=timeText();
@@ -438,16 +440,16 @@ function selectTool(index){
 }
 function showQuest(){
   const s=state(),q=N.current(s);
-  activity(q?N.titles[q]:s.flags.season5Complete?'岁序长青 · 来年有约':s.flags.volume5Complete?'清水满缸 · 日常继续':s.flags.volume4Complete?'海天帆影 · 家灯长明':s.flags.volume3Complete?'山海之间 · 日常继续':s.flags.volume2Complete?'南街灯起 · 日常继续':'岁末满庭 · 新春家议',q?'点一条眼前的具体事项，人物会沿已经走通的路前往。事情要按生活里的先后去办，不必另找“下一步”按钮。\n\n事情办妥后：'+N.rewards[q][1]:nextHint());
+  activity(q?N.titles[q]:s.flags.voyageComplete?'春潮有信 · 日常与番外继续':s.flags.season5Complete?'岁序长青 · 来年有约':s.flags.volume5Complete?'清水满缸 · 日常继续':s.flags.volume4Complete?'海天帆影 · 家灯长明':s.flags.volume3Complete?'山海之间 · 日常继续':s.flags.volume2Complete?'南街灯起 · 日常继续':'岁末满庭 · 新春家议',q?'点一条眼前的具体事项，人物会沿已经走通的路前往。事情要按生活里的先后去办，不必另找“下一步”按钮。\n\n事情办妥后：'+N.rewards[q][1]:nextHint());
   $('dialogKicker').textContent='只记下已经发生与眼前要做的事';
   if(q){const list=document.createElement('div');renderQuestSteps(list,true);$('panelExtra').append(list);}
-  if(!s.flags.volume2Started)navButton(window.NanlanI18n?.language==='en'?'Volume II · Requirements and Entry':'第二卷 · 解锁条件与前往方式',()=>window.NanlanV2.entry(),'quest-volume2-entry');
+  navButton(window.NanlanI18n?.language==='en'?'Chapter Entrances · Requirements':'篇章入口 · 查看开启条件与去向',()=>window.NanlanChapters.show(),'quest-chapter-entry');
   button('回看已经走过的路',showQuestCatalog,'catalog',true);
   button('查看家人与邻里留下的回应',showJournal,'journal',true);
 }
 function showQuestCatalog(){
   const s=state();
-  const current=N.current(s),known=[...N.ORDER,...N.V2_ORDER,...(N.V3_ORDER||[]),...(N.V4_ORDER||[]),...(N.V5_ORDER||[]),...(N.SEASON5_ORDER||[])].filter(id=>s.quests[id]?.status==='COMPLETED'||id===current);
+  const current=N.current(s),known=[...N.ORDER,...N.V2_ORDER,...(N.V3_ORDER||[]),...(N.V4_ORDER||[]),...(N.V5_ORDER||[]),...(N.SEASON5_ORDER||[]),...(N.V6_ORDER||[])].filter(id=>s.quests[id]?.status==='COMPLETED'||id===current);
   activity('走过的路',known.length>1?'从旧宅门前走到今日，许多事是做过以后才明白。这里不会提前写下还没发生的故事。':'旧宅的门还没有推开。先把眼前的一件事做好，新的页章自然会出现。','quest');
   const box=document.createElement('div');box.className='quest-catalog';
   for(const id of known){
@@ -1728,7 +1730,7 @@ try{
   if(oldRaw){$('oldSaveExport').hidden=false;$('loadWarning').hidden=false;$('loadWarning').textContent='旧版八章存档仍保留。新版按原企划重做任务顺序，请从门前开始新的第一卷；可先备份旧档。';}
 }catch(e){$('loadWarning').hidden=false;$('loadWarning').textContent='当前存档资料无法完整读取，原数据没有删除。可以先备份，再开始新旅程。';if(storedRaw||oldRaw)$('oldSaveExport').hidden=false;}
 $('oldSaveExport').onclick=()=>download('Nanlan_Previous_Save.json',oldRaw||storedRaw||'{}');
-$('volume2Entry').onclick=()=>window.NanlanV2.entry();
+$('volume2Entry').onclick=()=>{const entry=N.chapterEntries(state()).find(e=>!e.started&&e.ready);if(entry?.number===2)window.NanlanV2.entry();else window.NanlanChapters.show(entry?.number);};
 $('questOpen').onclick=showQuest;$('nearbyOpen').onclick=showNearby;$('peopleOpen').onclick=showPeople;$('galleryOpen').onclick=showGallery;$('helpOpen').onclick=showHelp;
 $('interactionHint').onclick=()=>{if(!active)return;const o=visibleObjects().find(v=>v.id===$('interactionHint').dataset.object);if(!o)return;if(nearObject(o))interact(o);else approach(o);};
 $('startGuide').onclick=showStartGuide;

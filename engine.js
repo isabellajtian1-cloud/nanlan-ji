@@ -114,6 +114,29 @@
     return s;
   }
   function activeOrder(s){return s.flags.voyageStarted?V6_ORDER:s.flags.season5Started&&SEASON5_ORDER.some(id=>s.quests[id]?.status==='ACTIVE')?SEASON5_ORDER:s.flags.volume5Started?V5_ORDER:s.flags.season5Started?SEASON5_ORDER:s.flags.volume4Started?V4_ORDER:s.flags.volume3Started?V3_ORDER:s.flags.volume2Started?V2_ORDER:ORDER;}
+  function chapterEntries(s){
+    const f=s.flags,second=storyV2.entryStatus(s),last3=done(s,V3_ORDER.at(-1));
+    return [
+      {number:2,title:'南街灯起',en:'South Street Lights',started:!!f.volume2Started,complete:!!f.volume2Complete,ready:second.ready,scene:'hall',object:'v2Family',requirements:[[second.completed,'完成第一卷并分享岁末家宴','Complete Volume I and share the year-end feast']]},
+      {number:3,title:'山海成行',en:'Roads between Hills and Sea',started:!!f.volume3Started,complete:!!f.volume3Complete,ready:v3.canStart(s),scene:'generalStore',object:'v3Chest',requirements:[[!!f.volume2Complete,'完成南街三日真实闭账、履约与最后家议','Finish Volume II: three trading-day accounts, promises and the closing family discussion']],recordIssue:!!f.volume2Complete&&!f.volume3Started&&!v3.canStart(s)},
+      {number:4,title:'海天帆影',en:'Sails beneath Open Skies',started:!!f.volume4Started,complete:!!f.volume4Complete,ready:v4.canStart(s),scene:'coast',object:'v4Bell',requirements:[[!!f.volume3Complete&&last3,'完成第三卷归来核账与家人团聚','Complete the return accounts and family gathering in Volume III']]},
+      {number:5,title:'岁序长青',en:'Enduring Seasons',started:!!f.season5Started,complete:!!f.season5Complete,ready:season5.canStart(s),scene:'backHall',object:'seasonBook',requirements:[[!!f.volume4Complete,'完成第四卷分户结算、家书与后堂安排','Complete Volume IV: household settlements, letters and the back hall']]},
+      {number:6,title:'春潮有信',en:'Letters on the Spring Tide',started:!!f.voyageStarted,complete:!!f.voyageComplete,ready:voyage.canStart(s),scene:'backHall',object:'voyageBook',requirements:[[!!f.season5Complete,'完成第五卷来季安排','Complete the next-season arrangements in Volume V'],[voyage.delegated(s),'至少有一项实际共事或有效交接记录','Have a recorded shared task or verified handover']]}
+    ];
+  }
+  function recoverRecordedFinales(s){
+    if(!Array.isArray(s.journal))return;
+    const groups=[[ORDER,null,'volumeComplete'],[V2_ORDER,'volume2Started','volume2Complete'],[V3_ORDER,'volume3Started','volume3Complete'],[V4_ORDER,'volume4Started','volume4Complete'],[SEASON5_ORDER,'season5Started','season5Complete'],[V6_ORDER,'voyageStarted','voyageComplete']];
+    for(const [ids,started,complete]of groups){
+      if(started&&!s.flags[started])continue;
+      const id=ids.at(-1);
+      if(s.quests[id]?.status!=='ACTIVE'||!ids.slice(0,-1).every(k=>done(s,k))||!steps[id].every(([flag])=>s.flags[flag]))continue;
+      if(ids===V2_ORDER&&((s.story2?.closings?.length||0)<3||Object.entries(s.story2?.orders||{}).some(([key,o])=>key!=='silkSample'&&o.delivered<o.quantity)))continue;
+      if(ids===V6_ORDER&&(!voyage.get(s)?.reconciled||voyage.get(s).away||voyage.get(s).reserve!==0))continue;
+      s.quests[id].status='COMPLETED';s.flags[complete]=true;
+      if(!s.claimed[id]){const [coins,description]=rewards[id];s.claimed[id]=true;s.coins+=coins;if(coins)log(s,'reward',coins,id+' '+titles[id]);s.journal.push({id,tick:s.worldTick,text:description});}
+    }
+  }
   function current(s) { return activeOrder(s).find(id => s.quests[id]?.status==='ACTIVE') || null; }
   function done(s,id) { return s.quests[id]?.status==='COMPLETED'; }
   function reached(s,id) { return done(s,id) || current(s)===id; }
@@ -164,7 +187,7 @@
     const clearRoad=v5.gate(s,to);if(clearRoad!==null)return clearRoad;
     const seaRoad=v4.gate(s,to);if(seaRoad!==null)return seaRoad;
     const road=v3.gate(s,to);if(road!==null)return road;
-    if(['county','pharmacy','generalStore','teahouse'].includes(to))return s.flags.volume2Started?'':'请先完成 M20「岁末满庭」，再到正厅的「新春家议」开启第二卷。';
+    if(['county','pharmacy','generalStore','teahouse'].includes(to))return s.flags.volume2Started?'':done(s,'M20')?'岁末家宴已完成，请到正厅读南街铺讯，开启第二卷后再进县城。':'请先完成第一卷并分享岁末家宴，再到正厅与家人读南街铺讯。';
     if(to==='gate')return '';
     if(!s.flags.gateOpen)return '先在门前完成交接、接过钥匙，再亲手打开院门。';
     if(['yard','hall','study','bed','store'].includes(to))return '';
@@ -219,6 +242,7 @@
       if(g.wateredAt!==undefined)requireThat(Number.isFinite(g.wateredAt)&&g.wateredAt>=0&&g.wateredAt<=value.worldTick,'地块浇水时间无效。');
     }
     for(const id of ORDER)requireThat(['ACTIVE','LOCKED','COMPLETED'].includes(value.quests[id]?.status),'存档任务状态无效。');
+    recoverRecordedFinales(value);
     rural.normalise(value,requireThat);
     storyV2.normalise(value);
     seals.normalise(value,requireThat);
@@ -448,6 +472,6 @@
       });
     }
   }
-  return {Engine,voyage,V6_ORDER,season5,SEASON5_ORDER,v5,V5_ORDER,v4,V4_ORDER,children,scholar,v3,V3_ORDER,rural,initial,current,done,reached,sceneGate,clock,tide,crop,gardenPlot,quantity,available,normaliseLoaded,
+  return {Engine,chapterEntries,voyage,V6_ORDER,season5,SEASON5_ORDER,v5,V5_ORDER,v4,V4_ORDER,children,scholar,v3,V3_ORDER,rural,initial,current,done,reached,sceneGate,clock,tide,crop,gardenPlot,quantity,available,normaliseLoaded,
     rareResources,resourceCooldown,resourceRequirement,daylight,SAVE_KEY,ORDER,V2_ORDER,shopPrice,shopCustomers,story2:storyV2,shopProducts:storyV2.products,titles,steps,rewards,itemNames,products,prices,supplyPrices,recipes};
 });

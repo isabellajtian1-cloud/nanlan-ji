@@ -8,7 +8,8 @@ const rows=raw.map((r,i)=>({title:r.slice(0,2),scene:r[2],object:r[3],text:r.sli
 rows.forEach((r,i)=>{titles[r.id]=r.title[0];steps[r.id]=r.actions.map((a,j)=>['voyage_'+i+'_'+j,a[0]]);rewards[r.id]=[0,'旅途经历已记下。'];});
 const get=s=>s.choices.voyage6,day=s=>Math.floor(s.worldTick/1440)+1;
 function first(s){const i=order.findIndex(id=>s.quests[id]?.status==='ACTIVE');if(i<0)return null;const j=steps[order[i]].findIndex(([flag])=>!s.flags[flag]);return {i,j,...rows[i]};}
-function canStart(s){return !!s.flags.season5Complete&&!get(s)&&!!s.season5?.plans?.xiaoman?.done;}
+function delegated(s){return ['mother','xiaoman','boat'].some(k=>s.season5?.plans?.[k]?.done)||['season5_motherDo','season5_xiaomanDo','season5_boatDo','v3_audit'].some(k=>s.flags[k]);}
+function canStart(s){return !!s.flags.season5Complete&&!get(s)&&delegated(s);}
 function target(s){const r=first(s),t=get(s);if(!r)return null;if(islands.includes(r.scene)&&!t?.away)return ['anchorage','voyageHarbor'];if(!islands.includes(r.scene)&&t?.away)return ['qPier','voyageReturn'];return r.i===8&&r.j===1?['qBamboo','voyagePath']:[r.scene,r.object];}
 function gate(s,to){const t=get(s);if(islands.includes(to))return t?.away?'':'先到避风泊岸核船期，乘近岸班船前往青屿。';if(t?.away)return '正在青屿旅途中。请从青屿渡口按回程安排返湾。';return null;}
 function note(s,zh,en){get(s).ledger.push({tick:s.worldTick,zh,en});}
@@ -18,7 +19,7 @@ function act(s,name,p,h){
  need(p.sequence===s.revision,'记录已经更新，请重新打开这一页。');
  const pay=(n,why)=>{need(s.coins-n>=(s.story2?.reserve||0),'保留家用后现钱不足，还需准备 '+n+' 文。');s.coins-=n;log(s,'voyage',-n,why);};
  const work=(minutes,energy=0)=>{need(s.worldTick%1440+minutes<=1320,'天已晚，请先休息到次日再安排这一段。');need(s.stamina>=energy,'体力不足，先休息再来。');s.worldTick+=minutes;s.stamina-=energy;};
- if(name==='voyageStart'){at(s,'backHall');need(canStart(s),'先完成岁序长青，并与小满实际完成一项共事。');s.choices.voyage6={version:1,ledger:[],away:false,phase:'preparing',pack:{},reserve:0,fares:0,returnCount:0,loan:false,shop:null,sketch:null,repair:[],extra:{active:null,done:{},records:[]}};s.flags.voyageStarted=true;order.forEach((id,i)=>s.quests[id]={status:i?'LOCKED':'ACTIVE'});return;}
+ if(name==='voyageStart'){at(s,'backHall');need(canStart(s),'先完成第五卷来季安排，并保留至少一项实际共事或有效交接记录。');s.choices.voyage6={version:1,ledger:[],away:false,phase:'preparing',pack:{},reserve:0,fares:0,returnCount:0,loan:false,shop:null,sketch:null,repair:[],extra:{active:null,done:{},records:[]}};s.flags.voyageStarted=true;order.forEach((id,i)=>s.quests[id]={status:i?'LOCKED':'ACTIVE'});return;}
  const t=get(s);need(t,'先在后堂查看春潮来信。');
  if(name==='voyageBuy'){need(islands.includes(s.scene),'请到青屿的补给处。');const costs={rice:3,ingredient:3,wood:2,bamboo:3,rope:3,hotMeal:5};need(Object.hasOwn(costs,p.item),'请选明补给。');pay(costs[p.item],'青屿补给 '+p.item);give(s,{[p.item]:1});return;}
  if(name==='voyageWait'){need(['anchorage',...islands].includes(s.scene),'先到候船处或青屿歇脚。');work(60);note(s,'候船一小时，货物与未完行程仍在。','An hour ashore; goods and the itinerary remain intact.');return;}
@@ -113,7 +114,7 @@ function normalise(s,need){
  need(t.extra&&t.extra.done&&Array.isArray(t.extra.records),'番外记录缺页。');
  if(t.extra.active)need(bonus[t.extra.active.id]&&Number.isInteger(t.extra.active.stage)&&t.extra.active.stage>=0&&t.extra.active.stage<4&&Number.isInteger(t.extra.active.day),'番外约定无效。');
 }
-return {rows,order,titles,steps,rewards,bonus,islands,get,day,first,canStart,target,gate,act,normalise,extraTargets,safeWeather};
+return {rows,order,titles,steps,rewards,bonus,islands,get,day,first,canStart,delegated,target,gate,act,normalise,extraTargets,safeWeather};
 });
 
 if(typeof window!=='undefined'){

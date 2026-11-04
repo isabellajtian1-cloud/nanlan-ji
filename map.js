@@ -50,6 +50,7 @@ function objectiveForStep(flag,label){
 }
 function nextObjective(){
   const s=state(),q=N.current(s),f=s.flags;
+  if(!q){const entry=N.chapterEntries(s).find(e=>!e.started&&e.ready);if(entry)return {scene:entry.scene,object:entry.object,label:'前往'+entry.title+'的开启地点'};}
   if(!q&&N.voyage?.canStart(s))return {scene:'backHall',object:'voyageBook',label:'拆开春潮来信，安排青屿行程'};
   if(!q&&s.flags.voyageComplete){const a=N.voyage.get(s).extra.active;if(a&&!a.paused&&N.voyage.day(s)>=a.day){const to=N.voyage.extraTargets(a.id,a.stage);return {scene:to[0],object:to[1],label:N.voyage.bonus[a.id].stages[a.stage][0]};}return {scene:'backHall',object:'voyageExtras',label:'闲日邀约 · 六篇番外'};}
   if(!q&&N.season5?.canStart(s))return {scene:'backHall',object:'seasonBook',label:'回后堂，与家人翻开岁序簿'};

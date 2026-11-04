@@ -122,3 +122,10 @@ button{font:inherit;cursor:pointer;color:inherit;touch-action:manipulation}butto
 .kitchen-supplies p{margin:2px 0}
 .kitchen-caption{margin:8px 0;color:#534832;font-size:14px;line-height:1.7}
 @media(max-height:650px) and (min-width:650px){.kitchen-scene{width:min(100%,410px)}}
+
+
+/* V6 task materials: zero-stock requirements stay visible instead of disappearing. */
+.inventory-row.required-missing{border-color:#a95e45;background:#f4e4cf}
+.inventory-row strong em{display:inline-block;margin-left:8px;padding:2px 6px;border-radius:999px;background:#e7d4aa;color:#70452f;font-style:normal;font-size:11px}
+.inventory-row.required-missing strong em{background:#a95e45;color:#fff8e7}
+#restoreAutoBackup:not([hidden]){border-color:#927344;background:#efe2bd;color:#38543f}

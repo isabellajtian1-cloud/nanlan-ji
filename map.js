@@ -3,11 +3,11 @@ const mapPositions={
   gate:[190,535],yard:[190,365],hall:[190,110],study:[65,235],bed:[325,235],store:[325,445],
   village:[520,520],market:[570,735],county:[850,735],pharmacy:[820,575],generalStore:[1075,735],teahouse:[1070,585],
   foothill:[535,340],mountain:[710,225],bambooGrove:[710,70],mountainside:[935,195],summit:[1080,70],
-  coast:[855,450],tidalflat:[1090,410],wharf:[880,345],oldTrail:[425,156],workshop:[348,615],qingxi:[1040,275],anchorage:[1005,505],guild:[680,630],backHall:[71,87]
+  coast:[855,450],tidalflat:[1090,410],wharf:[880,345],oldTrail:[425,156],workshop:[348,615],qingxi:[1040,275],anchorage:[1005,505],guild:[680,630],backHall:[71,87],qPier:[710,760],qFair:[940,665],qSalt:[1090,635],qBamboo:[775,675],qBeacon:[1010,570],qLodge:[1100,785]
 };
 const mapGroups=[['宅院与房间',['gate','yard','hall','study','bed','store']],
   ['村镇与县城',['village','market','county','pharmacy','generalStore','teahouse']],
-  ['青岚山',['foothill','mountain','bambooGrove','mountainside','summit']],['南澜海湾',['coast','tidalflat']],['山海之间',['wharf','oldTrail','workshop','qingxi']],['海天帆影',['anchorage','guild','backHall']]];
+  ['青岚山',['foothill','mountain','bambooGrove','mountainside','summit']],['南澜海湾',['coast','tidalflat']],['山海之间',['wharf','oldTrail','workshop','qingxi']],['海天帆影',['anchorage','guild','backHall']],['青屿远行',['qPier','qFair','qSalt','qBamboo','qBeacon','qLodge']]];
 const deferredPlaces=['county','pharmacy','generalStore','teahouse'];
 let selectedMapPlace='yard',selectedMapObject=null,navigationTarget=null,navigationObject=null,mapReturnFocus=null,mapZoom=1;
 function mapAccess(id){
@@ -17,10 +17,11 @@ function mapAccess(id){
   return '';
 }
 function mapKnown(id){
-  const s=state();return id===s.scene||id==='gate'||!!s.visits[id]||!mapAccess(id);
+  const s=state();if(N.voyage.islands.includes(id))return true;return id===s.scene||id==='gate'||!!s.visits[id]||!mapAccess(id);
 }
 function objectiveForStep(flag,label){
   const s=state(),f=s.flags;
+  if(flag?.startsWith('voyage_')){const to=N.voyage.target(s);return to?{scene:to[0],object:to[1],label}:null;}
   if(flag?.startsWith('season5_')){const to=N.season5.target(s,flag.slice(8));return to?{scene:to[0],object:to[1],label}:null;}
   if(flag?.startsWith('v5_')){const to=N.v5.target(s,flag.slice(3));return to?{scene:to[0],object:to[1],label}:null;}
   if(flag?.startsWith('v4_')){const [scene,object]=N.v4.target(s,flag.slice(3));return {scene,object,label};}
@@ -49,6 +50,8 @@ function objectiveForStep(flag,label){
 }
 function nextObjective(){
   const s=state(),q=N.current(s),f=s.flags;
+  if(!q&&N.voyage?.canStart(s))return {scene:'backHall',object:'voyageBook',label:'拆开春潮来信，安排青屿行程'};
+  if(!q&&s.flags.voyageComplete){const a=N.voyage.get(s).extra.active;if(a&&!a.paused&&N.voyage.day(s)>=a.day){const to=N.voyage.extraTargets(a.id,a.stage);return {scene:to[0],object:to[1],label:N.voyage.bonus[a.id].stages[a.stage][0]};}return {scene:'backHall',object:'voyageExtras',label:'闲日邀约 · 六篇番外'};}
   if(!q&&N.season5?.canStart(s))return {scene:'backHall',object:'seasonBook',label:'回后堂，与家人翻开岁序簿'};
   if(!q&&N.v4?.canStart(s))return {scene:'coast',object:'v4Bell',label:'去海湾岸边认一认陌生的帆'};
   if(!q&&N.v3?.canStart(s))return {scene:'generalStore',object:'v3Chest',label:'去南街看看门边的竹箱'};

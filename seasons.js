@@ -32,7 +32,7 @@ function ledger(){
  for(const [k,j]of Object.entries(V.jobs))if(t.plans[k])note((k==='mother'?L('母亲','Mother'):k==='xiaoman'?L('罗小满','Xiaoman'):L('何行舟','Xingzhou'))+' · '+j.minutes+L(' 分钟 · ',' minutes · ')+j.fee+L(' 文 · ',' coins · ')+(t.plans[k].done?L('已当面结清','Settled'):L('待共同开工','Awaiting shared work')));
  if(t.apprentice)note(L('师徒合做：竹三、绳一，师傅工钱四文；实做 ','Teaching: three bamboo, one rope, four coins in wages; ')+t.apprentice.minutes+L(' 分钟。留样不售，合格篓归李家。',' minutes worked. Practice sample stays off sale; the sound basket belongs to the household.'));
  if(t.prototype){note(L('食盒四项验记：','Food-box test record: ')+Object.entries(t.prototype.tests).map(([k,v])=>P(V.rows[k].label)+' · '+(v==='passed'?L('合用','Sound'):L('待加固','Needs reinforcement'))).join(' / '));}
- if(t.fair)note(L('秋集：','Fair: ')+N.itemNames[t.fair.item]+' · '+t.fair.held+L(' 件待售 / ',' held / ')+t.fair.sold+L(' 件已交 · 实收 ',' delivered · receipts ')+t.fair.gross+L(' 文',' coins'));
+ if(t.fair)note(L('秋集：','Fair: ')+(t.fair.skipped?L('本次暂缓，未交易','Deferred; no sale'):N.itemNames[t.fair.item])+' · '+t.fair.held+L(' 件待售 / ',' held / ')+t.fair.sold+L(' 件已交 · 实收 ',' delivered · receipts ')+t.fair.gross+L(' 文',' coins'));
  if(t.trip)note(P(routes[t.trip.route])+' · '+(t.trip.delegate?L('只许售一份授权干药，其余货不动','One authorised dried-herb parcel only; all other goods untouched'):L('歇铺，不动货','Shop rests; no stock used'))+' · '+(t.trip.returned?L('已核账','Reconciled'):L('尚待回铺核对','Awaiting return')));
  if(t.display){note(L('后堂陈列：','Back-hall display: ')+P(things[t.display.item]));if(s.scene==='backHall')job(L('把这件纪念物收回','Put the keepsake away'),'seasonTakeDisplay',{},ledger);}
  const d=document.createElement('details'),h=document.createElement('summary');h.textContent=L('翻看逐笔记录','Read the record');d.append(h);
@@ -80,6 +80,7 @@ function panel(o,stage=0){
   note(P(notes.tripActivity));activities.forEach((a,i)=>controls(P(a),k,{activity:i}));
  }
  else if(k==='marketPack'){
+  controls(L('本次不办小集，改为熟客试样与家人回顾','Defer the fair; discuss samples and memories instead'),k,{item:'skip'});
   for(const item of ['driedHerb','narrowBasket','bambooWare','shellCraft','travelBox']){const n=N.available(s,item);if(item==='travelBox'&&!s.flags.travelBoxPattern)continue;const b=controls(N.itemNames[item]+' ×1 · '+L('可用 ','available ')+n,k,{item});b.disabled=n<1;}
  }
  else if(k==='decorate'){
@@ -87,6 +88,7 @@ function panel(o,stage=0){
   note(L('放入陈设的物件会离开可售行囊。试样与教具原本就不在售货库存中。','Displayed objects leave sellable satchel stock. Samples and teaching pieces were already off sale.'));
  }
  else if(k==='year'){memories.forEach((m,i)=>controls(P(m),k,{memory:i}));}
+ else if(['marketDisplay','marketSell','marketClose'].includes(k)&&s.season5.fair?.skipped)controls(L('记录熟客试样意见，不成交、不收摊费','Record sample feedback; no sale or stall fee'),k,{choice:0});
  else if(r.options)r.options.forEach((m,i)=>controls(P(m),k,{choice:i}));
  else if(notes[k]&&stage===0){note(P(notes[k]));navButton(L('走近些，亲手试一遍','Come closer and try by hand'),()=>panel(o,1),'season-hand-'+k);}
  else{

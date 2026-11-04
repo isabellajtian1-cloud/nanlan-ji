@@ -256,6 +256,9 @@ function actionMessage(name){
 }
 function nextHint(s=state(),q=N.current(s)){
   const f=s.flags;
+  if(q?.startsWith('V6_')){const r=N.voyage.first(s);return r?r.actions[r.j][window.NanlanI18n?.language==='en'?1:0]:'';}
+  if(f.voyageComplete)return window.NanlanI18n?.language==='en'?'The main story is complete. Family and friends have six invitations waiting in the back hall.':'六卷主线已完成，后堂还有家人和伙伴的六篇闲日邀约。';
+  if(N.voyage.canStart(s))return window.NanlanI18n?.language==='en'?'A spring-tide letter waits in the back hall.':'后堂有一封春潮来信，何行舟邀你去青屿看看。';
   if(q?.startsWith('S5_'))return N.season5.first(s)?.label[0]||N.titles[q];
   if(N.season5?.canStart(s))return '后堂秋风翻账，母亲和伙伴们等你商量下一年的日子。';
   if(s.flags.season5Complete&&!q)return '岁序簿已翻到来年，伙伴的共事和后堂的纪念物都留在身边。';
@@ -323,6 +326,7 @@ function showTime(){
   }
   const list=document.createElement('div');list.className='time-cards';
   entries.forEach(([title,text])=>{const card=document.createElement('div'),b=document.createElement('b'),p=document.createElement('p');b.textContent=title;p.textContent=text;card.append(b,p);list.append(card);});$('panelExtra').append(list);
+  if(N.voyage.get(s))navButton(window.NanlanI18n?.language==='en'?'Open the travel book and invitations':'查看旅途册与闲日邀约',()=>window.NanlanVoyageUI.ledger(),'clock-voyage');
   button('在舆图上查看全部地点',()=>{closeDialog();showMap();},'time-map',true);
   if(s.flags.bedReady)button('找卧房（东厢房）床榻 · 两种休息',()=>{closeDialog();startNavigation('bed','bedRest');},'time-rest');
 }
@@ -355,8 +359,8 @@ function refreshQuestBanner(s=state(),q=N.current(s)){
   if(questSignature!==lastQuestSignature){
     renderQuestSteps($('quest'),false,s,q);lastQuestSignature=questSignature;
   }
-  $('questAct').textContent=q?.startsWith('S5_')||s.flags.season5Complete&&!q?'岁序长青':s.flags.volume5Started?'清水归渠':s.flags.volume4Started?'海天帆影':s.flags.volume3Started?'山海成行':s.flags.volume2Started?'南街的新日子':q?(Number(q.slice(1))<=4?'先安顿一家人':'在南澜生活'):'这一季已经写完';
-  $('questHeading').textContent=q?N.titles[q]:s.flags.season5Complete?'岁序长青 · 来年有约':s.flags.volume5Complete?'清水满缸 · 日常继续':s.flags.volume4Complete?'海天帆影 · 家灯长明':s.flags.volume3Complete?'山海之间 · 日常继续':s.flags.volume2Complete?'南街灯起 · 日常继续':'岁末满庭 · 新春家议';
+  $('questAct').textContent=q?.startsWith('V6_')||s.flags.voyageComplete?'春潮有信':q?.startsWith('S5_')||s.flags.season5Complete&&!q?'岁序长青':s.flags.volume5Started?'清水归渠':s.flags.volume4Started?'海天帆影':s.flags.volume3Started?'山海成行':s.flags.volume2Started?'南街的新日子':q?(Number(q.slice(1))<=4?'先安顿一家人':'在南澜生活'):'这一季已经写完';
+  $('questHeading').textContent=q?N.titles[q]:s.flags.voyageComplete?'主线完成 · 日常与番外继续':s.flags.season5Complete?'岁序长青 · 来年有约':s.flags.volume5Complete?'清水满缸 · 日常继续':s.flags.volume4Complete?'海天帆影 · 家灯长明':s.flags.volume3Complete?'山海之间 · 日常继续':s.flags.volume2Complete?'南街灯起 · 日常继续':'岁末满庭 · 新春家议';
   $('questHint').textContent=hint;
 }
 function refreshHud(){
@@ -991,6 +995,7 @@ function objectGate(o){
 function visibleObjects(scene=state().scene,includeCooling=false){
   const s=state(),f=s.flags,q=N.current(s);
   return world[scene].objects.filter(o=>{
+    if(globalThis.NanlanVoyageUI&&!globalThis.NanlanVoyageUI.visible(s,scene,o))return false;
     if(globalThis.NanlanV5&&!globalThis.NanlanV5.visible(s,o))return false;
     if(globalThis.NanlanV4&&!globalThis.NanlanV4.visible(s,o))return false;
     if(o.id==='seasonBook')return !!f.volume4Complete;
@@ -1066,6 +1071,7 @@ function refreshInteractionHint(){
 async function interact(o){
   if(!o||transitioning)return;
   if(!nearObject(o)){notice('先走近'+o.label+'。');return;}
+  if(globalThis.NanlanVoyageUI?.offer(o)){dialogObject=o;return;}
   if(o.action==='kidsCamp'){dialogObject=o;globalThis.NanlanKids.play();return;}
   if(o.action==='liangTea'){dialogObject=o;await globalThis.NanlanScholar.meet();window.NanlanBondUI?.npc(o);return;}
   if(globalThis.NanlanSeasons?.offer(o)){dialogObject=o;window.NanlanBondUI?.npc(o);return;}
@@ -1603,7 +1609,7 @@ function frame(t){
   const dt=Math.min(.1,(t-(lastFrame||t))/1000);lastFrame=t;
   try{update(dt);render();if(t-lastHud>300){refreshHud();refreshInteractionHint();lastHud=t;}
     void window.NanlanProduction?.maybeMorning();
-    window.NanlanAudio?.setEnvironment(state().scene,N.daylight(state()).darkness>.25,started&&active&&moving);
+    window.NanlanAudio?.setEnvironment(world[state().scene].soundScene||state().scene,N.daylight(state()).darkness>.25,started&&active&&moving);
     if(started&&active&&t-lastAutosave>20000){const r=engine.save();$('saveState').textContent=r.ok?(engine.memoryOnly?'仅本次试玩':'已保存'):'自动保存失败 · 请手动保存';lastAutosave=t;}
   }catch(e){console.error(e);active=false;notice('画面暂停了，请先保存进度，再刷新重试。',true);}
   requestAnimationFrame(frame);

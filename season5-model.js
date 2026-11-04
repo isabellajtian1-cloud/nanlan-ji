@@ -85,11 +85,12 @@ function act(s,name,p,h){
  }
  case 'maintenance':spend(s,{wood:1});work(15,2);break;
  case 'marketPack':{
+  if(p.item==='skip'){t.fair={item:null,held:0,sold:0,gross:0,closed:false,skipped:true};record(s,'本次不办小集，改为熟客试样与家人回顾，不拨货、不虚构成交。','This fair is deferred in favour of sample discussion; no goods or sales are invented.');break;}
   const item=p.item;need(['driedHerb','narrowBasket','bambooWare','shellCraft','travelBox'].includes(item)&&available(s,item)>=1,'先带一件可出售实货。');spend(s,{[item]:1});t.fair={item,held:1,sold:0,gross:0,closed:false};break;
  }
- case 'marketDisplay':need(t.fair?.held===1,'先拨一件实货到秋集摊位。');work(10,1);t.fair.display=p.choice;break;
- case 'marketSell':{const f=t.fair;need(f&&f.held===1&&!f.sold,'这件货已经交付。');const price=h.prices[f.item];need(Number.isInteger(price)&&price>0,'货目价格尚待核对。');f.held=0;f.sold=1;f.gross=price;s.coins+=price;log(s,'autumnFair',price,'秋日小集实物售出',f.item);break;}
- case 'marketClose':need(t.fair?.sold===1&&!t.fair.closed,'先完成这件实货买卖。');pay(2,'秋日小集一班摊务费用');t.fair.closed=true;break;
+ case 'marketDisplay':if(t.fair?.skipped){t.fair.display=p.choice;break;}need(t.fair?.held===1,'先拨一件实货到秋集摊位。');work(10,1);t.fair.display=p.choice;break;
+ case 'marketSell':{const f=t.fair;if(f?.skipped){record(s,'只听熟客试用意见，样品不出售。','Only sample feedback is recorded; no sale takes place.');break;}need(f&&f.held===1&&!f.sold,'这件货已经交付。');const price=h.prices[f.item];need(Number.isInteger(price)&&price>0,'货目价格尚待核对。');f.held=0;f.sold=1;f.gross=price;s.coins+=price;log(s,'autumnFair',price,'秋日小集实物售出',f.item);break;}
+ case 'marketClose':if(t.fair?.skipped){t.fair.closed=true;break;}need(t.fair?.sold===1&&!t.fair.closed,'先完成这件实货买卖。');pay(2,'秋日小集一班摊务费用');t.fair.closed=true;break;
  case 'tripPlan':{
   need(Number.isInteger(p.route)&&routes[p.route]&&typeof p.delegate==='boolean','请选择出游路线与留守安排。');
   t.trip={route:p.route,delegate:p.delegate,departed:false,returned:false,escrow:0,proceeds:0,activity:false};break;
@@ -127,7 +128,7 @@ function normalise(s,need){
  need(!!s.flags.season5Complete===(ix<0),'岁序结卷记录无效。');
  need(t.ledger.every(e=>Number.isFinite(e.tick)&&typeof e.zh==='string'&&typeof e.en==='string'),'岁序记录无效。');
  if(t.trip)need(routes[t.trip.route]&&typeof t.trip.delegate==='boolean'&&[0,1].includes(t.trip.escrow),'出游托管记录无效。');
- if(t.fair)need([0,1].includes(t.fair.held)&&[0,1].includes(t.fair.sold)&&t.fair.held+t.fair.sold===1,'秋集实货记录不符。');
+ if(t.fair)need([0,1].includes(t.fair.held)&&[0,1].includes(t.fair.sold)&&(t.fair.skipped?t.fair.held+t.fair.sold===0:t.fair.held+t.fair.sold===1),'秋集实货记录不符。');
 }
 return {chapters,order,titles,steps,rewards,rows,first,target,canStart,act,normalise,jobs,routes};
 });

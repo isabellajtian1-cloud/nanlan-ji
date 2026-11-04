@@ -37,7 +37,7 @@ const patterns={
   ['cold','clear','breeze','cold'],['cloud','rain','drizzle','cloud'],['fog','clear','cloud','cold']
  ]
 };
-const outdoor=new Set(['gate','yard','village','market','county','foothill','mountain','mountainside','summit','bambooGrove','coast','tidalflat','wharf','oldTrail','qingxi','anchorage']);
+const outdoor=new Set(['gate','yard','village','market','county','foothill','mountain','mountainside','summit','bambooGrove','coast','tidalflat','wharf','oldTrail','qingxi','anchorage','qPier','qFair','qSalt','qBamboo','qBeacon']);
 function dayNumber(s){return Math.floor(Number(s.worldTick||0)/1440)+1;}
 function minute(s){const value=Math.floor(Number(s.worldTick||0)%1440);return value<0?value+1440:value;}
 function calendar(s){return globalThis.NanlanClimate?.at?.(s)||{index:1,key:'summer'};}

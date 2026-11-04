@@ -85,6 +85,8 @@
   const v4=typeof module==='object'&&module.exports?require('./story4-model.js'):globalThis.NanlanStory4;
   const v5=typeof module==='object'&&module.exports?require('./story5-model.js'):globalThis.NanlanStory5;
   const season5=typeof module==='object'&&module.exports?require('./season5-model.js'):globalThis.NanlanSeason5;
+  const voyage=typeof module==='object'&&module.exports?require('./voyage-model.js'):globalThis.NanlanVoyage;
+  const V6_ORDER=voyage.order;
   const SEASON5_ORDER=season5.order,V5_ORDER=v5.order,V4_ORDER=v4.order,V3_ORDER=v3.order;
   const V2_ORDER=storyV2.order;
   Object.assign(titles,storyV2.titles);Object.assign(steps,storyV2.steps);Object.assign(rewards,storyV2.rewards);
@@ -92,6 +94,7 @@
   Object.assign(titles,v4.titles);Object.assign(steps,v4.steps);Object.assign(rewards,v4.rewards);
   Object.assign(titles,v5.titles);Object.assign(steps,v5.steps);Object.assign(rewards,v5.rewards);
   Object.assign(titles,season5.titles);Object.assign(steps,season5.steps);Object.assign(rewards,season5.rewards);
+  Object.assign(titles,voyage.titles);Object.assign(steps,voyage.steps);Object.assign(rewards,voyage.rewards);
   itemNames.travelBox='出行食盒';prices.travelBox=24;
   recipes.travelBox={label:'制作出行食盒',cost:{bamboo:2,rope:1},out:{travelBox:1}};
   const shopPrice=storyV2.price,shopCustomers=storyV2.customers;
@@ -107,10 +110,10 @@
       rural:rural.fresh(),production:production.fresh(),actorState:production.freshActors(),seals:seals.fresh(),shop:storyV2.emptyShop(),story2:storyV2.emptyStory(),practice:{},pages:{},visits:{gate:true},familyTalks:{},order:null,transactions:[],journal:[],
       tideAnchor:null,tideTutorialUsed:false,stallUntil:null,featured:null,lastNotice:'先和家人完成门前交接。'
     };
-    for(const id of Object.keys(titles).filter(id=>!V3_ORDER.includes(id)&&!V4_ORDER.includes(id)&&!V5_ORDER.includes(id)&&!SEASON5_ORDER.includes(id))) s.quests[id]={status:V2_ORDER.includes(id)?'DEFERRED_V2':id==='M01'?'ACTIVE':'LOCKED'};
+    for(const id of Object.keys(titles).filter(id=>!V3_ORDER.includes(id)&&!V4_ORDER.includes(id)&&!V5_ORDER.includes(id)&&!SEASON5_ORDER.includes(id)&&!V6_ORDER.includes(id))) s.quests[id]={status:V2_ORDER.includes(id)?'DEFERRED_V2':id==='M01'?'ACTIVE':'LOCKED'};
     return s;
   }
-  function activeOrder(s){return s.flags.season5Started&&SEASON5_ORDER.some(id=>s.quests[id]?.status==='ACTIVE')?SEASON5_ORDER:s.flags.volume5Started?V5_ORDER:s.flags.season5Started?SEASON5_ORDER:s.flags.volume4Started?V4_ORDER:s.flags.volume3Started?V3_ORDER:s.flags.volume2Started?V2_ORDER:ORDER;}
+  function activeOrder(s){return s.flags.voyageStarted?V6_ORDER:s.flags.season5Started&&SEASON5_ORDER.some(id=>s.quests[id]?.status==='ACTIVE')?SEASON5_ORDER:s.flags.volume5Started?V5_ORDER:s.flags.season5Started?SEASON5_ORDER:s.flags.volume4Started?V4_ORDER:s.flags.volume3Started?V3_ORDER:s.flags.volume2Started?V2_ORDER:ORDER;}
   function current(s) { return activeOrder(s).find(id => s.quests[id]?.status==='ACTIVE') || null; }
   function done(s,id) { return s.quests[id]?.status==='COMPLETED'; }
   function reached(s,id) { return done(s,id) || current(s)===id; }
@@ -157,6 +160,7 @@
     if(s.flags.volume2Started&&!current(s))s.flags.volume2Complete=true;
   }
   function sceneGate(s,to) {
+    const tripRoad=voyage.gate(s,to);if(tripRoad!==null)return tripRoad;
     const clearRoad=v5.gate(s,to);if(clearRoad!==null)return clearRoad;
     const seaRoad=v4.gate(s,to);if(seaRoad!==null)return seaRoad;
     const road=v3.gate(s,to);if(road!==null)return road;
@@ -239,6 +243,7 @@
     v4.normalise(value,requireThat);
     v5.normalise(value,requireThat);
     season5.normalise(value,requireThat);
+    voyage.normalise(value,requireThat);
     return copy(value);
   }
   class Engine {
@@ -275,6 +280,7 @@
     act(name,p={}) {
       return this.commit(name,(s)=>{
         const f=s.flags, q=current(s), quest=id=>expectQuest(s,id);
+        if(name.startsWith('voyage'))return voyage.act(s,name,p,{requireThat,requireScene,spend,give,available,log,prices,bonds});
         if(name==='chat'){
           const role=conversations.roles[p.object],person=conversations.cast[role],o=this.world[s.scene].objects.find(o=>o.id===p.object);
           requireThat(person&&o&&Math.hypot(o.x-s.player.x,o.y-s.player.y)<=94,'请先走到这位人物身旁。');
@@ -440,6 +446,6 @@
       });
     }
   }
-  return {Engine,season5,SEASON5_ORDER,v5,V5_ORDER,v4,V4_ORDER,children,scholar,v3,V3_ORDER,rural,initial,current,done,reached,sceneGate,clock,tide,crop,gardenPlot,quantity,available,normaliseLoaded,
+  return {Engine,voyage,V6_ORDER,season5,SEASON5_ORDER,v5,V5_ORDER,v4,V4_ORDER,children,scholar,v3,V3_ORDER,rural,initial,current,done,reached,sceneGate,clock,tide,crop,gardenPlot,quantity,available,normaliseLoaded,
     rareResources,resourceCooldown,resourceRequirement,daylight,SAVE_KEY,ORDER,V2_ORDER,shopPrice,shopCustomers,story2:storyV2,shopProducts:storyV2.products,titles,steps,rewards,itemNames,products,prices,supplyPrices,recipes};
 });

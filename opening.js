@@ -17,6 +17,21 @@ const shots=[
   ]
  },
  {
+  "duration": 9000,
+  "image": "opening-departure-v663.webp",
+  "asset": "oldTrail",
+  "environment": "oldTrail",
+  "roles": [],
+  "title": [
+   "辞京 · 把旧日留在身后",
+   "Departure · Leaving the Capital Behind"
+  ],
+  "line": [
+   "城门渐渐退到身后。你回望了一次，直到熟悉的屋瓦隐进晨雾。\n父亲扶稳车辕：「往后路远，咱们一家人一道走。」",
+   "The city gate receded behind you. You looked back once, until the familiar rooftops faded into the morning mist.\nFather steadied the cart. “It is a long road ahead. We shall travel it together.”"
+  ]
+ },
+ {
   "duration": 12000,
   "image": "opening-southbound-v662.webp",
   "asset": "oldTrail",
@@ -52,10 +67,7 @@ const shots=[
   "duration": 10000,
   "asset": "gate",
   "environment": "gate",
-  "roles": [
-   "mother",
-   "grandfather"
-  ],
+  "roles": [],
   "title": [
    "从这里 · 再安一个家",
    "Here · A Home to Make Together"
@@ -63,7 +75,8 @@ const shots=[
   "line": [
    "祖父把一路护着的书抱稳：「先进去吧。屋子可以慢慢修，日子也能慢慢过。」\n门后的模样还不知道。先走近家人，一起看看这处新住处。",
    "Grandfather gathered the book he had kept safe along the road. “Let us go in. We can mend the house, and find our way, a little at a time.”\nYou have yet to see what lies beyond the gate. Join your family and discover your new home together."
-  ]
+  ],
+  "image": "opening-homecoming-v663.webp"
  }
 ];
 let host=null,index=0,elapsed=0,playing=true,running=false,frame=0,last=0,lastAdvance=-Infinity,onFinish=null,focusBefore=null,wasActive=false,oldInert=false;
@@ -80,7 +93,7 @@ function build(){
  host.querySelector('#openingAuto').onclick=()=>{playing=!playing;last=0;labels();};
 }
 function labels(){
- host.querySelector('#openingKicker').textContent=P(['明代 · 从京城到南澜','Ming China · From the Capital to Nanlan']);
+ host.querySelector('#openingKicker').textContent=P(['明代 · 从京城到南澜','Ming China · From the Capital to Nanlan'])+' · '+(index+1)+' / '+shots.length;
  host.querySelector('#openingSkip').textContent=P(['跳过并开始','Skip and Play']);
  host.querySelector('#openingAuto').textContent=playing?P(['自动播放 开','Autoplay On']):P(['自动播放 暂停','Autoplay Paused']);
  host.querySelector('#openingAuto').setAttribute('aria-pressed',String(playing));

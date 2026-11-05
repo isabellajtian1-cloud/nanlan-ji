@@ -380,7 +380,7 @@ function refreshHud(){
   $('energy').textContent=Math.floor(s.stamina);$('energyBar').style.width=s.stamina+'%';$('coins').textContent=s.coins;
   refreshQuestBanner(s,q);$('nightNote').hidden=!(s.mode==='daily'&&N.clock(s).minute>=1320);
   $('nightNote').querySelector('strong').textContent=N.voyage.get(s)?.away?(window.NanlanI18n?.language==='en'?'Take me to the guest courtyard':'带我到宿院歇一夜'):(window.NanlanI18n?.language==='en'?'Take me to the bed in the East Wing':'带我回卧房（东厢房）床榻');
-  refreshToolbar();
+  refreshToolbar();window.NanlanChapterMark?.refresh(s,started);
 }
 const toolDefs=[
   ['hand','拾取','挽起布袖拾取落枝、草药与海湾物资。'],['sickle','月牙镰','清理杂草；须先在仓房修好农具。'],

@@ -1,0 +1,19 @@
+/* Paper labels and a short ink title; the scene keeps keyboard focus. */
+#chapterClock{position:absolute;right:18px;top:18px;display:grid;gap:5px;min-width:172px;max-width:245px}
+#chapterClock #clock{position:static;min-width:0;width:100%}
+#chapterMark{font:inherit;font-size:12px;line-height:1.6;letter-spacing:.08em;padding:5px 11px;text-align:center;border:1px solid #b69a657a;border-radius:3px;background:linear-gradient(110deg,#e7d8b4f2,#f0e4c8ed,#dfcea8f2);color:#3e503a;box-shadow:0 2px 8px #14291f26}
+#chapterMark:hover{background:#f1e6c9}
+#volumeIntertitle{position:absolute;z-index:8;left:50%;top:32%;transform:translate(-50%,-50%);width:min(540px,75vw);padding:24px 36px;text-align:center;color:#334531;background:radial-gradient(ellipse,#f1e6c9f5 12%,#e9dbb9dc 60%,#e9dbb900 73%);text-shadow:0 1px #fff6df;pointer-events:none}
+#volumeIntertitle small{display:block;font-size:15px;letter-spacing:.45em;margin-bottom:9px}
+#volumeIntertitle strong{font-size:clamp(28px,4vw,44px);font-weight:normal;letter-spacing:.18em;line-height:1.5}
+.ink-arrival{animation:chapter-ink 3.4s ease both}
+@keyframes chapter-ink{0%{opacity:0;filter:blur(3px)}18%,76%{opacity:1;filter:blur(0)}100%{opacity:0;filter:blur(0)}}
+.chapter-leaves{margin:12px 0;border-top:1px solid #b7a071}
+.chapter-leaves article{padding:14px 8px;border-bottom:1px solid #c6b38c}
+.chapter-leaves h3{margin:0 0 4px;font-size:19px;font-weight:normal;color:#36513b;letter-spacing:.08em}
+.chapter-leaves small{color:#896c40;font-size:12px}
+.chapter-leaves p{margin:6px 0 0;line-height:1.8}
+.chapter-unwritten{color:#8a7958;text-align:center;padding:14px;font-size:13px}
+@media(max-width:650px){#chapterClock{right:10px;top:10px;min-width:0;max-width:155px}#chapterMark{font-size:10px;padding:4px 7px;letter-spacing:0}#volumeIntertitle{top:36%;padding:22px 14px;width:82vw}#volumeIntertitle small{font-size:12px}}
+@media(max-height:560px) and (orientation:landscape){#chapterClock{right:10px;top:10px;max-width:175px;gap:3px}#chapterMark{font-size:10px;padding:2px 7px}}
+@media(prefers-reduced-motion:reduce){.ink-arrival{animation:none}}

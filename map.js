@@ -6,7 +6,7 @@ const mapPositions={
   coast:[855,450],tidalflat:[1090,410],wharf:[880,345],oldTrail:[425,156],workshop:[348,615],qingxi:[1040,275],anchorage:[1005,505],guild:[680,630],backHall:[71,87],qPier:[710,760],qFair:[940,665],qSalt:[1090,635],qBamboo:[775,675],qBeacon:[1010,570],qLodge:[1100,785]
 };
 const mapGroups=[['宅院与房间',['gate','yard','hall','study','bed','store']],
-  ['村镇与县城',['village','market','county','pharmacy','generalStore','teahouse']],
+  ['村镇与县城',['village','market','county','pharmacy','generalStore','teahouse']],['南街新铺',globalThis.NanlanTown.rooms],
   ['青岚山',['foothill','mountain','bambooGrove','mountainside','summit']],['南澜海湾',['coast','tidalflat']],['山海之间',['wharf','oldTrail','workshop','qingxi']],['海天帆影',['anchorage','guild','backHall']],['青屿远行',['qPier','qFair','qSalt','qBamboo','qBeacon','qLodge']]];
 const deferredPlaces=['county','pharmacy','generalStore','teahouse'];
 let selectedMapPlace='yard',selectedMapObject=null,navigationTarget=null,navigationObject=null,mapReturnFocus=null,mapZoom=1;
@@ -65,7 +65,7 @@ function showMap(id=state().scene,objectId=null){
   drawMap();inspectMapPlace(selectedMapPlace,objectId);$('mapClose').focus();centerMap(selectedMapPlace);
 }
 function centerMap(id){requestAnimationFrame(()=>{
-  const [x,y]=mapPositions[id],scroll=$('mapScroll'),board=$('mapBoard');
+  const [x,y]=mapPositions[id]||mapPositions.county,scroll=$('mapScroll'),board=$('mapBoard');
   scroll.scrollTo({left:Math.max(0,x/1200*board.clientWidth-scroll.clientWidth/2),top:Math.max(0,y/820*board.clientHeight-scroll.clientHeight/2),behavior:'smooth'});
 });}
 function setMapZoom(value){
@@ -80,7 +80,7 @@ function closeMap(){
 function drawMap(){
   const s=state(),edges=[],seen=new Set(),objective=nextObjective();
   for(const [from,w] of Object.entries(world))for(const o of w.objects.filter(o=>o.type==='door')){
-    const pair=[from,o.to].sort().join(':');if(seen.has(pair)||!mapPositions[o.to])continue;seen.add(pair);edges.push([from,o.to]);
+    const pair=[from,o.to].sort().join(':');if(seen.has(pair)||!mapPositions[from]||!mapPositions[o.to])continue;seen.add(pair);edges.push([from,o.to]);
   }
   edges.push(['gate','yard'],['market','county']);
   let svg='<g class="region-label" font-family="NanlanSerif,serif" fill="#f6e7bd" stroke="#213d30" stroke-width="4" paint-order="stroke" font-size="18" letter-spacing="5" opacity=".88"><text x="74" y="675">李 家 旧 宅</text><text x="430" y="650">南 澜 村 镇</text><text x="785" y="250">青 岚 山</text><text x="970" y="530">南 澜 海 湾</text></g>';
@@ -137,6 +137,7 @@ function inspectMapPlace(id,objectId=null){
 function drawPlaceLists(){
   $('allPlaceList').replaceChildren();
   mapGroups.forEach(([title,ids])=>{
+    if(title==='南街新铺'&&!state().flags.volume2Started)return;
     const box=document.createElement('section');box.className='place-list-card';const heading=document.createElement('b');heading.textContent=title;box.append(heading);
     for(const id of ids){
       const known=mapKnown(id),b=document.createElement('button');b.className='directory-scene';b.textContent=known?world[id].name+' · '+(mapAccess(id)?'尚未走通':'已经认得'):'未题名 · 等待探索';
@@ -213,3 +214,4 @@ $('navigationCancel').onclick=()=>{cancelNavigation();path=[];notice('已停止�
 $('nightNote').onclick=()=>startNavigation('bed','bedRest');
 
 document.addEventListener('nanlanlanguagechange',()=>{if(!$('worldMap').hidden)filterMap();});
+

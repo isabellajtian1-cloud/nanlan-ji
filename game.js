@@ -59,6 +59,7 @@ function loadImage(id){
 }
 async function loadSceneAssets(scene){
   const required=[scene];
+  if(globalThis.NanlanTown.rooms.includes(scene))required.push(...world[scene].objects.filter(o=>o.role).map(o=>'npc_'+o.role));
   if(scene==='backHall')required.push('backHallReady');
   if(world[scene]?.objects?.some(o=>o.v3Art!=null))required.push('v3Props');
   if(scene==='yard')required.push('gardenStages','productionStages','productionItems','waterJar');
@@ -138,6 +139,8 @@ function renderCompletionFeedback(time){
   ctx.restore();
 }
 function dialogueCast(title){
+  const shopkeeper=[['顾绣娘','clothKeeper'],['叶先生','bookKeeper'],['冯掌柜','innKeeper']].find(([name])=>title.startsWith(name));
+  if(shopkeeper)return [shopkeeper];
   const people=[['苏茂','seaMerchant'],['京中故交','visitor'],['梁问炊','liang'],['罗小满','xiaoman'],['何行舟','boatman'],['周成','zhou'],['方掌柜','fang'],['祖父','grandfather'],['父亲','father'],['母亲','mother'],['陈伯','chen'],['许青禾','doctor'],['阿岑','cen'],['程婉','wan'],['沈晚渔','yu'],['邱管事','qiu'],['林师傅','lin'],['郑掌柜','landlord'],['陆掌柜','neighbor'],['茶馆掌柜','tea'],['罗掌柜','tea'],['南街熟客','customer'],['官兵','guard']];
   const matched=people.find(([name])=>title.startsWith(name));if(matched)return [matched];
   if(/^(家议|正厅 · 家宴后的铺讯|正厅 · 临时安置|第一卷完成)/.test(title))return [['母亲','mother'],['父亲','father'],['祖父','grandfather']];
@@ -163,7 +166,7 @@ function activity(title,text,kind='general'){
   $('dialogKicker').textContent=kind==='quest'?'南澜记 · 眼前的事':'南澜小事';
   $('dialogQuestNavigate').hidden=true;
   $('choices').hidden=false;$('next').hidden=true;$('dialog').hidden=false;$('skip').textContent=started?'返回游戏 ×':'返回启程页 ×';
-  $('skip').onclick=closeDialog;$('skip').focus();if(kind!=='arrival'&&kind!=='pantry')window.NanlanDesktop?.dialogue(title,text);
+  $('skip').onclick=closeDialog;$('skip').focus();if(!['arrival','pantry','town-shop'].includes(kind))window.NanlanDesktop?.dialogue(title,text);
 }
 function button(label,fn,id,secondary=false,showOutcome=true){
   const b=document.createElement('button');b.textContent=label;b.dataset.action=id||label;
@@ -208,11 +211,11 @@ async function perform(name,p={},rerender){
   if(name==='openGate'&&!await loadImage('yard')){const failed={ok:false,message:'庭院图片未能载入，请重试。原有进度已保留。'};notice(failed.message,true);return failed;}
   if(['shareFirst','shareFeast','liangShare'].includes(name)&&!await loadImage(state().gender==='male'?'familyMealMale':'familyMealFemale')){const failed={ok:false,message:'用餐画面未加载完成，请再试一次；饭菜尚未扣除。'};notice(failed.message,true);return failed;}
   const gathered=['collect','harvest','clearWeed','silkLeaves','silkHarvest','silkHarvestFish','silkKit'].includes(name),beforeBag=gathered?{...state().bag}:null;
-  const nightCopy=name==='sleep'&&!engine.memoryOnly?JSON.stringify(state()):null;
+  const nightCopy=['sleep','townStay'].includes(name)&&!engine.memoryOnly?JSON.stringify(state()):null;
   const result=engine.act(name,p);
   if(nightCopy&&result.ok&&!result.duplicate){try{localStorage.setItem('nanlan_last_night',nightCopy);}catch{notice(deskText('已过夜，设备空间不足，未能保留睡前副本。','Morning has come, but the device could not keep a bedtime copy.'),true);}}
   if(!result.ok){window.NanlanAudio?.play('blocked');notice(result.message,true);$('saveState').textContent=result.message.startsWith('保存失败')?'本次动作尚未保存':'当前目标尚待完成';return result;}
-  if(!result.duplicate)window.NanlanAudio?.play(p.seal?(p.seal==='stone'?'sealStone':'sealWood'):name==='openGate'?'door':/water|Water/.test(name)?'water':/repair|Repair|patch|Patch|craft|Craft/.test(name)?'repair':/nap|sleep/.test(name)?'rest':/collect|harvest|Harvest|gather/.test(name)?'gather':'success');
+  if(!result.duplicate)window.NanlanAudio?.play(p.seal?(p.seal==='stone'?'sealStone':'sealWood'):name==='openGate'?'door':/water|Water/.test(name)?'water':/repair|Repair|patch|Patch|craft|Craft/.test(name)?'repair':/nap|sleep|townStay|townMeal/.test(name)?'rest':/collect|harvest|Harvest|gather/.test(name)?'gather':'success');
   $('saveState').textContent=engine.memoryOnly?'仅本次试玩 · 关闭网页会丢失':'已保存';
   if(result.completed)reward(result.completed,!!p.seal);
   refreshHud();
@@ -481,6 +484,8 @@ function showTextMap(){
   button('查看所有场景原画',showGallery,'map-gallery',true);
 }
 function itemSource(id){
+  if(id==='townSwatch')return '在南街榕下布庄量布、选色后取得。';
+  if(id==='townNotebook')return '在南街青简书坊选纸、折页、穿线后取得。';
   if(id==='travelBox')return '通过四项试样后，在仓房以竹材二、草绳一制作。';
   if(id==='duckStone'||id==='grassHopper')return globalThis.NanlanKids.desc[id];
   if(id==='shootRice'||id==='crustRice')return '按梁先生的饭方，用米、竹笋、枯枝和桶内水焖制。';
@@ -505,6 +510,8 @@ const inventorySheets=[
   {file:'inventory-crafts-v392.png',rows:[0,425,800,1254],items:['driedHerb','bambooWare','shellCraft','rope','ledgerOriginal','ledgerCopy','receipt','reply','narrowBasket']}
 ];
 function inventoryArt(id){
+  if(id==='townNotebook')return inventoryArt('ledgerCopy');
+  if(id==='townSwatch')return '<span class="town-swatch-art" aria-hidden="true"></span>';
   if(id==='travelBox')return inventoryArt('narrowBasket');
   if(id==='duckStone'||id==='grassHopper')return globalThis.NanlanKids.art(id);
   if(id==='shootRice'||id==='crustRice')return '<img class="scholar-food-icon" alt="" src="'+(id==='crustRice'?'scholar-rice.webp':'scholar-rice-plain.webp')+'">';
@@ -1024,6 +1031,7 @@ function objectGate(o){
 function visibleObjects(scene=state().scene,includeCooling=false){
   const s=state(),f=s.flags,q=N.current(s);
   return world[scene].objects.filter(o=>{
+    if(globalThis.NanlanTown.rooms.includes(o.to)&&!f.volume2Started)return false;
     if(globalThis.NanlanVoyageUI&&!globalThis.NanlanVoyageUI.visible(s,scene,o))return false;
     if(globalThis.NanlanV5&&!globalThis.NanlanV5.visible(s,o))return false;
     if(globalThis.NanlanV4&&!globalThis.NanlanV4.visible(s,o))return false;
@@ -1100,6 +1108,7 @@ function refreshInteractionHint(){
 async function interact(o){
   if(!o||transitioning)return;
   if(!nearObject(o)){notice('先走近'+o.label+'。');return;}
+  if(globalThis.NanlanTownUI?.offer(o)){dialogObject=o;return;}
   if(globalThis.NanlanVoyageUI?.offer(o)){dialogObject=o;return;}
   if(o.action==='kidsCamp'){dialogObject=o;globalThis.NanlanKids.play();return;}
   if(o.action==='liangTea'){dialogObject=o;await globalThis.NanlanScholar.meet();window.NanlanBondUI?.npc(o);return;}
@@ -1110,7 +1119,7 @@ async function interact(o){
   if(globalThis.NanlanV3?.offer(o)){dialogObject=o;window.NanlanBondUI?.npc(o);return;}
   if(o.type==='door'){const why=objectGate(o);if(why){notice(why,true);return;}await switchScene(o.to);return;}
   if(o.type==='locked'||o.type==='property'){activity(o.label,o.lines||'这个地点暂未开放，后续篇章会有新安排。');dialogObject=o;return;}
-  if(o.type==='npc'){npc(o);dialogObject=o;return;}
+  if(o.type==='npc'){npc(o);dialogObject=o;globalThis.NanlanTownUI?.family(o);return;}
   if(o.type==='view'||o.type==='read'){activity(o.label,o.lines||'这里记着家中旧事。');dialogObject=o;return;}
   if(resourceTypes.includes(o.type)){
     if(o.type==='weed')await perform('clearWeed',{id:o.id});
@@ -1123,7 +1132,7 @@ async function interact(o){
   if(a==='gardenDirect'){await handleGardenPlot(o);return;}
   if(a==='silkProduction'){window.NanlanProduction.show();dialogObject=o;return;}
   if(a?.startsWith('seal')){window.NanlanSeals.gather(o);return;}
-  if(a?.startsWith('v2')){window.NanlanV2.show(a,o);dialogObject=o;addConversation(o);window.NanlanSeals?.npc(o);window.NanlanProduction?.npc(o);window.NanlanVillage?.npc(o);window.NanlanBondUI?.npc(o);return;}
+  if(a?.startsWith('v2')){window.NanlanV2.show(a,o);dialogObject=o;addConversation(o);window.NanlanSeals?.npc(o);window.NanlanProduction?.npc(o);window.NanlanVillage?.npc(o);window.NanlanBondUI?.npc(o);globalThis.NanlanTownUI?.family(o);return;}
   if(f.volume2Started&&o.id==='goodsCrates'){window.NanlanV2.show('v2Cargo',o);dialogObject=o;return;}
   if(a==='arrival'){
     activity('旧宅门前 · 交接','官兵：「文书与行李都在此。李家远迁岭南，并未籍没家产。我等交接完便返京。」\n\n祖父：「走了这么远，倒到了门口才觉得腿沉。」\n你：「进去坐一坐。」\n\n门还没有开。你先帮谁一把？');
@@ -1346,6 +1355,7 @@ function approach(o){
 }
 let edgeExitCooldown=0,edgeExitAttempt=null;
 function keyboardExitDirection(o){
+  if(o.exit)return o.exit;
   if(['study','home','backFoothill','sideBack','sideBamboo','coastBack','tideBack','v4ToCoast'].includes(o.id))return [-1,0];
   if(['mountainGate','toGeneral','coastTide','v4ToShip','v4ToBackHall'].includes(o.id))return [1,0];
   if(['villageGate','exit-yard','bayRoad','toVillage','countyBack','exit-county','footVillage','grovePath','summitBack','groveBack','v4ToTown','v4ToHall'].includes(o.id))return [0,1];
@@ -1791,3 +1801,4 @@ window.addEventListener('beforeunload',()=>{if(started)engine.save();});
 loadImage('walkFemale');loadImage('walkMale');loadImage('bedDamage');loadImage('storePickups');loadImage('bed');loadImage('gate');loadImage('yard');loadImage('npc_playerFemale');loadImage('npc_playerMale');loadImage('bedPatched');loadImage('weedPatch');refreshHud();requestAnimationFrame(frame);
 
 document.addEventListener('nanlanlanguagechange',()=>{if(started)refreshHud();});
+

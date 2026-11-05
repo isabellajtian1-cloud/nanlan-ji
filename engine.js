@@ -86,6 +86,8 @@
   const v5=typeof module==='object'&&module.exports?require('./story5-model.js'):globalThis.NanlanStory5;
   const season5=typeof module==='object'&&module.exports?require('./season5-model.js'):globalThis.NanlanSeason5;
   const voyage=typeof module==='object'&&module.exports?require('./voyage-model.js'):globalThis.NanlanVoyage;
+  const town=typeof module==='object'&&module.exports?require('./town-model.js'):globalThis.NanlanTown;
+  Object.assign(itemNames,town.itemNames);
   const V6_ORDER=voyage.order;
   const SEASON5_ORDER=season5.order,V5_ORDER=v5.order,V4_ORDER=v4.order,V3_ORDER=v3.order;
   const V2_ORDER=storyV2.order;
@@ -187,7 +189,7 @@
     const clearRoad=v5.gate(s,to);if(clearRoad!==null)return clearRoad;
     const seaRoad=v4.gate(s,to);if(seaRoad!==null)return seaRoad;
     const road=v3.gate(s,to);if(road!==null)return road;
-    if(['county','pharmacy','generalStore','teahouse'].includes(to))return s.flags.volume2Started?'':done(s,'M20')?'岁末家宴已完成，请到正厅读南街铺讯，开启第二卷后再进县城。':'请先完成第一卷并分享岁末家宴，再到正厅与家人读南街铺讯。';
+    if(['county','pharmacy','generalStore','teahouse',...town.rooms].includes(to))return s.flags.volume2Started?'':done(s,'M20')?'岁末家宴已完成，请到正厅读南街铺讯，开启第二卷后再进县城。':'请先完成第一卷并分享岁末家宴，再到正厅与家人读南街铺讯。';
     if(to==='gate')return '';
     if(!s.flags.gateOpen)return '先在门前完成交接、接过钥匙，再亲手打开院门。';
     if(['yard','hall','study','bed','store'].includes(to))return '';
@@ -292,7 +294,8 @@
         requireThat(this.world[to],'这个地点不存在。');
         if(to==='tidalflat')requireThat(tide(s).low,'潮水正在上涨。可以先在海边与沈晚渔交谈、整理笔记，低潮还会再来。');
         v3.shopVisit(s,s.scene,to);
-        s.scene=to;s.player={x:this.world[to].spawn[0],y:this.world[to].spawn[1]};s.visits[to]=true;
+        const spawn=(to==='county'&&town.rooms.includes(s.scene)&&this.world[s.scene].returnAt)||this.world[to].spawn;
+        s.scene=to;s.player={x:spawn[0],y:spawn[1]};s.visits[to]=true;
         if(to==='coast'){s.flags.coastVisited=true;if(!s.tideTutorialUsed){s.tideAnchor=s.worldTick;s.tideTutorialUsed=true;}}
       });
     }
@@ -306,6 +309,7 @@
     act(name,p={}) {
       return this.commit(name,(s)=>{
         const f=s.flags, q=current(s), quest=id=>expectQuest(s,id);
+        if(name.startsWith('town'))return town.act(s,name,p,{requireThat,requireScene,give,log,sleepToMorning});
         if(name.startsWith('voyage'))return voyage.act(s,name,p,{requireThat,requireScene,spend,give,available,log,prices,bonds});
         if(name==='chat'){
           const role=conversations.roles[p.object],person=conversations.cast[role],o=this.world[s.scene].objects.find(o=>o.id===p.object);
@@ -475,3 +479,4 @@
   return {Engine,chapterEntries,voyage,V6_ORDER,season5,SEASON5_ORDER,v5,V5_ORDER,v4,V4_ORDER,children,scholar,v3,V3_ORDER,rural,initial,current,done,reached,sceneGate,clock,tide,crop,gardenPlot,quantity,available,normaliseLoaded,
     rareResources,resourceCooldown,resourceRequirement,daylight,SAVE_KEY,ORDER,V2_ORDER,shopPrice,shopCustomers,story2:storyV2,shopProducts:storyV2.products,titles,steps,rewards,itemNames,products,prices,supplyPrices,recipes};
 });
+

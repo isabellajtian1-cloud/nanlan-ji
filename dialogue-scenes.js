@@ -202,6 +202,49 @@
     lin:lines('林师傅把锉刀放平。「停手不是偷懒。木头已经告诉你今日到这里，再硬做下去，明日只剩补救。」','Master Lin lays the file flat. “Stopping is not idleness. The wood has told you that today ends here. Press on, and tomorrow will be spent repairing it.”'),
     liang:lines('梁问炊把勺洗净挂回原处。「一锅饭不必每回都惊艳。天冷时够热，劳作后够饱，家里人愿意再添半碗，就是好饭。」','Liang rinses the ladle and hangs it back. “A meal need not astonish every time. Hot in cold weather, filling after work, and welcome enough for another half bowl—that is good cooking.”')
   };
+  const chatFollowups={
+    mother:[
+      lines('母亲把灶边几样寻常食材数了一遍。「一家人爱吃什么，也会随着日子变。你今日说的我先记着，过几日再问，兴许又有新主意。」','Mother counts the everyday ingredients by the stove. “What a family likes changes with its days. I will remember what you said today and ask again later. Perhaps you will have a new answer.”'),
+      lines('她将待办的纸折成两半。「写清事情是为了少操心，不是把每个时辰都塞满。哪一日大家都累，就少做一件，也不会误了日子。」','She folds the list in half. “We write things down to worry less, not to fill every hour. If everyone is tired, we may do one thing less and the days will still go on.”'),
+      lines('母亲把布重新叠好。「物件怎样用，可以慢慢定。先看看一家人在这里怎样走动、怎样过四季，屋子自己会告诉咱们缺什么。」','Mother folds the cloth again. “We can decide its use slowly. First see how the family moves through this house and through the seasons. The rooms will tell us what they need.”')
+    ],
+    father:[
+      lines('父亲合上账册。「急事会自己催人，难事也总在心里占地方。真正要学的是，答应别人以前，先知道自己做不做得到。」','Father closes the ledger. “Urgent matters call out for themselves, and difficult ones occupy the mind. What we must learn is to know what we can truly do before giving our word.”'),
+      lines('他在路图上点了点回家的方向。「去处越多，越要给归路留时辰。晚一些见到新地方无妨，别让家里人又在门边听脚步。」','He taps the homeward line on the map. “The more places we visit, the more time we must leave for returning. A new place can wait. Let no one at home listen anxiously for footsteps again.”'),
+      lines('父亲把应急的钱袋与日用的钱分开放好。「余钱能叫人安心，也能叫人忘了当初怎样过紧日子。添置以前多问一句，通常不是坏事。」','Father separates the emergency purse from the household money. “Savings bring ease, but they can make us forget our lean days. Asking once more before buying is seldom a bad thing.”')
+    ],
+    grandfather:[
+      lines('祖父提笔写下两个同样的“家”字。「字落在不同的纸上，旁边有不同的人，意思便会变。人也一样，到了新地方，不必仍照旧日的模样活。」','Grandfather writes the character for “home” twice. “The same word changes on different paper, with different people beside it. So do people. In a new place, we need not live exactly as we once did.”'),
+      lines('祖父望向院外。「孩子画的路未必准，却会画出哪棵树可以乘凉、哪处有水玩。大人的图只记远近，有时反倒漏了日子真正经过的地方。」','Grandfather looks toward the courtyard. “A child’s map may be imprecise, yet it marks the tree that gives shade and the water where one may play. An adult records distance and sometimes misses where life truly passed.”'),
+      lines('他把袖口往上挽了一点。「人年轻时总想把趣事藏起来，只留下端正的一面。年岁长了才知道，后辈听见那些笨拙时候，反而更敢走自己的路。」','He draws back his sleeve. “When young, we hide our foolish stories and leave only the proper face. With age, we learn that hearing of our clumsy days gives the young courage to walk their own road.”')
+    ],
+    chen:[
+      lines('陈伯比了比树影移动的方向。「长凳放下以后，坐的人自然会告诉咱们哪里不妥。村里的东西不是一回商量就定死，真用起来还能再挪。」','Uncle Chen measures the moving shade. “Once the bench is placed, those who sit there will tell us what is wrong. A village need not settle everything in one meeting. We can move it after people truly use it.”'),
+      lines('他笑着朝旧宅方向抬了抬下巴。「说得慢不要紧。哪日别人不等你想，便先替你答‘旧宅李家’，那才是真的住熟了。」','He nods toward the old house with a smile. “It does not matter if the answer comes slowly. One day someone else will answer ‘the Li family at the old house’ before you do. Then you will know you have lived here long enough.”'),
+      lines('陈伯将两样消息分开放在心里似的，点了两下头。「趣事让人愿意坐下，提醒让人平安回家。村里说话，往往两样都得有。」','Uncle Chen nods twice, as if setting the two kinds of news apart. “A funny story makes people stay. A warning gets them safely home. Village talk often needs both.”')
+    ],
+    doctor:[
+      lines('青禾将认不准的那株单独放下。「看错一次并不可怕。可怕的是怕承认没认清，便匆匆给它安个名字。」','Qinghe sets the uncertain plant apart. “One mistaken look is not frightening. What is dangerous is refusing to admit uncertainty and giving it a name too quickly.”'),
+      lines('她把浇水的时辰写在木片上。「等待不是守着不动。记一次叶色、看一次土湿，等到收成时，才知道中间发生过什么。」','She writes the watering time on a wooden slip. “Waiting is not standing still. Note the leaf color and feel the soil, and at harvest you will know what happened in between.”'),
+      lines('青禾把孩子够得着的草移远些。「先教他们哪里不能碰，再教为什么。只叫人害怕，下一回背着大人，还是会伸手。」','Qinghe moves the plant beyond a child’s reach. “Teach first what must not be touched, then explain why. Fear alone only makes a child reach for it when no adult is watching.”')
+    ],
+    cen:[
+      lines('阿岑抬头看了看竹梢。「林子肯年年给东西，是因为咱们没有每回都拿到装不下为止。留一点，不只是留给别人，也是留给下次的自己。」','A-Cen looks up at the bamboo crowns. “The grove gives each year because we do not take until we can carry no more. Leaving some is for others and for our own next visit.”'),
+      lines('他用脚尖拨开一片遮路的叶。「边走边看会慢，却能记住哪里容易滑、哪里能避雨。走熟一条路，不只是知道怎样最快到达。」','He nudges a leaf from the path. “Looking as you walk is slower, but teaches where the ground slips and where rain can be avoided. Knowing a road is more than reaching its end quickly.”'),
+      lines('阿岑重新紧了紧篓绳。「少带一件，脚下就稳一分。山里的东西不会因你今日空手一半，明日便全不见了。」','A-Cen tightens the basket rope. “One less item makes each step steadier. The hills will not empty tomorrow because you left with half a load today.”')
+    ],
+    yu:[
+      lines('晚渔看着礁石边的水纹。「等久了，人会开始看见原先没留意的东西。潮不是把路藏起来，它只是在告诉你，今日该走另一种路。」','Wanyu watches the ripples by the reef. “Wait long enough and you notice what you missed before. The tide is not hiding the road. It is telling you that today requires another kind of route.”'),
+      lines('她拍了拍包得严实的行囊。「吃的和干衣都重要。真要舍下一件时，先想哪一样在路上找不到。会算这个，才算开始会出远门。」','She pats the tightly wrapped bundle. “Food and dry clothes both matter. If one must be left, ask which cannot be found along the way. Learning that is the beginning of traveling far.”'),
+      lines('晚渔笑道：「故事不用占舱位，却也不能随便拿。人家愿意说，咱们才带回来。听见一半，就只讲一半。」','Wanyu smiles. “Stories take no cargo space, but they cannot simply be taken. We carry back only what someone is willing to tell. If we hear half, we tell half.”')
+    ],
+    wan:[
+      lines('程婉轻轻压平旧页。「另起一页，并不是把过去关起来。是让新事有自己的地方，也让旧事不必为了迁就今日而改样。」','Cheng Wan smooths the old page. “Beginning a new page does not close the past. It gives new events their own place and lets the old remain unchanged for the sake of today.”'),
+      lines('她摸了摸书页磨薄的角。「物件替人守着一个触感，故事替人守着一句声音。能留下哪一样都好，不必样样齐全才算记得。」','She touches the worn corner. “An object keeps a touch. A story keeps a voice. Either is worth preserving. Memory need not be complete to be true.”'),
+      lines('程婉想了一会儿。「若画灯，也画一点灯照不到的地方。一个家并非时时都亮堂，可有人知道何处收着火种，天黑也不怕。」','Cheng Wan considers. “If you paint the lamp, paint some of what it cannot reach. A home is not always bright, but if someone knows where the tinder is kept, darkness need not frighten them.”')
+    ]
+  };
+  function followup(role,index){const set=chatFollowups[role];return set?L(...set[index%set.length]):null;}
   function everydayWords(role,s){
     const entry=everyday[role];
     if(!entry)return null;
@@ -220,7 +263,8 @@
   }
   function offer(o){
     if($('dialog').hidden||!nearObject(o)||$('choices').querySelector('[data-action="scene-local"]')||dialogKind==='voyage-extra-story')return;
-    const role=everyday[o.id]?o.id:(NanlanConversations.roles[o.id]||npcRole(o));
+    if(NanlanConversations.roles[o.id])return;
+    const role=everyday[o.id]?o.id:npcRole(o);
     const words=everydayWords(role,state());
     if(!words)return;
     const [name,first,reply]=words;
@@ -246,5 +290,5 @@
     for(const [name] of Object.values(everyday))window.NANLAN_EN[name[0]]??=name[1];
     window.NanlanI18n.configure(window.NANLAN_EN);
   }
-  window.NanlanDialogueScenes={after,link,offer};
+  window.NanlanDialogueScenes={after,link,offer,followup};
 })();

@@ -981,6 +981,13 @@ function showConversation(o){
     if(!result.ok){$('line').textContent=result.message;return;}
     activity(C.cast[role].name+' · 回应',t[choice===0?2:4]);dialogObject=o;
     $('dialogKicker').textContent='这次交谈已记下';
+    const followup=window.NanlanDialogueScenes?.followup(role,expected);
+    if(followup)navButton(deskText('听他说完','Let them finish'),()=>{
+      activity(C.cast[role].name+' · 闲话',followup,'dialogue-scene');dialogObject=o;
+      $('dialogKicker').textContent=deskText('话说得久了一些','A longer conversation');
+      navButton(deskText('换个话题','Choose another topic'),()=>showConversation(o),'chat-more');
+      navButton(deskText('结束交谈，回到场景','End the conversation'),closeDialog,'chat-leave');
+    },'chat-followup');
     navButton('换个话题',()=>showConversation(o),'chat-more');
     navButton('结束交谈，回到场景',closeDialog,'chat-leave');
   },'chat-choice-'+choice);

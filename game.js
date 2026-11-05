@@ -1770,16 +1770,12 @@ function arrivalReply(choice){
     deskText('你把箱笼挪到檐下。母亲摸了摸箱底：「铺盖还干着。只要屋里有一块干地，今晚就能先安顿。」','You move the trunk under the eaves. Mother feels its underside. “The bedding is still dry. Find one dry spot inside and we can settle for the night.”'),'arrival');
   navButton(deskText('去接院门钥匙','Go and take the key'),()=>goToArrival('key'),'arrival-go-key');
 }
-function playQuickArrival(){
+function playArrival(){
   if(!window.NanlanOpening){finishOpeningIntro();return;}
-  window.NanlanOpening.play({
-    title:['初到南澜','Arrival in Nanlan'],
+  window.NanlanOpening.start(finishOpeningIntro,{
     skip:['直接到门前','Go Straight to the Gate'],
-    last:['到门前帮家人 · 空格','Go Help Your Family · Space'],
-    shots:[{duration:7000,image:'opening-homecoming-v663.webp',asset:'gate',environment:'gate',roles:[],
-      title:['门里响了两下','Two Knocks Behind the Gate'],
-      line:['迁往岭南的路，到这扇门前就走完了。\n母亲按住装着干铺盖的箱笼：「再下雨前，得给一家人找个能落脚的地方。」','The road to Lingnan ends at this gate.\nMother holds down the trunk with the dry bedding. “We need somewhere to settle before the rain comes again.”']}]
-  },finishOpeningIntro);
+    last:['到门前帮家人 · 空格','Go Help Your Family · Space']
+  });
 }
 async function restoreAutomaticBackup(){
   const raw=localStorage.getItem('nanlan_v20_previous');if(!raw){notice('目前没有可恢复的自动备份。',true);return;}
@@ -1801,7 +1797,7 @@ async function beginGame(confirmed=false){
     if(!await loadImage('gate')){$('loadWarning').hidden=false;$('loadWarning').textContent='旧宅门前图片未能载入，请稍后再试。';return;}
     if(storedRaw&&!engine.memoryOnly){storage.setItem('nanlan_v20_previous',storedRaw);$('restoreAutoBackup').hidden=false;}
     engine.reset(gender);if(!engine.memoryOnly)localStorage.removeItem('nanlan_last_night');started=true;active=true;$('start').hidden=true;$('hud').hidden=false;storedRaw=null;
-    refreshHud();playQuickArrival();
+    refreshHud();playArrival();
   }catch(e){
     activity('浏览器暂时无法保存','当前浏览器没有可用的本地存储。你可以检查浏览器设置后重试，或选择仅本次试玩；试玩模式关闭网页后不会保留进度。');
     button('仅本次试玩 · 我知道关闭后会丢失',()=>{engine.memoryOnly=true;storedRaw=null;closeDialog();beginGame();},'memory-only');

@@ -77,6 +77,19 @@ const openingShots=[
    "Grandfather gathered the book he had kept safe along the road. “Let us go in. We can mend the house, and find our way, a little at a time.”\nYou have yet to see what lies beyond the gate. Join your family and discover your new home together."
   ],
   "image": "opening-homecoming-v663.webp"
+ },
+ {
+  "duration": 7000,
+  "image": "opening-homecoming-v663.webp",
+  "asset": "gate",
+  "environment": "gate",
+  "roles": [],
+  "detail": true,
+  "title": ["门里响了两下","Two Knocks Behind the Gate"],
+  "line": [
+   "你正要往前，门板后忽然笃、笃两响。\n母亲按住装着干铺盖的箱笼：「再下雨前，得给一家人找个能落脚的地方。」",
+   "As you step forward, two knocks sound from behind the gate.\nMother steadies the trunk with the dry bedding. “We need somewhere to settle before the rain comes again.”"
+  ]
  }
 ];
 let shots=openingShots,filmTitle=['明代 · 从京城到南澜','Ming China · From the Capital to Nanlan'],skipLabel=['跳过并开始','Skip and Play'],lastLabel=['走近家人 · 空格','Join Your Family · Space'];
@@ -104,6 +117,7 @@ function labels(){
 }
 function paint(){
  const s=shots[index],A=window.NANLAN_DATA.assets,token=++paintToken;host.dataset.shot=String(index);
+ host.classList.toggle('opening-detail',s.detail===true);
  imagePending=true;imageFailed=false;
  const img=document.createElement('img');img.alt=P(s.title);img.draggable=false;img.hidden=true;
  const shade=document.createElement('div');shade.className='opening-shade';
@@ -160,7 +174,9 @@ window.addEventListener('keydown',e=>{
 },true);
 window.addEventListener('keyup',e=>{if(running){e.preventDefault();e.stopImmediatePropagation();}},true);
 document.addEventListener('visibilitychange',()=>{if(running)last=0;});
-window.NanlanOpening={start,finish,replay:()=>start(),running:()=>running,environment:()=>running?shots[index].environment:null,duration:openingShots.reduce((n,s)=>n+s.duration,0),shots:openingShots,play:(options,done)=>start(done,options)};
+window.NanlanOpening={start,finish,replay:()=>start(null,{
+ skip:['返回标题页','Return to Title'],last:['返回标题页 · 空格','Return to Title · Space']
+}),running:()=>running,environment:()=>running?shots[index].environment:null,duration:openingShots.reduce((n,s)=>n+s.duration,0),shots:openingShots,play:(options,done)=>start(done,options)};
 const dictionary=window.NANLAN_EN||(window.NANLAN_EN={});
 Object.assign(dictionary,{
  '回看开场':'Replay Opening','回看完整开场故事':'Watch the Full Opening Story',

@@ -226,11 +226,16 @@ async function perform(name,p={},rerender){
   }
   const gathered=['collect','harvest','clearWeed','silkLeaves','silkHarvest','silkHarvestFish','silkKit'].includes(name),beforeBag=gathered?{...state().bag}:null;
   const nightCopy=['sleep','prefSleep'].includes(name)&&!engine.memoryOnly?JSON.stringify(state()):null;
+  const previous=state();
   const result=engine.act(name,p);
   if(nightCopy&&result.ok&&!result.duplicate){try{localStorage.setItem('nanlan_last_night',nightCopy);}catch{notice(deskText('已过夜，设备空间不足，未能保留睡前副本。','Morning has come, but the device could not keep a bedtime copy.'),true);}}
   if(!result.ok){window.NanlanAudio?.play('blocked');notice(result.message,true);$('saveState').textContent=result.message.startsWith('保存失败')?'本次动作尚未保存':'当前目标尚待完成';return result;}
   if(!result.duplicate)window.NanlanAudio?.play(p.seal?(p.seal==='stone'?'sealStone':'sealWood'):name==='openGate'?'door':/water|Water/.test(name)?'water':/repair|Repair|patch|Patch|craft|Craft/.test(name)?'repair':/nap|sleep|townStay|townMeal/.test(name)?'rest':/collect|harvest|Harvest|gather/.test(name)?'gather':'success');
   $('saveState').textContent=engine.memoryOnly?'仅本次试玩 · 关闭网页会丢失':'已保存';
+  if(!result.duplicate){
+    const memory=window.NanlanMemoryBook?.unlocked(previous,state());
+    if(memory)$('saveState').textContent=memory;
+  }
   if(result.completed)reward(result.completed,!!p.seal);
   refreshHud();
   if(ferryTo){
@@ -479,6 +484,7 @@ function showQuest(){
   if(q){const list=document.createElement('div');renderQuestSteps(list,true);$('panelExtra').append(list);}
   navButton(window.NanlanI18n?.language==='en'?'Chapter Entrances · Requirements':'篇章入口 · 查看开启条件与去向',()=>window.NanlanChapters.show(),'quest-chapter-entry');
   button('回看已经走过的路',showQuestCatalog,'catalog',true);
+  window.NanlanMemoryBook?.link(showQuest);
   button('查看家人与邻里留下的回应',showJournal,'journal',true);
 }
 function showQuestCatalog(){

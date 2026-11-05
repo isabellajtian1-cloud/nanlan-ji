@@ -16,6 +16,8 @@ let active=false,started=false,gender='female',dialogKind=null,dialogObject=null
 let path=[],keys={},moving=false,direction='down',walkFrame=0,lastFrame=0,lastHud=0,transitioning=false;
 let storedRaw=null,oldRaw=null,previousFocus=null,messageTimer=0,rewardTimer=0,lastAutosave=0;
 let camera={scale:1,ox:0,oy:0,dpr:1,vw:W,vh:H},hitTargets=[],focusedObjectId=null,lastInteractionHint='';
+let overviewCamera=false,cameraOverviewUntil=0;
+const reduceCameraMotion=window.matchMedia('(prefers-reduced-motion: reduce)');
 let lastQuestSignature='';
 let completionFx=null;
 let gardenWorkFx=null;
@@ -237,6 +239,7 @@ async function perform(name,p={},rerender){
     if(memory)$('saveState').textContent=memory;
   }
   if(result.completed)reward(result.completed,!!p.seal);
+  if(!result.duplicate&&['openGate','estateImprove'].includes(name))cameraOverviewUntil=performance.now()+950;
   refreshHud();
   if(ferryTo){
     closeDialog(true);focusedObjectId=null;lastInteractionHint='';render();
@@ -416,6 +419,7 @@ function refreshQuestBanner(s=state(),q=N.current(s)){
 }
 function refreshHud(){
   const s=state(),q=N.current(s),t=timeText();
+  $('cameraView').textContent=overviewCamera?deskText('跟随主角','Follow Player'):deskText('看全景','Full Scene');
   $('estateOpen').hidden=!started||!['yard','hall'].includes(s.scene);
   $('where').textContent=s.scene==='generalStore'&&s.story2?.site?'南街 · '+(s.production?.shopName||N.story2.shops[s.story2.site].name):world[s.scene].name;$('roleName').textContent=s.gender==='male'?'李家晚辈 · 男主角':'李家晚辈 · 女主角';
   $('statusTime').textContent=t.short;$('clock').replaceChildren();
@@ -1453,13 +1457,32 @@ function update(dt){
     if(keyboardSteering&&tryKeyboardExit(dx/len,dy/len,dt))return;
   }
 }
-function setupCamera(){
-  const r=canvas.getBoundingClientRect(),dpr=Math.min(window.devicePixelRatio||1,2),vw=r.width,vh=r.height;
-  if(canvas.width!==Math.round(vw*dpr)||canvas.height!==Math.round(vh*dpr)){canvas.width=Math.round(vw*dpr);canvas.height=Math.round(vh*dpr);}
-  const portrait=vw<600&&vh>vw,scale=portrait?Math.max(vw/640,(vh-220)/H):Math.min(vw/W,vh/H);
-  const viewW=vw/scale,center=portrait?Math.max(viewW/2,Math.min(W-viewW/2,state().player.x)):W/2;
-  camera={scale,ox:vw/2-center*scale,oy:(vh-H*scale)/2,dpr,vw,vh};
-  ctx.setTransform(scale*dpr,0,0,scale*dpr,camera.ox*dpr,camera.oy*dpr);
+function setupCamera(rect,now){
+  const s=state(),dpr=Math.min(window.devicePixelRatio||1,2);
+  const vw=Math.max(1,rect.width),vh=Math.max(1,rect.height);
+  const width=Math.round(vw*dpr),height=Math.round(vh*dpr);
+  if(canvas.width!==width||canvas.height!==height){canvas.width=width;canvas.height=height;}
+
+  const fullScale=Math.min(vw/W,vh/H);
+  const portraitScale=vh>vw?Math.max(fullScale,Math.min(vw/650,vh/H)):fullScale;
+  const whole=!started||overviewCamera||now<cameraOverviewUntil;
+  const targetScale=whole?fullScale:portraitScale*1.2;
+  const targetX=whole?W/2:s.player.x;
+  // Frame the character's body above its feet without hiding the path ahead.
+  const targetY=whole?H/2:s.player.y-34;
+  const resize=camera.vw!==vw||camera.vh!==vh||camera.dpr!==dpr;
+  const snap=resize||camera.scene!==s.scene||camera.started!==started||reduceCameraMotion.matches;
+  const dt=Math.max(0,Math.min(.05,(now-(camera.time??now))/1000));
+  const blend=snap?1:1-Math.exp(-dt/.19);
+  const move=(current,target)=>current===undefined||Math.abs(current-target)<.02?target:current+(target-current)*blend;
+  const scale=move(camera.scale,targetScale);
+  const focusX=move(camera.focusX,targetX),focusY=move(camera.focusY,targetY);
+  const offset=(viewport,worldSize,focus)=>{
+    const extent=worldSize*scale;
+    if(extent<=viewport)return (viewport-extent)/2;
+    return Math.max(viewport-extent,Math.min(0,viewport/2-focus*scale));
+  };
+  camera={scale,ox:offset(vw,W,focusX),oy:offset(vh,H,focusY),focusX,focusY,dpr,vw,vh,scene:s.scene,started,time:now};
 }
 function polygon(points,fill,stroke){
   ctx.beginPath();points.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));ctx.closePath();ctx.fillStyle=fill;ctx.fill();if(stroke){ctx.strokeStyle=stroke;ctx.stroke();}
@@ -1579,7 +1602,10 @@ function personBounds(role,x,y){
   return {x:x-width/2-6,y:y-height-8,w:width+12,h:height+18};
 }
 function render(){
-  const r=canvas.getBoundingClientRect();ctx.setTransform(1,0,0,1,0,0);ctx.fillStyle='#20392d';ctx.fillRect(0,0,canvas.width,canvas.height);setupCamera();ctx.imageSmoothingEnabled=true;
+  setupCamera(canvas.getBoundingClientRect(),performance.now());
+  ctx.setTransform(1,0,0,1,0,0);ctx.fillStyle='#20392d';ctx.fillRect(0,0,canvas.width,canvas.height);
+  const {scale,ox,oy,dpr}=camera;
+  ctx.setTransform(scale*dpr,0,0,scale*dpr,ox*dpr,oy*dpr);ctx.imageSmoothingEnabled=true;
   const s=state(),fallback=s.scene==='backHall'&&s.flags.v4_room?'backHallReady':s.scene==='bed'&&s.flags.leakPatched?'bedPatched':world[s.scene].asset;
   const baseKey=window.NanlanEstateUI?.backdrop(s,s.scene,fallback)||fallback;
   const base=images[baseKey]||images[world[s.scene].asset];if(base?.naturalWidth)ctx.drawImage(NanlanClimate.picture(base,s.scene,s),0,0,W,H);
@@ -1825,6 +1851,10 @@ try{
 $('oldSaveExport').onclick=()=>download('Nanlan_Previous_Save.json',oldRaw||storedRaw||'{}');
 $('volume2Entry').onclick=()=>{const entry=N.chapterEntries(state()).find(e=>!e.started&&e.ready);if(entry?.number===2)window.NanlanV2.entry();else window.NanlanChapters.show(entry?.number);};
 $('questOpen').onclick=showQuest;$('nearbyOpen').onclick=showNearby;$('peopleOpen').onclick=showPeople;$('galleryOpen').onclick=showGallery;$('helpOpen').onclick=showHelp;
+$('cameraView').onclick=()=>{
+  overviewCamera=!overviewCamera;cameraOverviewUntil=0;
+  refreshHud();
+};
 $('interactionHint').onclick=()=>{if(!active)return;const o=visibleObjects().find(v=>v.id===$('interactionHint').dataset.object);if(!o)return;if(nearObject(o))interact(o);else approach(o);};
 $('startGuide').onclick=showStartGuide;
 $('openingReplay').onclick=()=>window.NanlanOpening?.replay();

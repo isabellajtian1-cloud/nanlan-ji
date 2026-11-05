@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#20382d">
   <meta name="description" content="南澜记：在明代岭南安顿家人、修整旧宅、采集种植，并与邻里共同过日子的叙事生活游戏。">
-  <title>南澜记 V6.9.4 · 门内有声</title>
+  <title>南澜记 V6.9.5 · 门内有声</title>
   <link rel="stylesheet" href="style.css?v=600">
   <link rel="stylesheet" href="map.css"><link rel="stylesheet" href="opening.css?v=693"><link rel="stylesheet" href="chapter-mark.css?v=681">
   <link rel="stylesheet" href="journey.css?v=500"><link rel="stylesheet" href="town.css?v=670"><link rel="stylesheet" href="festival.css?v=680">
@@ -16,7 +16,7 @@
   <canvas id="game" width="1100" height="733" aria-label="南澜记可行走场景，点击地面行走，点击标记靠近互动"></canvas>
   <div id="hud" hidden>
     <section class="panel" id="status" aria-label="角色状态">
-      <div class="brand"><span class="seal">李</span><div><strong>南澜记</strong><small id="roleName">李家晚辈</small></div><span class="version">V6.9.4</span></div>
+      <div class="brand"><span class="seal">李</span><div><strong>南澜记</strong><small id="roleName">李家晚辈</small></div><span class="version">V6.9.5</span></div>
       <div id="statusTime"></div>
       <div class="vitals"><span>体力 <b id="energy">100</b></span><span>家用 <b id="coins">80</b> 文</span></div>
       <div class="energy-track"><span id="energyBar"></span></div>
@@ -30,7 +30,7 @@
     <div id="volumeIntertitle" role="status" hidden></div><div id="chapterToast" role="status" hidden></div>
     <div id="message" role="status" aria-live="polite"></div>
     <nav id="actions" aria-label="场景操作">
-      <button id="mapOpen">舆图 · 已知地点 M</button><button id="nearbyOpen">场景互动</button><button id="bagOpen">行囊 B</button><button id="peopleOpen">相识之人</button><button id="galleryOpen">旅途图景</button>
+      <button id="mapOpen">舆图 · 已知地点 M</button><button id="nearbyOpen">场景互动</button><button id="bagOpen">行囊 B</button><button id="peopleOpen">相识之人</button><button id="galleryOpen">旅途图景</button><button id="cameraView" type="button" data-no-localize>看全景</button>
       <button id="estateOpen" hidden>宅院修葺</button><button id="save">保存</button><button id="sound" aria-pressed="false">环境音 关</button><button id="helpOpen">玩法</button><button id="languageToggle" data-no-localize aria-label="Switch language / 切换语言">中文 / English</button>
     </nav>
     <div id="navigationStatus" class="panel" hidden><span id="navigationLabel"></span><button id="navigationCancel" aria-label="停止导航">停止 ×</button></div>
@@ -56,7 +56,7 @@
         <p id="audioHint"><button id="startSound" aria-pressed="true">声音 开 · 环境与互动</button> 点击启程后启动环境音；可打开设置试听、调节音量。</p>
       </details>
       <p id="loadWarning" hidden></p>
-      <small class="version-note">V6.9.4 · 门内有声 · 六卷与番外开发试玩</small>
+      <small class="version-note">V6.9.5 · 门内有声 · 六卷与番外开发试玩</small>
     </div>
   </section>
   <section id="dialog" role="dialog" aria-modal="true" aria-labelledby="speaker" hidden>
@@ -89,7 +89,7 @@
 <button id="audioMusicOnly">仅听音乐 · 关闭环境与操作声</button><button id="audioMusicTest">播放当前地点音乐</button><button id="audioToggle">开启声音</button><button id="audioTest">试听音效 · 两声提示</button>
 <p>若试听仍无声，请检查浏览器标签页是否静音及设备媒体音量。音乐为本游戏新编旋律，音色、环境音与操作音效由程序合成，未使用第三方录音或游戏原曲。各项音量可单独调至零。</p>
 </section>
-<script src="data.js?v=500"></script><script src="v5-world.js?v=610"></script><script src="voyage-world.js?v=650"></script><script src="town-world.js?v=670a"></script><script src="town-model.js?v=680"></script><script src="story2-model.js?v=652"></script><script src="conversations.js?v=500"></script><script src="bonds-model.js?v=650"></script><script src="seals-model.js?v=500"></script><script src="rural-model.js?v=504"></script><script src="production-model.js?v=500"></script><script src="v3-dialogue.js?v=500"></script><script src="v3-steps.js?v=500"></script><script src="story3-model.js?v=500"></script><script src="scholar-model.js?v=500"></script><script src="children-model.js?v=610"></script><script src="v4-script.js?v=500"></script><script src="v4-steps.js?v=500"></script><script src="story4-model.js?v=504"></script><script src="v5-script.js?v=600"></script><script src="v5-steps.js?v=600"></script><script src="story5-model.js?v=600"></script><script src="season5-model.js?v=650"></script><script src="voyage-model.js?v=653"></script><script src="climate.js?v=680"></script><script src="festival-model.js?v=680"></script><script src="prefecture-model.js?v=680"></script><script src="prefecture-world.js?v=680"></script><script src="weather.js?v=650"></script><script src="estate-model.js?v=690"></script><script src="engine.js?v=690"></script><script src="art.js?v=500"></script><script src="audio.js?v=500"></script><script src="story-threads.js?v=503"></script><script src="opening.js?v=693"></script><script src="game.js?v=693"></script><script src="map.js?v=690"></script><script src="volume2.js?v=652"></script><script src="seals.js?v=500"></script>
+<script src="data.js?v=500"></script><script src="v5-world.js?v=610"></script><script src="voyage-world.js?v=650"></script><script src="town-world.js?v=670a"></script><script src="town-model.js?v=680"></script><script src="story2-model.js?v=652"></script><script src="conversations.js?v=500"></script><script src="bonds-model.js?v=650"></script><script src="seals-model.js?v=500"></script><script src="rural-model.js?v=504"></script><script src="production-model.js?v=500"></script><script src="v3-dialogue.js?v=500"></script><script src="v3-steps.js?v=500"></script><script src="story3-model.js?v=500"></script><script src="scholar-model.js?v=500"></script><script src="children-model.js?v=610"></script><script src="v4-script.js?v=500"></script><script src="v4-steps.js?v=500"></script><script src="story4-model.js?v=504"></script><script src="v5-script.js?v=600"></script><script src="v5-steps.js?v=600"></script><script src="story5-model.js?v=600"></script><script src="season5-model.js?v=650"></script><script src="voyage-model.js?v=653"></script><script src="climate.js?v=680"></script><script src="festival-model.js?v=680"></script><script src="prefecture-model.js?v=680"></script><script src="prefecture-world.js?v=680"></script><script src="weather.js?v=650"></script><script src="estate-model.js?v=690"></script><script src="engine.js?v=690"></script><script src="art.js?v=500"></script><script src="audio.js?v=500"></script><script src="story-threads.js?v=503"></script><script src="opening.js?v=693"></script><script src="game.js?v=695"></script><script src="map.js?v=690"></script><script src="volume2.js?v=652"></script><script src="seals.js?v=500"></script>
 <script src="production.js?v=500"></script><script src="village.js?v=504"></script><script src="volume3.js?v=503"></script><script src="children.js?v=500"></script><script src="scholar.js?v=500"></script><script src="volume4.js?v=503"></script><script src="guild.js?v=504"></script><script src="volume5.js?v=611"></script><script src="seasons.js?v=650"></script><script src="voyage.js?v=653"></script><script src="chapters.js?v=653"></script><script src="chapter-mark.js?v=681"></script><script src="ending-scenes.js?v=666"></script><script src="endings.js?v=666"></script><script src="bonds.js?v=641"></script><script src="desktop.js?v=500"></script><script src="town-ui.js?v=680"></script><script src="festival-ui.js?v=680"></script><script src="estate-ui.js?v=690"></script><script src="memory-book.js?v=694"></script></body></html>
 
 

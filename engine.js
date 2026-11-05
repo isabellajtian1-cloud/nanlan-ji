@@ -89,6 +89,7 @@
   const town=typeof module==='object'&&module.exports?require('./town-model.js'):globalThis.NanlanTown;
   const festival=typeof module==='object'&&module.exports?require('./festival-model.js'):globalThis.NanlanFestival;
   const prefecture=typeof module==='object'&&module.exports?require('./prefecture-model.js'):globalThis.NanlanPrefecture;
+  const estate=typeof module==='object'&&module.exports?require('./estate-model.js'):globalThis.NanlanEstate;
   Object.assign(itemNames,town.itemNames);
   const V6_ORDER=voyage.order;
   const SEASON5_ORDER=season5.order,V5_ORDER=v5.order,V4_ORDER=v4.order,V3_ORDER=v3.order;
@@ -274,6 +275,7 @@
     season5.normalise(value,requireThat);
     voyage.normalise(value,requireThat);
     prefecture.normalise(value,requireThat);
+    estate.normalise(value,requireThat);
     // Finish only a fully recorded, active final feast; never invent missing steps.
     if(!value.flags.volume2Started&&value.quests.M20?.status==='ACTIVE'&&ORDER.slice(0,-1).every(id=>done(value,id))&&steps.M20.every(([flag])=>value.flags[flag]))reconcile(value);
     return copy(value);
@@ -315,6 +317,7 @@
         const f=s.flags, q=current(s), quest=id=>expectQuest(s,id);
         if(name==='festivalAttend')return festival.act(s,p,{requireThat,requireScene,spend});
         if(name.startsWith('pref'))return prefecture.act(s,name,p,{requireThat,requireScene,spend,give,log,prices,sleepToMorning,world:this.world});
+        if(name.startsWith('estate'))return estate.act(s,name,{requireThat,requireScene,log});
         if(name.startsWith('town'))return town.act(s,name,p,{requireThat,requireScene,give,log,sleepToMorning});
         if(name.startsWith('voyage'))return voyage.act(s,name,p,{requireThat,requireScene,spend,give,available,log,prices,bonds});
         if(name==='chat'){

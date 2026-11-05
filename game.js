@@ -212,6 +212,14 @@ async function perform(name,p={},rerender){
   if(dialogObject&&!nearObject(dialogObject)){const failed={ok:false,message:'请先走到物件旁，再进行操作。'};notice(failed.message,true);closeDialog();return failed;}
   if(name==='openGate'&&!await loadImage('yard')){const failed={ok:false,message:'庭院图片未能载入，请重试。原有进度已保留。'};notice(failed.message,true);return failed;}
   if(['shareFirst','shareFeast','liangShare'].includes(name)&&!await loadImage(state().gender==='male'?'familyMealMale':'familyMealFemale')){const failed={ok:false,message:'用餐画面未加载完成，请再试一次；饭菜尚未扣除。'};notice(failed.message,true);return failed;}
+  if(name==='estateImprove'||name==='estateGift'){
+    const keys=name==='estateImprove'?['estateYard','estateHall']:['estateGift'];
+    if(!(await Promise.all(keys.map(loadImage))).every(Boolean)){
+      const message=deskText('宅院新景暂未载入，本次未结算，请稍后再试。','The new courtyard artwork did not load. Nothing was charged. Please try again.');
+      notice(message,true);
+      return {ok:false,message};
+    }
+  }
   const ferryTo={prefSail:'prefDock',prefReturn:'wharf'}[name];
   if(ferryTo&&!await loadSceneAssets(ferryTo)){
     const failed={ok:false,message:'目的地图片未能载入。船脚尚未扣除，请重试。'};notice(failed.message,true);return failed;
@@ -397,6 +405,7 @@ function refreshQuestBanner(s=state(),q=N.current(s)){
 }
 function refreshHud(){
   const s=state(),q=N.current(s),t=timeText();
+  $('estateOpen').hidden=!started||!['yard','hall'].includes(s.scene);
   $('where').textContent=s.scene==='generalStore'&&s.story2?.site?'南街 · '+(s.production?.shopName||N.story2.shops[s.story2.site].name):world[s.scene].name;$('roleName').textContent=s.gender==='male'?'李家晚辈 · 男主角':'李家晚辈 · 女主角';
   $('statusTime').textContent=t.short;$('clock').replaceChildren();
   const text=document.createElement('div');text.style.whiteSpace='pre-line';text.textContent=t.full;
@@ -689,7 +698,7 @@ function showGallery(){
       if(!started||!(id===state().scene||state().visits[id]))continue;
       const card=document.createElement('button');card.className='scene-card';card.dataset.scene=id;
       const img=document.createElement('img');
-      img.src=DATA.assets[w.asset];img.loading='lazy';img.alt=w.name+'场景原画';
+      img.src=window.NanlanEstateUI?.preview(state(),id,DATA.assets[w.asset])||DATA.assets[w.asset];img.loading='lazy';img.alt=w.name+'场景原画';
       const desc=document.createElement('div');desc.innerHTML='<b>'+clean(w.name)+'</b><p>'+(id===state().scene?'此刻正在这里':'你曾亲自走过这里')+'</p>';
       card.append(img,desc);card.onclick=()=>{card.classList.toggle('expanded');if(card.classList.contains('expanded'))card.scrollIntoView({behavior:'smooth',block:'start'});};$('galleryGrid').append(card);
   }
@@ -1335,6 +1344,7 @@ function insideObjectFootprint(o,x,y,clearance=0){
 }
 function baseBlocked(x,y,clearance=0){
   const b=world[state().scene].bounds;if(x<b[0]||x>b[2]||y<b[1]||y>b[3])return true;
+  if(state().scene==='yard'&&window.NanlanEstate.gifted(state())&&window.NanlanEstate.giftBlocks(x,y,clearance))return true;
   for(const [a,c,w,h] of world[state().scene].collisions||[])if(x>a-6-clearance&&x<a+w+6+clearance&&y>c-6-clearance&&y<c+h+6+clearance)return true;
   if(state().scene==='yard')for(const o of world.yard.objects.filter(v=>v.type==='weed'&&!state().collected[v.id]))if(Math.hypot(x-o.x,y-o.y)<22+clearance)return true;
   return false;
@@ -1554,7 +1564,8 @@ function personBounds(role,x,y){
 }
 function render(){
   const r=canvas.getBoundingClientRect();ctx.setTransform(1,0,0,1,0,0);ctx.fillStyle='#20392d';ctx.fillRect(0,0,canvas.width,canvas.height);setupCamera();ctx.imageSmoothingEnabled=true;
-  const s=state(),baseKey=s.scene==='backHall'&&s.flags.v4_room?'backHallReady':s.scene==='bed'&&s.flags.leakPatched?'bedPatched':world[s.scene].asset;
+  const s=state(),fallback=s.scene==='backHall'&&s.flags.v4_room?'backHallReady':s.scene==='bed'&&s.flags.leakPatched?'bedPatched':world[s.scene].asset;
+  const baseKey=window.NanlanEstateUI?.backdrop(s,s.scene,fallback)||fallback;
   const base=images[baseKey]||images[world[s.scene].asset];if(base?.naturalWidth)ctx.drawImage(NanlanClimate.picture(base,s.scene,s),0,0,W,H);
   NanlanClimate.atmosphere(ctx,s.scene,s,performance.now(),W,H);
   window.NanlanWeather?.atmosphere(ctx,s.scene,s,performance.now(),W,H);
@@ -1563,6 +1574,7 @@ function render(){
   const time=performance.now(),objective=localObjectiveObject(),destination=path[path.length-1]?.object;
   const people=visibleObjects().filter(o=>npcRole(o));
   const actors=people.map(o=>({layer:40,y:o.y,draw:()=>drawNaturalPerson(o,time)}));
+  if(s.scene==='yard'&&window.NanlanEstate.gifted(s))actors.push({layer:40,y:window.NanlanEstate.gift.y,draw:()=>window.NanlanEstateUI?.drawGift(ctx)});
   if(started)actors.push({layer:40,y:s.player.y,draw:()=>renderCharacter(time)});
 
   for(const o of visibleObjects()){

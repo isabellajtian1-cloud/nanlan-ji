@@ -454,6 +454,7 @@ function showQuest(){
   if(q){const list=document.createElement('div');renderQuestSteps(list,true);$('panelExtra').append(list);}
   navButton(window.NanlanI18n?.language==='en'?'Chapter Entrances · Requirements':'篇章入口 · 查看开启条件与去向',()=>window.NanlanChapters.show(),'quest-chapter-entry');
   button('回看已经走过的路',showQuestCatalog,'catalog',true);
+  window.NanlanMemoryBook?.link();
   button('查看家人与邻里留下的回应',showJournal,'journal',true);
 }
 function showQuestCatalog(){

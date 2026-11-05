@@ -1,6 +1,8 @@
 /* South Street interiors. They share the county route, not the story gates of the player's shop. */
 (() => {
   const {world,assets}=window.NANLAN_DATA;
+  // Leave the southern pavement open while routing around the planter and eaves.
+  world.county.collisions=[...(world.county.collisions||[]),[740,427,92,142],[824,455,53,118]];
   const rooms=[
     {id:'clothShop',name:'榕下布庄',role:'clothKeeper',keeper:'顾绣娘',x:275,y:615,exit:[0,1],returnAt:[305,566]},
     {id:'bookShop',name:'青简书坊',role:'bookKeeper',keeper:'叶先生',x:875,y:605,exit:[0,1],returnAt:[797,592]},

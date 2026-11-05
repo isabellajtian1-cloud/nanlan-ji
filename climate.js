@@ -7,12 +7,12 @@ function at(s){
  const day=Math.floor(s.worldTick/1440)+1;
  const phase=s.flags.voyageStarted?'spring':s.flags.season5Started?'autumn':s.flags.volume2Started?'spring':'summer';
  const baseline={autumn:2,spring:0,summer:1}[phase],pattern=phase==='autumn'?/^S5_/:phase==='spring'?(s.flags.voyageStarted?/^V6_/:/^V2_/):/^M0[1-4]$/;
- const ticks=(s.journal||[]).filter(r=>pattern.test(r.id||'')&&Number.isFinite(r.tick)).map(r=>r.tick);
- const anchor=phase==='summer'?1:ticks.length?Math.floor(Math.min(...ticks)/1440)+1:day;
+ const ticks=(s.journal||[]).filter(r=>(pattern.test(r.id||'')||(!s.flags.voyageStarted&&phase==='spring'&&r.id==='卷二'))&&Number.isFinite(r.tick)).map(r=>r.tick);
+ const anchor=phase==='summer'?1:ticks.length?Math.floor(Math.min(...ticks)/1440)+1:1;
  const elapsed=Math.max(0,day-anchor),index=(baseline+Math.floor(elapsed/length))%4;
  return {index,key:['spring','summer','autumn','winter'][index],zh:seasons[index][0],en:seasons[index][1],day:elapsed%length+1,length};
 }
-const outdoor=new Set(['gate','yard','village','market','county','foothill','mountain','mountainside','summit','bambooGrove','coast','tidalflat','wharf','oldTrail','qingxi','anchorage','qPier','qFair','qSalt','qBamboo','qBeacon']);
+const outdoor=new Set(['gate','yard','village','market','county','foothill','mountain','mountainside','summit','bambooGrove','coast','tidalflat','wharf','oldTrail','qingxi','anchorage','qPier','qFair','qSalt','qBamboo','qBeacon','prefDock','prefMarket']);
 const gardens=new Set(['yard','village','foothill','mountain','mountainside','summit','bambooGrove','oldTrail','qBamboo']);
 const cache=new Map();
 function picture(image,scene,s){
@@ -64,3 +64,4 @@ function preview(img,scene,s){
 }
 return {at,picture,atmosphere,preview,note,length};
 });
+

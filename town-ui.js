@@ -100,11 +100,7 @@
     open('冯掌柜','南街客栈',body);
     paid('来一碗热饭 · 5 文',T.meal,'townMeal',{},()=>inn('食毕把碗放回桌角。歇了一阵，脚下也有了力气。'),state().stamina===100?'体力已满，饿了再来。':'');
     if(state().stamina<100)hint('热饭可恢复体力，吃饭约需二十游戏分钟。');
-    pick('问问客房',()=>{
-      open('冯掌柜','南街客栈','「东窗那间铺了干席，门闩也紧。要住便住，明早天一亮我来敲门。」');
-      paid('付房钱，睡到次日清晨 · 6 文',T.stay,'townStay',{},()=>inn('窗纸透亮了。楼下有人掀锅盖，南街新的一日开始了。'));
-      pick('回到堂前',()=>inn(),'town-inn-back',true);
-    },'town-room',true);
+    pick('问问客房',()=>globalThis.NanlanFestivalUI.lodging('county',inn),'town-room',true);
     pick('听听过路人说什么',()=>{
       const {day,hour}=N.clock(state());open('冯掌柜','南街客栈',rumors[(day+Math.floor(hour/6))%rumors.length]);
       pick('回到堂前',()=>inn(),'town-inn-back',true);

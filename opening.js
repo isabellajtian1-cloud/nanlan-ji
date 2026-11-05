@@ -1,6 +1,6 @@
 /* Illustrated arrival. Presentation only: no quest flags, inventory or clock writes. */
 (()=>{'use strict';
-const shots=[
+const openingShots=[
  {
   "duration": 11000,
   "image": "opening-capital-v662.webp",
@@ -79,9 +79,10 @@ const shots=[
   "image": "opening-homecoming-v663.webp"
  }
 ];
+let shots=openingShots,filmTitle=['明代 · 从京城到南澜','Ming China · From the Capital to Nanlan'],skipLabel=['跳过并开始','Skip and Play'],lastLabel=['走近家人 · 空格','Join Your Family · Space'];
 let host=null,index=0,elapsed=0,playing=true,running=false,frame=0,last=0,lastAdvance=-Infinity,onFinish=null,focusBefore=null,wasActive=false,oldInert=false,imagePending=false,imageFailed=false,paintToken=0;
 const en=()=>window.NanlanI18n?.language==='en',P=p=>p[en()?1:0];
-const total=shots.reduce((n,s)=>n+s.duration,0);
+let total=shots.reduce((n,s)=>n+s.duration,0);
 function build(){
  if(host)return;
  host=document.createElement('section');host.id='openingFilm';host.hidden=true;host.setAttribute('role','dialog');host.setAttribute('aria-modal','true');host.setAttribute('aria-labelledby','openingTitle');host.dataset.noLocalize='';
@@ -93,12 +94,12 @@ function build(){
  host.querySelector('#openingAuto').onclick=()=>{playing=!playing;last=0;labels();};
 }
 function labels(){
- host.querySelector('#openingKicker').textContent=P(['明代 · 从京城到南澜','Ming China · From the Capital to Nanlan'])+' · '+(index+1)+' / '+shots.length;
- host.querySelector('#openingSkip').textContent=P(['跳过并开始','Skip and Play']);
+ host.querySelector('#openingKicker').textContent=P(filmTitle)+' · '+(index+1)+' / '+shots.length;
+ host.querySelector('#openingSkip').textContent=P(skipLabel);
  host.querySelector('#openingAuto').textContent=playing?P(['自动播放 开','Autoplay On']):P(['自动播放 暂停','Autoplay Paused']);
  host.querySelector('#openingAuto').setAttribute('aria-pressed',String(playing));
  host.querySelector('#openingNext').disabled=imagePending&&!imageFailed;
- host.querySelector('#openingNext').textContent=imageFailed?P(['重试载入 · 空格','Retry Artwork · Space']):imagePending?P(['绘景载入中…','Loading Artwork…']):index===shots.length-1?P(['走近家人 · 空格','Join Your Family · Space']):P(['继续 · 空格','Continue · Space']);
+ host.querySelector('#openingNext').textContent=imageFailed?P(['重试载入 · 空格','Retry Artwork · Space']):imagePending?P(['绘景载入中…','Loading Artwork…']):index===shots.length-1?P(lastLabel):P(['继续 · 空格','Continue · Space']);
  host.querySelector('#openingHint').textContent=P(['空格 / Enter 继续 · Esc 跳过','Space / Enter to continue · Esc to skip']);
 }
 function paint(){
@@ -138,8 +139,10 @@ function finish(){
  if(focusBefore?.isConnected)focusBefore.focus({preventScroll:true});
  if(done)done();
 }
-function start(done){
- if(running)return false;build();
+function start(done,options={}){
+ if(running)return false;
+ shots=options.shots||openingShots;total=shots.reduce((n,s)=>n+s.duration,0);
+ filmTitle=options.title||['明代 · 从京城到南澜','Ming China · From the Capital to Nanlan'];skipLabel=options.skip||['跳过并开始','Skip and Play'];lastLabel=options.last||['走近家人 · 空格','Join Your Family · Space'];build();
  index=0;elapsed=0;last=0;lastAdvance=-Infinity;playing=true;onFinish=done||null;focusBefore=document.activeElement;wasActive=active;
  active=false;keys={};path=[];moving=false;window.NanlanDesktop?.discard();
  const wrap=document.getElementById('wrap');oldInert=!!wrap?.inert;if(wrap)wrap.inert=true;
@@ -157,6 +160,6 @@ window.addEventListener('keydown',e=>{
 },true);
 window.addEventListener('keyup',e=>{if(running){e.preventDefault();e.stopImmediatePropagation();}},true);
 document.addEventListener('visibilitychange',()=>{if(running)last=0;});
-window.NanlanOpening={start,finish,replay:()=>start(),running:()=>running,environment:()=>running?shots[index].environment:null,duration:total,shots};
+window.NanlanOpening={start,finish,replay:()=>start(),running:()=>running,environment:()=>running?shots[index].environment:null,duration:openingShots.reduce((n,s)=>n+s.duration,0),shots:openingShots,play:(options,done)=>start(done,options)};
 const dictionary=window.NANLAN_EN||(window.NANLAN_EN={});dictionary['回看开场']='Replay Opening';dictionary['观看五页开场绘景']='Watch the Five-Part Opening';window.NanlanI18n?.configure(dictionary);
 })();

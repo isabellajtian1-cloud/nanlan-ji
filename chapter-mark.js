@@ -55,6 +55,7 @@ function show(){
  }
  if(info.number<6){const future=document.createElement('p');future.className='chapter-unwritten';future.textContent=L('后面的纸页，尚未题名。','The pages ahead have yet to be named.');list.append(future);}
  $('panelExtra').append(list);
+ window.NanlanEndings?.history();
  if(q)navButton(L('翻到眼前的记事 · ','Open the current entry · ')+(en()?window.NanlanI18n.t(N.titles[q]):N.titles[q]),showQuest,'chapter-current-entry');
  else navButton(L('看看接下来的日子','See What Comes Next'),()=>window.NanlanChapters.show(),'chapter-next-entry');
  navButton(L('合上行记，回到此间','Close the Journal'),()=>closeDialog(true),'chapter-journal-close');

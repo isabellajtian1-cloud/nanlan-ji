@@ -380,7 +380,7 @@ function refreshHud(){
   $('energy').textContent=Math.floor(s.stamina);$('energyBar').style.width=s.stamina+'%';$('coins').textContent=s.coins;
   refreshQuestBanner(s,q);$('nightNote').hidden=!(s.mode==='daily'&&N.clock(s).minute>=1320);
   $('nightNote').querySelector('strong').textContent=N.voyage.get(s)?.away?(window.NanlanI18n?.language==='en'?'Take me to the guest courtyard':'带我到宿院歇一夜'):(window.NanlanI18n?.language==='en'?'Take me to the bed in the East Wing':'带我回卧房（东厢房）床榻');
-  refreshToolbar();window.NanlanChapterMark?.refresh(s,started);
+  refreshToolbar();window.NanlanChapterMark?.refresh(s,started);window.NanlanEndings?.refresh(s,started);
 }
 const toolDefs=[
   ['hand','拾取','挽起布袖拾取落枝、草药与海湾物资。'],['sickle','月牙镰','清理杂草；须先在仓房修好农具。'],
@@ -1230,6 +1230,7 @@ function showFamilyMeal(feast=false,memory=false){
   button(feast&&!memory?'饭后叙话 · 岁末满庭':'收好碗筷，回到正厅',()=>{if(feast&&!memory)showEnding();else closeDialog();},'meal-continue');
 }
 function showEnding(){
+  if(window.NanlanEndings){window.NanlanEndings.play(1);return;}
   activity('第一卷完成 · 岁末满庭','灯亮在回廊，家人与邻里坐在一处。你从门外接过行李，走过竹林、山路和海湾，也学会把家计与承诺说清楚。\n\n祖父留下了明春的课，父亲约定出门先报去向，母亲有了自己的小单。原簿回到程婉手里，获准的副本留在书案。\n\n这里终于成了愿意守护的家。\n\n第一卷已完成。到正厅的「新春家议」开启第二卷「南街灯起」。任务、物品和人物选择全部保留。','ending');
   button(window.NanlanI18n?.language==='en'?'Read the Shop Notice · Begin Volume II':'与家人读铺讯 · 开启第二卷',()=>window.NanlanV2.entry(),'ending-volume2');
   button('回到家中，继续过日子',()=>{closeDialog();notice('岁末满庭之后，日常仍在继续。');},'ending-continue');
@@ -1758,7 +1759,7 @@ window.addEventListener('keydown',e=>{
 });
 window.addEventListener('keyup',e=>{const k=e.key.toLowerCase();keys[k]=false;if(['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright'].includes(k))edgeExitAttempt=null;});
 window.addEventListener('blur',()=>{keys={};path=[];moving=false;});
-document.addEventListener('visibilitychange',()=>{keys={};path=[];moving=false;if(document.hidden){active=false;if(started)engine.save();}else{active=started&&$('dialog').hidden&&$('gallery').hidden&&$('worldMap').hidden&&!transitioning;lastFrame=performance.now();}});
+document.addEventListener('visibilitychange',()=>{keys={};path=[];moving=false;if(document.hidden){active=false;if(started)engine.save();}else{active=started&&$('dialog').hidden&&$('gallery').hidden&&$('worldMap').hidden&&!transitioning&&!window.NanlanOpening?.running();lastFrame=performance.now();}});
 document.addEventListener('keydown',e=>{
   if(e.key!=='Tab')return;const root=!$('gallery').hidden?$('gallery'):!$('worldMap').hidden?$('worldMap'):!$('dialog').hidden?$('dialog'):null;if(!root)return;
   const buttons=[...root.querySelectorAll('button:not([hidden]):not(:disabled),input')];if(!buttons.length)return;

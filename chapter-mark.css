@@ -17,3 +17,6 @@
 @media(max-width:650px){#chapterClock{right:10px;top:10px;min-width:0;max-width:155px}#chapterMark{font-size:10px;padding:4px 7px;letter-spacing:0}#volumeIntertitle{top:36%;padding:22px 14px;width:82vw}#volumeIntertitle small{font-size:12px}}
 @media(max-height:560px) and (orientation:landscape){#chapterClock{right:10px;top:10px;max-width:175px;gap:3px}#chapterMark{font-size:10px;padding:2px 7px}}
 @media(prefers-reduced-motion:reduce){.ink-arrival{animation:none}}
+
+/* Quiet closing-page choices use the existing paper dialog. */
+.ending-note{font-size:13px;line-height:1.8;color:#786744;margin:12px 0;padding:10px 12px;border-left:1px solid #b7a174;background:#e9dbb540}

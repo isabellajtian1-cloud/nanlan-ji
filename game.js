@@ -163,7 +163,7 @@ function activity(title,text,kind='general'){
   $('dialogKicker').textContent=kind==='quest'?'南澜记 · 眼前的事':'南澜小事';
   $('dialogQuestNavigate').hidden=true;
   $('choices').hidden=false;$('next').hidden=true;$('dialog').hidden=false;$('skip').textContent=started?'返回游戏 ×':'返回启程页 ×';
-  $('skip').onclick=closeDialog;$('skip').focus();if(kind!=='arrival')window.NanlanDesktop?.dialogue(title,text);
+  $('skip').onclick=closeDialog;$('skip').focus();if(kind!=='arrival'&&kind!=='pantry')window.NanlanDesktop?.dialogue(title,text);
 }
 function button(label,fn,id,secondary=false,showOutcome=true){
   const b=document.createElement('button');b.textContent=label;b.dataset.action=id||label;
@@ -584,7 +584,7 @@ function showAccounts(){
 function showPantry(){
   const fresh=$('dialog').hidden,s=state();if(fresh)for(const item of Object.keys(pantryDraft))pantryDraft[item]=0;
   const en=window.NanlanI18n?.language==='en',L=(zh,english)=>en?english:zh;
-  activity('乡邻余粮 · 种子与补给',L('挑选实际需要的物资，可以混合选择并自行填写数量。确认前只计算合计，不会扣除家用。\n\n目前家用 '+s.coins+' 文。','Choose the supplies and quantities you need. Nothing is charged until you confirm.\n\nHousehold savings: '+s.coins+' coins.'));
+  activity('乡邻余粮 · 种子与补给',L('挑选实际需要的物资，可以混合选择并自行填写数量。确认前只计算合计，不会扣除家用。\n\n目前家用 '+s.coins+' 文。','Choose the supplies and quantities you need. Nothing is charged until you confirm.\n\nHousehold savings: '+s.coins+' coins.'),'pantry');
   const seedNote=document.createElement('p');seedNote.className='prerequisite-note';seedNote.dataset.noLocalize='';
   seedNote.textContent=L('乡邻这里常备种子，每份 '+N.supplyPrices.seed+' 文。一份可播一块地，青菜与药草共用，买好就放进行囊。','Seeds are always available here at '+N.supplyPrices.seed+' coins per packet. One packet plants one plot; the same seeds are used for vegetables and herbs. Purchased seeds go into your satchel.');
   $('panelExtra').append(seedNote);

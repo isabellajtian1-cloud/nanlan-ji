@@ -99,9 +99,70 @@
     return [name, description];
   }
 
+  const estateRanks = [
+    ['旧宅待整', 'A House to Restore'],
+    ['初有起色', 'A Home Taking Shape'],
+    ['安居有序', 'Settled In'],
+    ['院落渐新', 'A Renewed Home'],
+    ['一院暖灯', 'A Courtyard of Warm Lights']
+  ];
+  const storyRanks = [
+    ['初到南澜', 'Arrival in Nanlan'],
+    ['一卷成章', 'A Volume Complete'],
+    ['数卷成篇', 'A Story Taking Shape'],
+    ['六卷成书', 'All Six Volumes Complete']
+  ];
+
+  function estateRating(save) {
+    const estate = window.NanlanEstate;
+    const checks = [
+      {
+        done: estate.settled(save), title: ['安顿旧宅', 'Settle the Old House'],
+        hint: ['安顿东厢房、清理院路、疏通宅外水口。', 'Settle the East Wing and clear the courtyard path and drain.']
+      },
+      {
+        done: save.flags.windowPatched && save.flags.leakPatched, title: ['东厢避风雨', 'Shelter from Wind and Rain'],
+        hint: ['补好东厢房的窗格和漏点。', 'Mend both the East Wing window and the roof leak.']
+      },
+      {
+        done: estate.furnished(save), title: ['旧院换新颜', 'A Courtyard Renewed'],
+        hint: ['累计收到 30 文货款后，可在「宅院修葺」花 24 文请人修整。', 'Take in 30 coins in sales, then spend 24 coins in Home Improvements.']
+      },
+      {
+        done: estate.gifted(save), title: ['街坊来添花', 'Flowers from the Neighbors'],
+        hint: ['办妥两桩乡邻约定，再到「宅院修葺」收下桂花与竹篮。', 'Keep two promises to neighbors, then accept the osmanthus and basket in Home Improvements.']
+      }
+    ];
+    return {checks, rank: checks.filter(check => check.done).length};
+  }
+
+  function storyRating(save) {
+    const statuses = [
+      {started: true, complete: !!save.flags.volumeComplete || N.done(save, 'M20')},
+      ...N.chapterEntries(save)
+    ];
+    const orders = [N.ORDER, N.V2_ORDER, N.V3_ORDER, N.V4_ORDER, N.SEASON5_ORDER, N.V6_ORDER];
+    const volumes = statuses.map((status, i) => {
+      const tasks = orders[i];
+      const done = status.complete ? tasks.length : tasks.filter(id => N.done(save, id)).length;
+      return {...status, done, total: tasks.length};
+    });
+    const complete = volumes.filter(volume => volume.complete).length;
+    const rank = complete === volumes.length ? 3 : complete >= 2 ? 2 : complete;
+    return {volumes, complete, rank};
+  }
+
   function unlocked(previous, save) {
     const newRecords = entries(save).filter(([, flag]) => previous.flags[flag] !== true);
-    if (!newRecords.length) return '';
+    if (!newRecords.length) {
+      const estate = estateRating(save);
+      if (estate.rank > estateRating(previous).rank)
+        return local('宅院评级提升 · ', 'Home rating raised · ') + local(...estateRanks[estate.rank]);
+      const story = storyRating(save);
+      if (story.rank > storyRating(previous).rank)
+        return local('剧情评级提升 · ', 'Story rating raised · ') + local(...storyRanks[story.rank]);
+      return '';
+    }
     if (newRecords.length === 1) {
       const [name] = words(newRecords[0], save);
       return local('旧事簿添页 · ', 'New memory · ') + local(...name);
@@ -110,7 +171,54 @@
   }
 
   let returnTo;
-  function show(openChapters) {
+  function ratingGroup(id, title, openSections) {
+    const group = document.createElement('details');
+    group.className = 'chapter-leaves memory-chapter';
+    group.dataset.noLocalize = '';
+    group.dataset.memorySection = id;
+    group.open = openSections.has(id);
+    const label = document.createElement('summary');
+    label.textContent = title;
+    group.append(label);
+    $('panelExtra').append(group);
+    return group;
+  }
+
+  function ratingRow(group, title, description) {
+    const row = document.createElement('article');
+    const heading = document.createElement('h3');
+    const body = document.createElement('p');
+    heading.textContent = title;
+    body.textContent = description;
+    row.append(heading, body);
+    group.append(row);
+  }
+
+  function showRatings(save, openSections) {
+    const estate = estateRating(save);
+    const home = ratingGroup('estate', local('宅院评级 · ', 'Home rating · ') + local(...estateRanks[estate.rank]) +
+      ' · ' + estate.rank + '/' + estate.checks.length, openSections);
+    for (const check of estate.checks) {
+      const status = check.done ? local('已达成', 'Achieved') : local('待达成', 'To do');
+      ratingRow(home, local(...check.title) + ' · ' + status, local(...check.hint));
+    }
+
+    const story = storyRating(save);
+    const plot = ratingGroup('story', local('剧情评级 · ', 'Story rating · ') + local(...storyRanks[story.rank]) +
+      ' · ' + story.complete + '/' + story.volumes.length, openSections);
+    for (const [i, volume] of story.volumes.entries()) {
+      if (!volume.started && !volume.complete) {
+        ratingRow(plot, local('第 ' + (i + 1) + ' 卷', 'Volume ' + (i + 1)), local('尚未到此卷。', 'This volume is still ahead.'));
+        continue;
+      }
+      const stage = volume.complete ? local('落笔成卷', 'Volume Complete') :
+        volume.done * 2 >= volume.total ? local('渐入佳境', 'Well Underway') : local('初启此卷', 'Just Begun');
+      ratingRow(plot, local(...chapters[i]) + ' · ' + stage,
+        local('主线 ', 'Main story ') + volume.done + '/' + volume.total);
+    }
+  }
+
+  function show(openChapters, openSections = new Set()) {
     const save = state();
     const records = entries(save);
     const title = local('南澜旧事簿', 'Nanlan Book of Memories');
@@ -120,6 +228,7 @@
     activity(title, intro, 'memory-book');
     dialogObject = null;
     $('dialogKicker').textContent = local('亲手做过的事', 'Things you made happen');
+    showRatings(save, openSections);
 
     if (records.length) {
       for (let chapter = chapters.length; chapter >= 1; chapter--) {
@@ -166,9 +275,12 @@
   document.addEventListener('nanlanlanguagechange', () => {
     if (!$('dialog').hidden && dialogKind === 'memory-book') {
       const openChapters = new Set([...$('panelExtra').querySelectorAll('.memory-chapter[open]')]
-        .map(group => group.dataset.memoryChapter));
-      show(openChapters);
+        .map(group => group.dataset.memoryChapter).filter(Boolean));
+      const openSections = new Set([...$('panelExtra').querySelectorAll('[data-memory-section][open]')]
+        .map(group => group.dataset.memorySection));
+      show(openChapters, openSections);
     }
   });
   window.NanlanMemoryBook = {link, unlocked};
 })();
+

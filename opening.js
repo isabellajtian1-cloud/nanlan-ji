@@ -79,7 +79,7 @@ const shots=[
   "image": "opening-homecoming-v663.webp"
  }
 ];
-let host=null,index=0,elapsed=0,playing=true,running=false,frame=0,last=0,lastAdvance=-Infinity,onFinish=null,focusBefore=null,wasActive=false,oldInert=false;
+let host=null,index=0,elapsed=0,playing=true,running=false,frame=0,last=0,lastAdvance=-Infinity,onFinish=null,focusBefore=null,wasActive=false,oldInert=false,imagePending=false,imageFailed=false,paintToken=0;
 const en=()=>window.NanlanI18n?.language==='en',P=p=>p[en()?1:0];
 const total=shots.reduce((n,s)=>n+s.duration,0);
 function build(){
@@ -87,7 +87,7 @@ function build(){
  host=document.createElement('section');host.id='openingFilm';host.hidden=true;host.setAttribute('role','dialog');host.setAttribute('aria-modal','true');host.setAttribute('aria-labelledby','openingTitle');host.dataset.noLocalize='';
  host.innerHTML='<div class="opening-shell"><div class="opening-top"><p id="openingKicker"></p><button type="button" id="openingSkip"></button></div><figure class="opening-landscape"><div class="opening-shade"></div></figure><div class="opening-caption"><div class="opening-portraits" aria-hidden="true"></div><div class="opening-copy"><h2 id="openingTitle"></h2><p id="openingLine" aria-live="polite"></p></div></div><div class="opening-controls"><small id="openingHint"></small><div><button type="button" id="openingAuto" aria-pressed="true"></button><button type="button" id="openingNext"></button></div></div><div class="opening-progress" aria-hidden="true"><span></span></div></div>';
  document.body.append(host);
- const backdrop=host.querySelector('.opening-landscape');backdrop.style.backgroundImage='url("'+window.NANLAN_DATA.assets.gate+'")';backdrop.style.backgroundSize='contain';backdrop.style.backgroundRepeat='no-repeat';backdrop.style.backgroundPosition='center';
+
  host.querySelector('#openingSkip').onclick=finish;
  host.querySelector('#openingNext').onclick=advance;
  host.querySelector('#openingAuto').onclick=()=>{playing=!playing;last=0;labels();};
@@ -97,13 +97,20 @@ function labels(){
  host.querySelector('#openingSkip').textContent=P(['跳过并开始','Skip and Play']);
  host.querySelector('#openingAuto').textContent=playing?P(['自动播放 开','Autoplay On']):P(['自动播放 暂停','Autoplay Paused']);
  host.querySelector('#openingAuto').setAttribute('aria-pressed',String(playing));
- host.querySelector('#openingNext').textContent=index===shots.length-1?P(['走近家人 · 空格','Join Your Family · Space']):P(['继续 · 空格','Continue · Space']);
+ host.querySelector('#openingNext').disabled=imagePending&&!imageFailed;
+ host.querySelector('#openingNext').textContent=imageFailed?P(['重试载入 · 空格','Retry Artwork · Space']):imagePending?P(['绘景载入中…','Loading Artwork…']):index===shots.length-1?P(['走近家人 · 空格','Join Your Family · Space']):P(['继续 · 空格','Continue · Space']);
  host.querySelector('#openingHint').textContent=P(['空格 / Enter 继续 · Esc 跳过','Space / Enter to continue · Esc to skip']);
 }
 function paint(){
- const s=shots[index],A=window.NANLAN_DATA.assets;host.dataset.shot=String(index);
- const img=document.createElement('img');img.alt='';img.src=s.image||A[s.asset]||A.gate;img.draggable=false;img.onerror=()=>{img.onerror=null;img.src=A[s.asset]||A.gate;};
- const shade=document.createElement('div');shade.className='opening-shade';host.querySelector('.opening-landscape').replaceChildren(img,shade);
+ const s=shots[index],A=window.NANLAN_DATA.assets,token=++paintToken;host.dataset.shot=String(index);
+ imagePending=true;imageFailed=false;
+ const img=document.createElement('img');img.alt=P(s.title);img.draggable=false;img.hidden=true;
+ const shade=document.createElement('div');shade.className='opening-shade';
+ const status=document.createElement('p');status.className='opening-loading';status.setAttribute('role','status');status.textContent=P(['正在载入本页绘景…','Loading this illustration…']);
+ host.querySelector('.opening-landscape').replaceChildren(img,shade,status);
+ img.onload=()=>{if(token!==paintToken||!running)return;imagePending=false;imageFailed=false;elapsed=0;last=0;img.hidden=false;status.hidden=true;labels();};
+ img.onerror=()=>{if(token!==paintToken||!running)return;imageFailed=true;status.textContent=P(['本页绘景暂未载入，请点「重试载入」。','This illustration could not load. Choose “Retry Artwork”.']);labels();};
+ img.src=(s.image||A[s.asset]||A.gate)+'?v=664';
  const cast=host.querySelector('.opening-portraits');cast.replaceChildren();cast.style.animation='none';void cast.offsetWidth;cast.style.animation='';
  for(const role of s.roles){const portrait=document.createElement('img');portrait.src=A['npc_'+role];portrait.alt='';portrait.draggable=false;portrait.onerror=()=>{portrait.hidden=true;};cast.append(portrait);}
  host.querySelector('#openingTitle').textContent=P(s.title);host.querySelector('#openingLine').textContent=P(s.line);labels();
@@ -111,7 +118,7 @@ function paint(){
 function update(t){
  if(!running)return;
  const delta=last?Math.max(0,Math.min(100,t-last)):0;last=t;
- if(playing&&!document.hidden)elapsed+=delta;
+ if(playing&&!imagePending&&!document.hidden)elapsed+=delta;
  const prior=shots.slice(0,index).reduce((n,s)=>n+s.duration,0);
  host.querySelector('.opening-progress span').style.width=((prior+Math.min(elapsed,shots[index].duration))/total*100)+'%';
  if(elapsed>=shots[index].duration){if(index===shots.length-1){finish();return;}index++;elapsed=0;paint();}
@@ -120,6 +127,7 @@ function update(t){
 function advance(){
  if(!running||performance.now()-lastAdvance<250)return;
  lastAdvance=performance.now();
+ if(imageFailed){paint();return;}if(imagePending)return;
  if(index===shots.length-1){finish();return;}index++;elapsed=0;last=0;paint();
 }
 function finish(){
@@ -140,7 +148,7 @@ function start(done){
 }
 window.addEventListener('keydown',e=>{
  if(!running||e.ctrlKey||e.metaKey||e.altKey)return;
- if(e.key==='Tab'){const controls=[...host.querySelectorAll('button')],i=controls.indexOf(document.activeElement),next=e.shiftKey?(i<=0?controls.length-1:i-1):(i+1)%controls.length;e.preventDefault();e.stopImmediatePropagation();controls[next].focus();return;}
+ if(e.key==='Tab'){const controls=[...host.querySelectorAll('button')].filter(b=>!b.disabled),i=controls.indexOf(document.activeElement),next=e.shiftKey?(i<=0?controls.length-1:i-1):(i+1)%controls.length;e.preventDefault();e.stopImmediatePropagation();controls[next].focus();return;}
  e.preventDefault();e.stopImmediatePropagation();if(e.repeat)return;
  if(e.key==='Escape')finish();else if(e.key===' '||e.key==='Enter'){
   if(document.activeElement?.id==='openingAuto')host.querySelector('#openingAuto').click();
@@ -150,5 +158,5 @@ window.addEventListener('keydown',e=>{
 window.addEventListener('keyup',e=>{if(running){e.preventDefault();e.stopImmediatePropagation();}},true);
 document.addEventListener('visibilitychange',()=>{if(running)last=0;});
 window.NanlanOpening={start,finish,replay:()=>start(),running:()=>running,environment:()=>running?shots[index].environment:null,duration:total,shots};
-const dictionary=window.NANLAN_EN||(window.NANLAN_EN={});dictionary['回看开场']='Replay Opening';window.NanlanI18n?.configure(dictionary);
+const dictionary=window.NANLAN_EN||(window.NANLAN_EN={});dictionary['回看开场']='Replay Opening';dictionary['观看五页开场绘景']='Watch the Five-Part Opening';window.NanlanI18n?.configure(dictionary);
 })();

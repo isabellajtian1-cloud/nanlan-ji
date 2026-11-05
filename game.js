@@ -170,7 +170,7 @@ function activity(title,text,kind='general'){
   $('dialogKicker').textContent=kind==='quest'?'南澜记 · 眼前的事':'南澜小事';
   $('dialogQuestNavigate').hidden=true;
   $('choices').hidden=false;$('next').hidden=true;$('dialog').hidden=false;$('skip').textContent=started?'返回游戏 ×':'返回启程页 ×';
-  $('skip').onclick=closeDialog;$('skip').focus();if(!['arrival','pantry','town-shop'].includes(kind))window.NanlanDesktop?.dialogue(title,text);
+  $('skip').onclick=closeDialog;$('skip').focus();if(!['arrival','pantry','town-shop','dialogue-scene','voyage-extra-story','voyage-memory'].includes(kind))window.NanlanDesktop?.dialogue(title,text);
 }
 function button(label,fn,id,secondary=false,showOutcome=true){
   const b=document.createElement('button');b.textContent=label;b.dataset.action=id||label;
@@ -271,6 +271,7 @@ async function perform(name,p={},rerender){
       if(!$('dialog').hidden){const receipt=document.createElement('p');receipt.className='gather-receipt';receipt.setAttribute('role','status');receipt.textContent=text+(state().selected==='basket'?'，已放入竹背篓。':'，已放入行囊。');$('panelExtra').prepend(receipt);button('按 B 查看全部行囊物资',showBag,'harvest-bag',true);}
     }
   }
+  if(result.completed)window.NanlanDialogueScenes?.after(result.completed);
   return result;
 }
 function actButton(label,name,p,refresh,id,secondary=false){
@@ -500,6 +501,7 @@ function showQuest(){
   navButton(window.NanlanI18n?.language==='en'?'Chapter Entrances · Requirements':'篇章入口 · 查看开启条件与去向',()=>window.NanlanChapters.show(),'quest-chapter-entry');
   button('回看已经走过的路',showQuestCatalog,'catalog',true);
   window.NanlanMemoryBook?.link(showQuest);
+  window.NanlanDialogueScenes?.link();
   button('查看家人与邻里留下的回应',showJournal,'journal',true);
 }
 function showQuestCatalog(){
@@ -1154,6 +1156,11 @@ function refreshInteractionHint(){
   hint.dataset.object=o.id;hint.hidden=false;
 }
 async function interact(o){
+  if(!o||transitioning)return;
+  await interactCore(o);
+  if(dialogObject===o)window.NanlanDialogueScenes?.offer(o);
+}
+async function interactCore(o){
   if(!o||transitioning)return;
   if(!nearObject(o)){notice('先走近'+o.label+'。');return;}
   if(globalThis.NanlanFestivalUI?.offer(o)){dialogObject=o;return;}
@@ -1887,5 +1894,6 @@ window.addEventListener('beforeunload',()=>{if(started)engine.save();});
 loadImage('walkFemale');loadImage('walkMale');loadImage('bedDamage');loadImage('storePickups');loadImage('bed');loadImage('gate');loadImage('yard');loadImage('npc_playerFemale');loadImage('npc_playerMale');loadImage('bedPatched');loadImage('weedPatch');refreshHud();requestAnimationFrame(frame);
 
 document.addEventListener('nanlanlanguagechange',()=>{if(started)refreshHud();});
+
 
 

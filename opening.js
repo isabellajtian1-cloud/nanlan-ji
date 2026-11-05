@@ -59,8 +59,8 @@ const openingShots=[
    "Nanlan · Where the Road Ends"
   ],
   "line": [
-   "长路终于在一扇旧院门前停下。官兵将文书与钥匙交到父亲手中。\n父亲望了望屋瓦：「箱笼先别全搬。先看看，哪里能让大家安顿。」",
-   "At last, the long road ended before an old courtyard gate. The escort handed Father the papers and the key.\nFather looked up at the roof. “Leave the trunks for now. Let us see where everyone can settle.”"
+   "长路终于在一扇旧院门前停下。官兵取出文书和钥匙，等一家人走近。\n父亲望了望屋瓦：「箱笼先别全搬。先看看，哪里能让大家安顿。」",
+   "At last, the long road ended before an old courtyard gate. The escort took out the papers and the key and waited for the family.\nFather looked up at the roof. “Leave the trunks for now. Let us see where everyone can settle.”"
   ]
  },
  {
@@ -161,5 +161,14 @@ window.addEventListener('keydown',e=>{
 window.addEventListener('keyup',e=>{if(running){e.preventDefault();e.stopImmediatePropagation();}},true);
 document.addEventListener('visibilitychange',()=>{if(running)last=0;});
 window.NanlanOpening={start,finish,replay:()=>start(),running:()=>running,environment:()=>running?shots[index].environment:null,duration:openingShots.reduce((n,s)=>n+s.duration,0),shots:openingShots,play:(options,done)=>start(done,options)};
-const dictionary=window.NANLAN_EN||(window.NANLAN_EN={});dictionary['回看开场']='Replay Opening';dictionary['观看五页开场绘景']='Watch the Five-Part Opening';window.NanlanI18n?.configure(dictionary);
+const dictionary=window.NANLAN_EN||(window.NANLAN_EN={});
+Object.assign(dictionary,{
+ '回看开场':'Replay Opening','回看完整开场故事':'Watch the Full Opening Story',
+ '门内有声':'A Sound Behind the Gate',
+ '雨刚停，门里响了两下。':'The rain has just stopped. Two knocks sound from behind the gate.',
+ '一家人的干铺盖还在箱里。这扇门后，有没有一处地方能让大家睡下？':'The family’s dry bedding is still in the trunk. Is there anywhere behind this gate where everyone can sleep?',
+ '启程 · 去门前帮家人':'Begin · Help Your Family at the Gate',
+ '风掀起东厢房一角破窗纸。原来，门里那几声响是窗扇在拍窗框。':'The wind lifts torn paper in the east wing. The knocks were a loose shutter striking its frame.'
+});
+window.NanlanI18n?.configure(dictionary);
 })();

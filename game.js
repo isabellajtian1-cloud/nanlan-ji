@@ -78,7 +78,7 @@ function notice(text,sticky=false){
   if(!sticky)messageTimer=setTimeout(()=>$('message').classList.add('fade'),8500);
 }
 const storyHooks={
-  M01:'门轴转动时，屋里传来一声滴水。今夜，谁能睡得安稳？',
+  M01:'风掀起东厢房一角破窗纸。原来，门里那几声响是窗扇在拍窗框。',
   M02:'床褥刚铺下，庭院草丛里露出半截生锈的旧农具。',
   M03:'通路见了光，灶膛却还是冷的；墙外的水声也不太对。',
   M04:'饭后，陈伯托人捎话：村口有封家信，等着有人念给乡邻听。',
@@ -243,7 +243,18 @@ async function perform(name,p={},rerender){
     notice(name==='prefSail'?'沿水路抵达府城，回程船脚已付。':'已凭船凭回到南澜新河埠。');
     return result;
   }
-  if(name==='openGate'){closeDialog();render();notice('院门打开了。先去东厢房检查窗格与漏点。');return result;}
+  if(name==='openGate'){
+    closeDialog(true);focusedObjectId='bed';lastInteractionHint='';render();refreshInteractionHint();
+    notice(deskText('门推开了。东厢的窗扇又响了一声，窗下还泛着湿光。去看看今晚能不能在那儿睡。','The gate opens. The east wing shutter knocks again, and the stone beneath it glistens. See if the room can shelter your family tonight.'),true);
+    const lead=document.createElement('button');
+    lead.className='receipt-open';lead.textContent=deskText('去看看东厢房','Look inside the East Wing');
+    lead.onclick=()=>{
+      const door=visibleObjects().find(o=>o.id==='bed'&&o.to==='bed');
+      if(active&&door)approach(door);
+    };
+    $('message').append(lead);
+    return result;
+  }
   if(name==='v2Sign'&&window.NanlanProduction){window.NanlanProduction.mounted();return result;}
   if(rerender)rerender();else notice(result.duplicate?'这件事已经办好了。':actionMessage(name));
   const nextChapter=result.completed&&N.chapterEntries(state()).find(e=>!e.started&&e.ready);
@@ -309,7 +320,7 @@ function nextHint(s=state(),q=N.current(s)){
   if(N.v3?.canStart(s))return '南街门边多了一只旧牌竹箱。得空去铺子看看。';
   const v2=window.NanlanV2?.hint(s,q);if(v2)return v2;
   const hints={
-    M01:!f.handover?'先在门前点家人与行李，选好怎样帮忙。':!f.keyTaken?'接过官兵递来的院门钥匙。':'靠近旧宅院门，亲手开门。',
+    M01:!f.handover?deskText('先去门边帮家人一把。','Go to the gate and lend your family a hand.'):!f.keyTaken?'接过官兵递来的院门钥匙。':'靠近旧宅院门，亲手开门。',
     M02:!f.windowInspected||!f.leakInspected?'去卧房（东厢房），分别查看窗格和漏点。':!f.firstRepair?'在卧房（东厢房）先选一处最急的地方，花 1 份材料修补。':'到卧房（东厢房）床榻旁把床褥搬进去。',
     M03:!f.farmTools?'仓房里有一束旧农具。':!f.toolsRepaired?'到仓房工作台，用 1 份修补材料修农具。':!f.pathCleared?'选第 2 格镰刀，清掉庭院 3 处杂草。':'去庭院东侧整理一小块菜畦或香草畦。',
     M04:!f.stoveClean?'先收拾庭院东北的灶边。':!f.bucketFilled?(s.tools.water?'水桶已经在手，到庭院水缸取水。':'在仓房领水桶，再到庭院水缸取水。'):!f.drainClear?'清理宅外水口。池塘只是背景，不用修。':!f.firstCooked?'灶边用米、食材、枯枝和一桶水做饭。':'端着热饭回正厅，在饭桌旁与家人分享。',
@@ -1169,14 +1180,19 @@ async function interact(o){
   if(a?.startsWith('v2')){window.NanlanV2.show(a,o);dialogObject=o;addConversation(o);window.NanlanSeals?.npc(o);window.NanlanProduction?.npc(o);window.NanlanVillage?.npc(o);window.NanlanBondUI?.npc(o);globalThis.NanlanTownUI?.family(o);return;}
   if(f.volume2Started&&o.id==='goodsCrates'){window.NanlanV2.show('v2Cargo',o);dialogObject=o;return;}
   if(a==='arrival'){
-    activity('旧宅门前 · 交接','官兵：「文书与行李都在此。李家远迁岭南，并未籍没家产。我等交接完便返京。」\n\n祖父：「走了这么远，倒到了门口才觉得腿沉。」\n你：「进去坐一坐。」\n\n门还没有开。你先帮谁一把？');
-    actButton('先扶祖父到门边','handover',{choice:'grandfather'},()=>{closeDialog();notice('祖父站稳了。现在可以接过院门钥匙。');},'arrival-grandfather');
-    actButton('先把行李搬到门边','handover',{choice:'luggage'},()=>{closeDialog();notice('行李已交接。现在可以接过院门钥匙。');},'arrival-luggage');
+    activity('旧宅门前 · 交接',deskText(
+      '笃、笃。门里响了两下。\n\n祖父扶着车辕没作声。母亲压住箱笼上的湿布：「干铺盖都在这口箱里。先帮我照看一头。」',
+      'Knock, knock. The sound comes from behind the gate.\n\nGrandfather leans silently against the cart. Mother holds down the damp covering on a trunk. “All our dry bedding is in here. Give one of us a hand.”'),'arrival');
+    actButton('先扶祖父到门边','handover',{choice:'grandfather'},()=>arrivalReply('grandfather'),'arrival-grandfather');
+    actButton('先把行李搬到门边','handover',{choice:'luggage'},()=>arrivalReply('luggage'),'arrival-luggage');
   }else if(a==='key'){
-    activity('官兵 · 院门钥匙','「这是宅院钥匙。屋舍久无人住，先把一家人安顿好。」\n\n钥匙需要你亲手接过，不会因为略过对白就自动放入行囊。');
-    actButton('接过钥匙，收入行囊','takeKey',{},()=>{closeDialog();notice('院门钥匙 ×1 已入包。走到旧宅院门前开门。');});
+    activity('官兵 · 院门钥匙',deskText('「文书收好。钥匙在这儿，宅院往后就交给你们了。」\n\n他摊开手，一枚发暗的钥匙躺在掌中。','“Keep the papers safe. Here is the key. The house is in your hands now.”\n\nHe opens his hand. A tarnished key lies in his palm.'),'arrival');
+    actButton('接过钥匙，收入行囊','takeKey',{},()=>{
+      activity('旧宅院门',deskText('钥匙沉甸甸地落进你手里。门后又响了两下，像是从东边传来的。','The key is heavy in your hand. Two more knocks come from behind the gate, somewhere to the east.'),'arrival');
+      navButton(deskText('拿着钥匙去院门','Take the key to the gate'),()=>goToArrival('gate'),'arrival-go-gate');
+    });
   }else if(a==='gate'){
-    activity('旧宅院门','旧门沉沉地合着。钥匙转开以后，要亲手推门，院内才会开放。');
+    activity('旧宅院门',deskText('你扶住湿漉漉的门板。母亲在身后说：「先给祖父找个干地方坐。其余的，咱们慢慢来。」','You put a hand on the rain-soaked wood. Behind you, Mother says, “First find Grandfather somewhere dry to sit. The rest can wait.”'),'arrival');
     actButton('用钥匙打开院门','openGate');
   }else if(a==='window'||a==='leak'){
     const window=a==='window',fixed=f[window?'windowPatched':'leakPatched'];
@@ -1737,29 +1753,33 @@ $('female').onclick=()=>chooseGender('female');$('male').onclick=()=>chooseGende
 function showStartGuide(){
   activity('启程前 · 怎样行动','点击地面行走，点击人物或物件互动。电脑可用 WASD / 方向键移动，空格或 E 互动；B 打开或收起行囊。\n\n不用预先记住所有系统。第一次遇到采集、修缮、种植或买卖时，游戏会在当时说明。');
 }
-const arrivalBeats=[
-  ['岭南雨歇','最后一阵雨停在山后。车辙陷进湿泥，押送的人把文书卷起，指了指前面那扇久闭的院门。'],
-  ['父亲 · 门前','「到了。箱笼先别全搬，门锁、屋瓦和能落脚的地方，都要亲眼看过再说。」'],
-  ['母亲 · 门前','「你一路也累了。先接好文书，别让雨打湿；屋里的事，我们进去一件件看。」'],
-  ['祖父 · 门前','「往后的日子，不必今日就想完。先把这扇门打开吧。」']
-];
-function showFirstSteps(){
-  activity('第一步 · 走到家人身边','先只做眼前这一件事：走近门边的家人与行李。\n\n鼠标：点击右下角的引导，人物会自动走过去。\n键盘：用 WASD 或方向键走近，再按空格互动。','tutorial');
-  $('dialogKicker').textContent='初行小引 · 边走边学';
-  button('我来试试',()=>{closeDialog(true);focusedObjectId='familyLuggage';lastInteractionHint='';notice('第一步：点击右下角「家人与行李」，或走近后按空格。',true);},'first-step-try');
-  button('先自己看看',()=>{closeDialog(true);notice('需要提示时，看右下角「初行引导」；玩法会在第一次遇到时说明。');},'first-step-explore',true);
-}
 function finishOpeningIntro(){
   closeDialog(true);focusedObjectId='familyLuggage';lastInteractionHint='';
-  notice(window.NanlanI18n?.language==='en'?'Walk towards your family and the luggage. Use WASD / arrow keys, then press Space; or click the guide at the lower right.':'走近家人与行李。用 WASD / 方向键移动后按空格，或点击右下角的初行引导。',true);
+  notice(deskText('母亲在门边招手。点右下角提示走过去，或自己走近后按空格。','Mother beckons by the gate. Tap the guide at the lower right, or walk up and press Space.'),true);
   refreshInteractionHint();
 }
-function showArrivalBeat(index=0){
-  const [title,line]=arrivalBeats[index];activity(title,line,'arrival');$('dialog').classList.add('arrival-mode');
-  $('dialogKicker').textContent='初见南澜 · '+(index+1)+' / '+arrivalBeats.length;$('skip').textContent='跳过演出 ×';
-  $('skip').onclick=showFirstSteps;
-  if(index<arrivalBeats.length-1)button('继续听下去',()=>showArrivalBeat(index+1),'arrival-next',false,false);
-  else button('走近家人与行李',showFirstSteps,'arrival-enter',false,false);
+function goToArrival(action){
+  const target=visibleObjects().find(o=>o.action===action);
+  closeDialog(true);
+  if(target)approach(target);
+}
+function arrivalReply(choice){
+  const grandfather=choice==='grandfather';
+  activity(grandfather?'祖父 · 门前':'母亲 · 门前',grandfather?
+    deskText('祖父借你的手站稳，侧耳听了听。「声在东边。像是风吹着一扇没拴紧的窗。进去瞧瞧。」','Grandfather steadies himself on your arm and listens. “From the east. It sounds like a shutter loose in the wind. Let us look inside.”'):
+    deskText('你把箱笼挪到檐下。母亲摸了摸箱底：「铺盖还干着。只要屋里有一块干地，今晚就能先安顿。」','You move the trunk under the eaves. Mother feels its underside. “The bedding is still dry. Find one dry spot inside and we can settle for the night.”'),'arrival');
+  navButton(deskText('去接院门钥匙','Go and take the key'),()=>goToArrival('key'),'arrival-go-key');
+}
+function playQuickArrival(){
+  if(!window.NanlanOpening){finishOpeningIntro();return;}
+  window.NanlanOpening.play({
+    title:['初到南澜','Arrival in Nanlan'],
+    skip:['直接到门前','Go Straight to the Gate'],
+    last:['到门前帮家人 · 空格','Go Help Your Family · Space'],
+    shots:[{duration:7000,image:'opening-homecoming-v663.webp',asset:'gate',environment:'gate',roles:[],
+      title:['门里响了两下','Two Knocks Behind the Gate'],
+      line:['迁往岭南的路，到这扇门前就走完了。\n母亲按住装着干铺盖的箱笼：「再下雨前，得给一家人找个能落脚的地方。」','The road to Lingnan ends at this gate.\nMother holds down the trunk with the dry bedding. “We need somewhere to settle before the rain comes again.”']}]
+  },finishOpeningIntro);
 }
 async function restoreAutomaticBackup(){
   const raw=localStorage.getItem('nanlan_v20_previous');if(!raw){notice('目前没有可恢复的自动备份。',true);return;}
@@ -1781,7 +1801,7 @@ async function beginGame(confirmed=false){
     if(!await loadImage('gate')){$('loadWarning').hidden=false;$('loadWarning').textContent='旧宅门前图片未能载入，请稍后再试。';return;}
     if(storedRaw&&!engine.memoryOnly){storage.setItem('nanlan_v20_previous',storedRaw);$('restoreAutoBackup').hidden=false;}
     engine.reset(gender);if(!engine.memoryOnly)localStorage.removeItem('nanlan_last_night');started=true;active=true;$('start').hidden=true;$('hud').hidden=false;storedRaw=null;
-    refreshHud();if(window.NanlanOpening)window.NanlanOpening.start(finishOpeningIntro);else showArrivalBeat();
+    refreshHud();playQuickArrival();
   }catch(e){
     activity('浏览器暂时无法保存','当前浏览器没有可用的本地存储。你可以检查浏览器设置后重试，或选择仅本次试玩；试玩模式关闭网页后不会保留进度。');
     button('仅本次试玩 · 我知道关闭后会丢失',()=>{engine.memoryOnly=true;storedRaw=null;closeDialog();beginGame();},'memory-only');
@@ -1841,4 +1861,5 @@ window.addEventListener('beforeunload',()=>{if(started)engine.save();});
 loadImage('walkFemale');loadImage('walkMale');loadImage('bedDamage');loadImage('storePickups');loadImage('bed');loadImage('gate');loadImage('yard');loadImage('npc_playerFemale');loadImage('npc_playerMale');loadImage('bedPatched');loadImage('weedPatch');refreshHud();requestAnimationFrame(frame);
 
 document.addEventListener('nanlanlanguagechange',()=>{if(started)refreshHud();});
+
 

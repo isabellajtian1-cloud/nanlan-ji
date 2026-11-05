@@ -5,11 +5,11 @@
 })(globalThis,()=>{
   const rooms=['clothShop','bookShop','countyInn'];
   const itemNames={townSwatch:'布样册',townNotebook:'线装小札'};
-  const terms={swatch:2,book:3,meal:5,stay:6,mealRest:20,mealTime:20,bookTime:12};
+  const terms={swatch:2,book:3,meal:5,mealRest:20,mealTime:20,bookTime:12};
   const colors={indigo:'靛青',tea:'茶褐',persimmon:'柿红'};
   const uses={herbs:'草木札',road:'行路记'};
   const minute=(s,n)=>Math.max(s.worldTick,Math.min(s.worldTick+n,Math.floor(s.worldTick/1440)*1440+1320));
-  function act(s,name,p,{requireThat,requireScene,give,log,sleepToMorning}){
+  function act(s,name,p,{requireThat,requireScene,give,log}){
     requireThat(s.flags.volume2Started,'第二卷开启后，方可在南街走访这几间铺子。');
     const choices=s.choices;
     function pay(n,note,item){
@@ -35,10 +35,6 @@
       requireThat(s.stamina<100,'体力已满，可以把这一碗留待赶路回来。');
       pay(terms.meal,'南街客栈 · 一碗热饭');s.stamina=Math.min(100,s.stamina+terms.mealRest);
       s.worldTick=minute(s,terms.mealTime);return;
-    }
-    if(name==='townStay'){
-      requireScene(s,'countyInn');requireThat(s.mode==='daily','请先安顿家里，再到客栈投宿。');
-      pay(terms.stay,'南街客栈 · 一夜房钱');sleepToMorning(s);return;
     }
     if(name==='townShowSwatch'||name==='townShowBook'){
       const cloth=name==='townShowSwatch',item=cloth?'townSwatch':'townNotebook',key=cloth?'town:motherSaw':'town:grandfatherSaw';

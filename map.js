@@ -3,10 +3,10 @@ const mapPositions={
   gate:[190,535],yard:[190,365],hall:[190,110],study:[65,235],bed:[325,235],store:[325,445],
   village:[520,520],market:[570,735],county:[850,735],pharmacy:[820,575],generalStore:[1075,735],teahouse:[1070,585],
   foothill:[535,340],mountain:[710,225],bambooGrove:[710,70],mountainside:[935,195],summit:[1080,70],
-  coast:[855,450],tidalflat:[1090,410],wharf:[880,345],oldTrail:[425,156],workshop:[348,615],qingxi:[1040,275],anchorage:[1005,505],guild:[680,630],backHall:[71,87],qPier:[710,760],qFair:[940,665],qSalt:[1090,635],qBamboo:[775,675],qBeacon:[1010,570],qLodge:[1100,785]
+  coast:[855,450],tidalflat:[1090,410],wharf:[880,345],oldTrail:[425,156],workshop:[348,615],qingxi:[1040,275],anchorage:[1005,505],guild:[680,630],backHall:[71,87],qPier:[710,760],qFair:[940,665],qSalt:[1090,635],qBamboo:[775,675],qBeacon:[1010,570],qLodge:[1100,785],prefDock:[1110,147]
 };
 const mapGroups=[['宅院与房间',['gate','yard','hall','study','bed','store']],
-  ['村镇与县城',['village','market','county','pharmacy','generalStore','teahouse']],['南街新铺',globalThis.NanlanTown.rooms],
+  ['村镇与县城',['village','market','county','pharmacy','generalStore','teahouse']],['南街新铺',[...globalThis.NanlanTown.rooms,'countyRoom']],['府城水路',globalThis.NanlanPrefecture.places],
   ['青岚山',['foothill','mountain','bambooGrove','mountainside','summit']],['南澜海湾',['coast','tidalflat']],['山海之间',['wharf','oldTrail','workshop','qingxi']],['海天帆影',['anchorage','guild','backHall']],['青屿远行',['qPier','qFair','qSalt','qBamboo','qBeacon','qLodge']]];
 const deferredPlaces=['county','pharmacy','generalStore','teahouse'];
 let selectedMapPlace='yard',selectedMapObject=null,navigationTarget=null,navigationObject=null,mapReturnFocus=null,mapZoom=1;
@@ -17,7 +17,8 @@ function mapAccess(id){
   return '';
 }
 function mapKnown(id){
-  const s=state();if(N.voyage.islands.includes(id))return true;return id===s.scene||id==='gate'||!!s.visits[id]||!mapAccess(id);
+  const s=state();if(globalThis.NanlanPrefecture.places.includes(id))return globalThis.NanlanPrefecture.unlocked(s);
+  if(N.voyage.islands.includes(id))return true;return id===s.scene||id==='gate'||!!s.visits[id]||!mapAccess(id);
 }
 function objectiveForStep(flag,label){
   const s=state(),f=s.flags;
@@ -65,7 +66,7 @@ function showMap(id=state().scene,objectId=null){
   drawMap();inspectMapPlace(selectedMapPlace,objectId);$('mapClose').focus();centerMap(selectedMapPlace);
 }
 function centerMap(id){requestAnimationFrame(()=>{
-  const [x,y]=mapPositions[id]||mapPositions.county,scroll=$('mapScroll'),board=$('mapBoard');
+  const [x,y]=mapPositions[id]||(globalThis.NanlanPrefecture.places.includes(id)?mapPositions.prefDock:mapPositions.county),scroll=$('mapScroll'),board=$('mapBoard');
   scroll.scrollTo({left:Math.max(0,x/1200*board.clientWidth-scroll.clientWidth/2),top:Math.max(0,y/820*board.clientHeight-scroll.clientHeight/2),behavior:'smooth'});
 });}
 function setMapZoom(value){
@@ -92,6 +93,7 @@ function drawMap(){
     else svg+='<path class="map-route" d="'+d+'" fill="none" stroke="#d8c59c" stroke-width="4" stroke-dasharray="7 7" opacity=".72"/><path class="map-route" d="'+d+'" fill="none" stroke="#6d6048" stroke-width="1.4" stroke-dasharray="7 7" opacity=".75"/>';
   }$('mapLines').innerHTML=svg;$('mapNodes').replaceChildren();
   for(const [id,[x,y]] of Object.entries(mapPositions)){
+    if(id==='prefDock'&&!globalThis.NanlanPrefecture.unlocked(s))continue;
     const why=mapAccess(id),known=mapKnown(id),b=document.createElement('button');
     b.className='map-node'+(!why?' open':'')+(s.scene===id?' current':'')+(objective.scene===id?' objective':'');
     b.dataset.mapPlace=id;b.style.left=(x/12)+'%';b.style.top=(y/8.2)+'%';
@@ -118,6 +120,11 @@ function inspectMapPlace(id,objectId=null){
   if(!why&&route===null)description+='\n当前通路尚未连通，先完成门前交接或当前修路任务。';
   $('mapPlaceDescription').textContent=description;
   function add(label,fn,secondary){const b=document.createElement('button');b.textContent=label;b.onclick=fn;if(secondary)b.className='secondary';$('mapPlaceActions').append(b);}
+  const pref=globalThis.NanlanPrefecture;
+  if(started&&pref.places.includes(id)&&!pref.away(s)&&!N.voyage.get(s)?.away)
+    add(deskText('去新河埠查看府城班船','Go to New River Wharf to check the ferry'),()=>{closeMap();startNavigation('wharf','prefBoard');});
+  if(started&&pref.away(s)&&!pref.places.includes(id))
+    add(deskText('去府城河埠搭回程船','Go to the landing for the return ferry'),()=>{closeMap();startNavigation('prefDock','prefReturn');});
   if(started&&!why&&route!==null)add(s.scene===target?(o?'走近目标 · '+o.label:'查看这里的互动地点'):'沿路前往'+w.name,()=>{closeMap();if(state().scene===target&&!o)showNearby();else startNavigation(target,o?.id);});
   if(started&&!why&&route!==null&&s.visits[target]&&target!==s.scene)add('快速抵达 · 已走过的地方',()=>quickTravel(target,o?.id),true);
   if(!started)add('从旧宅门前启程',()=>{closeMap();$('begin').focus();});
@@ -138,12 +145,14 @@ function drawPlaceLists(){
   $('allPlaceList').replaceChildren();
   mapGroups.forEach(([title,ids])=>{
     if(title==='南街新铺'&&!state().flags.volume2Started)return;
+    if(title==='府城水路'&&!globalThis.NanlanPrefecture.unlocked(state()))return;
     const box=document.createElement('section');box.className='place-list-card';const heading=document.createElement('b');heading.textContent=title;box.append(heading);
     for(const id of ids){
       const known=mapKnown(id),b=document.createElement('button');b.className='directory-scene';b.textContent=known?world[id].name+' · '+(mapAccess(id)?'尚未走通':'已经认得'):'未题名 · 等待探索';
       b.onclick=()=>{inspectMapPlace(id);centerMap(id);};box.append(b);
       if(!known)continue;
-      const entries=world[id].objects.filter(o=>!o.id.startsWith('neighbor-')||visibleObjects(id,true).some(v=>v.id===o.id));const details=document.createElement('details'),summary=document.createElement('summary');summary.textContent='展开 '+entries.length+' 处人物、设施与采集点';details.append(summary);
+      const shown=new Set(visibleObjects(id,true).map(o=>o.id));
+      const entries=world[id].objects.filter(o=>!(o.festival||o.id==='prefBoard'||o.id.startsWith('neighbor-'))||shown.has(o.id));const details=document.createElement('details'),summary=document.createElement('summary');summary.textContent='展开 '+entries.length+' 处人物、设施与采集点';details.append(summary);
       for(const o of entries){const local=document.createElement('button');local.textContent=o.label;local.onclick=()=>{inspectMapPlace(id,o.id);centerMap(id);$('mapInspector').scrollIntoView({block:'nearest',behavior:'smooth'});};details.append(local);}
       box.append(details);
     }
@@ -211,7 +220,7 @@ $('mapObjective').onclick=locateObjective;$('mapHome').onclick=()=>{const id=sta
 $('mapZoomOut').onclick=()=>setMapZoom(mapZoom-.15);$('mapZoomIn').onclick=()=>setMapZoom(mapZoom+.15);$('mapZoomReset').onclick=()=>setMapZoom(1);
 $('mapMarkers').onclick=()=>{const hidden=$('mapBoard').classList.toggle('map-cinematic');$('mapMarkers').setAttribute('aria-pressed',String(hidden));$('mapMarkers').textContent=hidden?'显示地点牌 · 继续导航':'隐藏地点牌 · 看全景';};
 $('navigationCancel').onclick=()=>{cancelNavigation();path=[];notice('已停止导航，可自由走动。');};
-$('nightNote').onclick=()=>startNavigation('bed','bedRest');
+$('nightNote').onclick=()=>globalThis.NanlanPrefecture.away(state())?startNavigation('prefDock','prefReturn'):startNavigation('bed','bedRest');
 
 document.addEventListener('nanlanlanguagechange',()=>{if(!$('worldMap').hidden)filterMap();});
 

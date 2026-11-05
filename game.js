@@ -59,6 +59,7 @@ function loadImage(id){
 }
 async function loadSceneAssets(scene){
   const required=[scene];
+  if(scene==='prefTea')required.push('teaServings','teaExtras');
   if(globalThis.NanlanTown.rooms.includes(scene))required.push(...world[scene].objects.filter(o=>o.role).map(o=>'npc_'+o.role));
   if(scene==='backHall')required.push('backHallReady');
   if(world[scene]?.objects?.some(o=>o.v3Art!=null))required.push('v3Props');
@@ -139,6 +140,7 @@ function renderCompletionFeedback(time){
   ctx.restore();
 }
 function dialogueCast(title){
+  if(title.startsWith('杜掌柜'))return [['杜掌柜','customer']];
   const shopkeeper=[['顾绣娘','clothKeeper'],['叶先生','bookKeeper'],['冯掌柜','innKeeper']].find(([name])=>title.startsWith(name));
   if(shopkeeper)return [shopkeeper];
   const people=[['苏茂','seaMerchant'],['京中故交','visitor'],['梁问炊','liang'],['罗小满','xiaoman'],['何行舟','boatman'],['周成','zhou'],['方掌柜','fang'],['祖父','grandfather'],['父亲','father'],['母亲','mother'],['陈伯','chen'],['许青禾','doctor'],['阿岑','cen'],['程婉','wan'],['沈晚渔','yu'],['邱管事','qiu'],['林师傅','lin'],['郑掌柜','landlord'],['陆掌柜','neighbor'],['茶馆掌柜','tea'],['罗掌柜','tea'],['南街熟客','customer'],['官兵','guard']];
@@ -210,15 +212,29 @@ async function perform(name,p={},rerender){
   if(dialogObject&&!nearObject(dialogObject)){const failed={ok:false,message:'请先走到物件旁，再进行操作。'};notice(failed.message,true);closeDialog();return failed;}
   if(name==='openGate'&&!await loadImage('yard')){const failed={ok:false,message:'庭院图片未能载入，请重试。原有进度已保留。'};notice(failed.message,true);return failed;}
   if(['shareFirst','shareFeast','liangShare'].includes(name)&&!await loadImage(state().gender==='male'?'familyMealMale':'familyMealFemale')){const failed={ok:false,message:'用餐画面未加载完成，请再试一次；饭菜尚未扣除。'};notice(failed.message,true);return failed;}
+  const ferryTo={prefSail:'prefDock',prefReturn:'wharf'}[name];
+  if(ferryTo&&!await loadSceneAssets(ferryTo)){
+    const failed={ok:false,message:'目的地图片未能载入。船脚尚未扣除，请重试。'};notice(failed.message,true);return failed;
+  }
   const gathered=['collect','harvest','clearWeed','silkLeaves','silkHarvest','silkHarvestFish','silkKit'].includes(name),beforeBag=gathered?{...state().bag}:null;
-  const nightCopy=['sleep','townStay'].includes(name)&&!engine.memoryOnly?JSON.stringify(state()):null;
+  const nightCopy=['sleep','prefSleep'].includes(name)&&!engine.memoryOnly?JSON.stringify(state()):null;
+  const previous=state();
   const result=engine.act(name,p);
   if(nightCopy&&result.ok&&!result.duplicate){try{localStorage.setItem('nanlan_last_night',nightCopy);}catch{notice(deskText('已过夜，设备空间不足，未能保留睡前副本。','Morning has come, but the device could not keep a bedtime copy.'),true);}}
   if(!result.ok){window.NanlanAudio?.play('blocked');notice(result.message,true);$('saveState').textContent=result.message.startsWith('保存失败')?'本次动作尚未保存':'当前目标尚待完成';return result;}
   if(!result.duplicate)window.NanlanAudio?.play(p.seal?(p.seal==='stone'?'sealStone':'sealWood'):name==='openGate'?'door':/water|Water/.test(name)?'water':/repair|Repair|patch|Patch|craft|Craft/.test(name)?'repair':/nap|sleep|townStay|townMeal/.test(name)?'rest':/collect|harvest|Harvest|gather/.test(name)?'gather':'success');
   $('saveState').textContent=engine.memoryOnly?'仅本次试玩 · 关闭网页会丢失':'已保存';
+  if(!result.duplicate){
+    const memory=window.NanlanMemoryBook?.unlocked(previous,state());
+    if(memory)$('saveState').textContent=memory;
+  }
   if(result.completed)reward(result.completed,!!p.seal);
   refreshHud();
+  if(ferryTo){
+    closeDialog(true);focusedObjectId=null;lastInteractionHint='';render();
+    notice(name==='prefSail'?'沿水路抵达府城，回程船脚已付。':'已凭船凭回到南澜新河埠。');
+    return result;
+  }
   if(name==='openGate'){closeDialog();render();notice('院门打开了。先去东厢房检查窗格与漏点。');return result;}
   if(name==='v2Sign'&&window.NanlanProduction){window.NanlanProduction.mounted();return result;}
   if(rerender)rerender();else notice(result.duplicate?'这件事已经办好了。':actionMessage(name));
@@ -339,8 +355,10 @@ function showTime(){
   const list=document.createElement('div');list.className='time-cards';
   entries.forEach(([title,text])=>{const card=document.createElement('div'),b=document.createElement('b'),p=document.createElement('p');b.textContent=title;p.textContent=text;card.append(b,p);list.append(card);});$('panelExtra').append(list);
   if(N.voyage.get(s))navButton(window.NanlanI18n?.language==='en'?'Open the travel book and invitations':'查看旅途册与闲日邀约',()=>window.NanlanVoyageUI.ledger(),'clock-voyage');
+  if(!c.story)navButton('年节簿',()=>window.NanlanFestivalUI.festivalCalendar(),'clock-festivals');
   button('在舆图上查看全部地点',()=>{closeDialog();showMap();},'time-map',true);
-  if(s.flags.bedReady)button('找卧房（东厢房）床榻 · 两种休息',()=>{closeDialog();startNavigation('bed','bedRest');},'time-rest');
+  if(globalThis.NanlanPrefecture.away(s))navButton(deskText('去府城候船棚','Find the prefectural ferry shelter'),()=>startNavigation('prefDock','prefReturn'),'time-pref-dock');
+  else if(s.flags.bedReady)button('找卧房（东厢房）床榻 · 两种休息',()=>{closeDialog();startNavigation('bed','bedRest');},'time-rest');
 }
 function rowProgress(flag){
   const s=state();if(flag==='pathCleared')return ['weed1','weed2','weed3'].filter(k=>s.collected[k]).length+'/3';
@@ -383,12 +401,15 @@ function refreshHud(){
   $('statusTime').textContent=t.short;$('clock').replaceChildren();
   const text=document.createElement('div');text.style.whiteSpace='pre-line';text.textContent=t.full;
   const small=document.createElement('small');small.textContent=t.extra;$('clock').append(text,small);
+  const festival=window.NanlanFestivalUI?.active(s);
+  if(festival){const seasonNote=document.createElement('small');seasonNote.className='festival-clock';seasonNote.textContent=festival.name[0];$('clock').append(seasonNote);}
   const track=document.createElement('span'),sun=document.createElement('i'),hint=document.createElement('small');
   track.className='day-track';sun.style.left=(N.daylight(s).progress*100)+'%';sun.textContent=N.daylight(s).darkness>.5?'☾':'☀';track.append(sun);hint.className='clock-hint';hint.textContent='点此查看日历与生长';$('clock').append(track,hint);
   $('clock').setAttribute('aria-label','查看日期、昼夜与潮汐：'+t.short);
   $('energy').textContent=Math.floor(s.stamina);$('energyBar').style.width=s.stamina+'%';$('coins').textContent=s.coins;
   refreshQuestBanner(s,q);$('nightNote').hidden=!(s.mode==='daily'&&N.clock(s).minute>=1320);
   $('nightNote').querySelector('strong').textContent=N.voyage.get(s)?.away?(window.NanlanI18n?.language==='en'?'Take me to the guest courtyard':'带我到宿院歇一夜'):(window.NanlanI18n?.language==='en'?'Take me to the bed in the East Wing':'带我回卧房（东厢房）床榻');
+  if(globalThis.NanlanPrefecture.away(s))$('nightNote').querySelector('strong').textContent=deskText('去府城候船棚等天亮','Wait for morning at the landing shelter');
   refreshToolbar();window.NanlanChapterMark?.refresh(s,started);window.NanlanEndings?.refresh(s,started);
 }
 const toolDefs=[
@@ -454,7 +475,7 @@ function showQuest(){
   if(q){const list=document.createElement('div');renderQuestSteps(list,true);$('panelExtra').append(list);}
   navButton(window.NanlanI18n?.language==='en'?'Chapter Entrances · Requirements':'篇章入口 · 查看开启条件与去向',()=>window.NanlanChapters.show(),'quest-chapter-entry');
   button('回看已经走过的路',showQuestCatalog,'catalog',true);
-  window.NanlanMemoryBook?.link();
+  window.NanlanMemoryBook?.link(showQuest);
   button('查看家人与邻里留下的回应',showJournal,'journal',true);
 }
 function showQuestCatalog(){
@@ -686,6 +707,7 @@ function showArchive(){
     s.flags.bookReturned&&!s.flags.copyApproved?'原簿已经交还程婉。等获准留下誊写副本，再来回看。':
     '这里只整理获准晾晒或誊写的页。原簿始终属于程婉；重复整理不产生额外物资。\n\n已整理 '+Object.keys(s.pages).length+'/4 片。');
   if(s.children)globalThis.NanlanKids?.home(showArchive);
+  navButton(deskText('翻看祖父的诗笺','Read Grandfather’s poetry slips'),()=>window.NanlanFestivalUI.poetryBook(),'study-poetry');
   if(s.flags.ledgerPermission&&(!s.flags.bookReturned||s.flags.copyApproved)){
     const texts=['纸边写着借灯时日，名字暂缺一角。','一栏记下归还器具，旁边画着小花。','雨痕间留着相助的人名，等当事人核对。','同一件事的几页放在一起，先不把数字都当作欠账。'];
     texts.forEach((line,index)=>button((s.pages[index]?'✓ 回看':'整理')+' · 第 '+(index+1)+' 片',()=>{activity('获准的第 '+(index+1)+' 片',line+(s.flags.historyConfirmed?'\n\n这些记号记着旧时互助，原簿已回到程婉手中。':'\n\n眼下只认出纸页的次序，往事还需当事人说清。'));if(!s.pages[index])actButton('理好页序，记一条笔记','sortPage',{index},showArchive,'sort-'+index);else button('返回书案',showArchive,'archive-back',true);},'page-'+index,true));
@@ -1032,6 +1054,7 @@ function objectGate(o){
 function visibleObjects(scene=state().scene,includeCooling=false){
   const s=state(),f=s.flags,q=N.current(s);
   return world[scene].objects.filter(o=>{
+    if(globalThis.NanlanFestivalUI&&!globalThis.NanlanFestivalUI.visible(s,o))return false;
     if(globalThis.NanlanTown.rooms.includes(o.to)&&!f.volume2Started)return false;
     if(globalThis.NanlanVoyageUI&&!globalThis.NanlanVoyageUI.visible(s,scene,o))return false;
     if(globalThis.NanlanV5&&!globalThis.NanlanV5.visible(s,o))return false;
@@ -1109,6 +1132,7 @@ function refreshInteractionHint(){
 async function interact(o){
   if(!o||transitioning)return;
   if(!nearObject(o)){notice('先走近'+o.label+'。');return;}
+  if(globalThis.NanlanFestivalUI?.offer(o)){dialogObject=o;return;}
   if(globalThis.NanlanTownUI?.offer(o)){dialogObject=o;return;}
   if(globalThis.NanlanVoyageUI?.offer(o)){dialogObject=o;return;}
   if(o.action==='kidsCamp'){dialogObject=o;globalThis.NanlanKids.play();return;}
@@ -1543,6 +1567,9 @@ function render(){
 
   for(const o of visibleObjects()){
     if(o.x<left-70||o.x>right+70)continue;
+    if(o.festival||o.tabletop)actors.push({layer:40,y:o.y,draw:()=>window.NanlanFestivalUI?.draw(ctx,s,o)});
+    if(o.tabletop){const [x,y]=o.tabletop;hitTargets.push({o,rect:null,anchor:{x:x-45,y:y-30,w:90,h:65}});}
+    if(o.festival)hitTargets.push({o,rect:null,anchor:{x:o.x-36,y:o.y-70,w:72,h:75}});
     const locked=!!objectGate(o)||o.type==='locked'||o.type==='property',selected=o.id===focusedObjectId||o===destination,isObjective=o===objective;
     if(o.id==='dryRackVisual'){
       actors.push({layer:40,y:o.y,draw:()=>{ctx.save();const x=o.x,y=o.y;ctx.strokeStyle='#765334';ctx.lineCap='round';ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(x-31,y);ctx.lineTo(x-23,y-61);ctx.moveTo(x+31,y);ctx.lineTo(x+23,y-61);ctx.stroke();ctx.strokeStyle='#b98a4e';ctx.lineWidth=3;for(let j=0;j<5;j++){ctx.beginPath();ctx.moveTo(x-30,y-52+j*10);ctx.lineTo(x+30,y-52+j*10);ctx.stroke();}ctx.fillStyle='#71854f';for(let j=0;j<9;j++){ctx.beginPath();ctx.ellipse(x-24+j*6,y-48+(j%3)*10,5,2.5,(j%2?-.5:.4),0,Math.PI*2);ctx.fill();}ctx.restore();}});

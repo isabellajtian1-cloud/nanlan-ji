@@ -14,6 +14,8 @@
 .chapter-leaves small{color:#896c40;font-size:12px}
 .chapter-leaves p{margin:6px 0 0;line-height:1.8}
 .chapter-unwritten{color:#8a7958;text-align:center;padding:14px;font-size:13px}
+.memory-chapter>summary{box-sizing:border-box;min-height:44px;padding:11px 8px;color:#36513b;line-height:1.5;cursor:pointer}
+.memory-chapter>summary:focus-visible{outline:2px solid #36513b;outline-offset:-2px}
 @media(max-width:650px){#chapterClock{right:10px;top:10px;min-width:0;max-width:155px}#chapterMark{font-size:10px;padding:4px 7px;letter-spacing:0}#volumeIntertitle{top:36%;padding:22px 14px;width:82vw}#volumeIntertitle small{font-size:12px}}
 @media(max-height:560px) and (orientation:landscape){#chapterClock{right:10px;top:10px;max-width:175px;gap:3px}#chapterMark{font-size:10px;padding:2px 7px}}
 @media(prefers-reduced-motion:reduce){.ink-arrival{animation:none}}

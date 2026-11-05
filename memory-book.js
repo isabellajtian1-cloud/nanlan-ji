@@ -4,7 +4,14 @@
 
   const english = () => window.NanlanI18n?.language === 'en';
   const local = (zh, en) => english() ? en : zh;
-  const chapters = ['一', '二', '三', '四', '五', '六'];
+  const chapters = [
+    ['第一卷 · 初抵南澜', 'Volume I · Arrival in Nanlan'],
+    ['第二卷 · 南街灯起', 'Volume II · South Street Lights'],
+    ['第三卷 · 山海成行', 'Volume III · Roads between Hills and Sea'],
+    ['第四卷 · 海天帆影', 'Volume IV · Sails beneath Open Skies'],
+    ['第五卷 · 岁序长青', 'Volume V · Enduring Seasons'],
+    ['第六卷 · 春潮有信', 'Volume VI · Letters on the Spring Tide']
+  ];
   const milestones = [
     [1, 'firstRepair', ['旧屋的第一处修补', 'The First Repair'], [
       '在东厢检查过窗格和漏点，亲手修好最急的一处。',
@@ -72,8 +79,40 @@
     return milestones.filter(([, flag]) => save.flags[flag] === true);
   }
 
-  function show() {
-    const records = entries(state());
+  const repairMemories = {
+    window: [['修好的第一扇窗', 'The First Window Repaired'], [
+      '你先修了东厢松动的窗格。搬进床褥之前，屋里已经少了一处透风的地方。',
+      'You repaired the loose window in the east room first, closing one draft before moving in the bedding.'
+    ]],
+    leak: [['补好的第一处漏点', 'The First Leak Patched'], [
+      '你先补了东厢的漏点，给准备搬进去的床褥留了一处干爽地方。',
+      'You patched the leak in the east room first, making a dry spot for the bedding.'
+    ]]
+  };
+
+  function words(record, save) {
+    const [, flag, name, description] = record;
+    if (flag === 'firstRepair') {
+      const choice = save.choices?.repair;
+      if (choice === 'window' || choice === 'leak') return repairMemories[choice];
+    }
+    return [name, description];
+  }
+
+  function unlocked(previous, save) {
+    const newRecords = entries(save).filter(([, flag]) => previous.flags[flag] !== true);
+    if (!newRecords.length) return '';
+    if (newRecords.length === 1) {
+      const [name] = words(newRecords[0], save);
+      return local('旧事簿添页 · ', 'New memory · ') + local(...name);
+    }
+    return local('旧事簿新增 ' + newRecords.length + ' 页', newRecords.length + ' new memories');
+  }
+
+  let returnTo;
+  function show(openChapters) {
+    const save = state();
+    const records = entries(save);
     const title = local('南澜旧事簿', 'Nanlan Book of Memories');
     const intro = records.length
       ? local('已写下 ' + records.length + ' 件旧事。', records.length + (records.length === 1 ? ' memory recorded.' : ' memories recorded.'))
@@ -83,35 +122,53 @@
     $('dialogKicker').textContent = local('亲手做过的事', 'Things you made happen');
 
     if (records.length) {
-      const list = document.createElement('div');
-      list.className = 'chapter-leaves';
-      list.dataset.noLocalize = '';
-      for (const [chapter, flag, name, description] of records) {
-        const row = document.createElement('article');
-        const heading = document.createElement('h3');
-        const volume = document.createElement('small');
-        const body = document.createElement('p');
-        row.dataset.memory = flag;
-        heading.textContent = local(...name);
-        volume.textContent = local('第' + chapters[chapter - 1] + '卷', 'Volume ' + chapter);
-        body.textContent = local(...description);
-        row.append(heading, volume, body);
-        list.append(row);
+      for (let chapter = chapters.length; chapter >= 1; chapter--) {
+        const memories = records.filter(([volume]) => volume === chapter);
+        if (!memories.length) continue;
+        const group = document.createElement('details');
+        const label = document.createElement('summary');
+        group.className = 'chapter-leaves memory-chapter';
+        group.dataset.noLocalize = '';
+        group.dataset.memoryChapter = String(chapter);
+        group.open = openChapters ? openChapters.has(String(chapter)) : chapter === records.at(-1)[0];
+        label.textContent = local(...chapters[chapter - 1]) + ' · ' + memories.length;
+        group.append(label);
+        for (const record of memories) {
+          const [, flag] = record;
+          const [name, description] = words(record, save);
+          const row = document.createElement('article');
+          const heading = document.createElement('h3');
+          const body = document.createElement('p');
+          row.dataset.memory = flag;
+          heading.textContent = local(...name);
+          body.textContent = local(...description);
+          row.append(heading, body);
+          group.append(row);
+        }
+        $('panelExtra').append(group);
       }
-      $('panelExtra').append(list);
     }
 
+    navButton(local('返回上一页', 'Back to Previous Page'), returnTo, 'memory-book-back').dataset.noLocalize = '';
     navButton(local('合上旧事簿', 'Close the Book'), () => closeDialog(true), 'memory-book-close');
   }
 
-  function link() {
+  function link(back) {
     const label = local('翻开南澜旧事簿', 'Open the Nanlan Book of Memories');
-    const button = navButton(label, show, 'memory-book');
+    const count = entries(state()).length;
+    const button = navButton(count ? label + ' · ' + count : label, () => {
+      returnTo = back;
+      show();
+    }, 'memory-book');
     button.dataset.noLocalize = '';
   }
 
   document.addEventListener('nanlanlanguagechange', () => {
-    if (!$('dialog').hidden && dialogKind === 'memory-book') show();
+    if (!$('dialog').hidden && dialogKind === 'memory-book') {
+      const openChapters = new Set([...$('panelExtra').querySelectorAll('.memory-chapter[open]')]
+        .map(group => group.dataset.memoryChapter));
+      show(openChapters);
+    }
   });
-  window.NanlanMemoryBook = {link};
+  window.NanlanMemoryBook = {link, unlocked};
 })();

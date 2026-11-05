@@ -76,12 +76,69 @@
       lines('把空白留给以后的日子。','Leave the blank pages for the days to come.'),lines('他合上册子，轻轻推回你面前。「往后哪件事值得记，由你自己定。」','He closes the book and slides it back to you. “What is worth writing down next is yours to decide.”'))
   };
 
-  function show(exchange,back){
+  /* A few turning points linger for another exchange instead of ending after one reply. */
+  const afterthoughts={
+    M02:[
+      lines('母亲走到门边，又回头看了一眼床榻。「你祖父嘴上不说，腿脚一路都在疼。等他睡下，咱们再把漏处接一接。今晚先让这一间像个能住人的地方。」','Mother reaches the doorway, then looks back at the bed. “Your grandfather has said nothing, but his legs have ached all the way here. Once he is asleep, we can set another bowl beneath the leak. Tonight, let us first make this room feel inhabitable.”'),
+      lines('她低头揉了揉手腕。「在京里时，总有人替我搬最沉的箱子。如今许多事得重新学，可一家人都在，慢一点也不怕。」','She rubs her wrist. “In the Capital, someone always carried the heaviest chest for me. There is much I must learn anew, but the family is here. I do not mind learning slowly.”')
+    ],
+    M05:[
+      lines('陈伯把信重新折好，没有立刻收起。「村里不识字的人不少，倒不是没有话想说。往后谁托你念信，你若遇着不愿当众念的，就给他留个安静地方。」','Uncle Chen folds the letter but does not put it away. “Many in the village cannot read, though they have plenty they wish to say. If someone asks you to read a letter and would rather not hear it before a crowd, find them a quiet place.”'),
+      lines('他又补了一道去水边的短线。「雨后这条近路会滑。你认路以后，也别只顾走得快。看见谁提着重物，就同他走慢些。」','He adds a short line toward the water. “This shortcut grows slippery after rain. Once you know the paths, do not think only of walking quickly. If someone carries a heavy load, walk slowly beside them.”')
+    ],
+    M15:[
+      lines('父亲把河草放在窗台上晾着。「我总想着事情办妥再回家，免得你们跟着操心。今日才明白，不留话，本身就是叫人操心。这个习惯，我改。」','Father lays the river grass on the sill to dry. “I always thought I should finish the matter before coming home, so none of you would worry with me. Today I learned that leaving no word is itself a cause for worry. I will change that habit.”'),
+      lines('父亲擦到一半，忽然笑了一下。「你小时候晚归，我也总在门边听脚步。轮到你等我，原来是同一种滋味。以后咱们谁出门，都给家里一个准信。」','Halfway through drying his feet, Father gives a small laugh. “When you came home late as a child, I listened for your steps by the door. Now you have waited for me, and I see it is the same feeling. From now on, whoever leaves will give the household a clear word.”')
+    ],
+    M20:[
+      lines('祖父望向门外亮着的灯。「从前说起家，总以为是祖上传下来的那一处宅子。如今想想，能让人添一把椅子的地方，也就是家了。明年若真来了新客，别忘了问他爱吃什么。」','Grandfather looks toward the lantern beyond the door. “I once thought home meant only the house handed down by our ancestors. Now I think it may be any place where one can add another chair. If a new guest truly comes next year, remember to ask what they like to eat.”'),
+      lines('他把最远的一只空碗收回来。「家里人坐得舒服，才有余力照看来客。咱们不必把每件事都做得体面周全，先叫做饭的人吃上热的，便很好。」','He gathers the empty bowl at the far end. “When the family can sit in comfort, we have strength left to care for guests. Everything need not be perfectly proper. Let the cook eat while the food is hot, and that will be enough.”')
+    ],
+    V2_18:[
+      lines('父亲在页脚添了一个小小的记号。「账若只记进出，久了便看不出这条街为什么愿意照应咱们。人情不能折成铜钱，可该记得是谁在难处伸过手。」','Father adds a small mark at the foot of the page. “If a ledger records only goods in and out, we will forget why this street chose to look after us. Kindness cannot be turned into coin, yet we should remember who reached out when things were difficult.”'),
+      lines('他将最早的一张压在新账下面。「以后铺子兴许会更忙。若有一天咱们只顾催货、催账，就翻出它来看看，当初一文钱是怎样挣来的。」','He places the earliest sheet beneath the new accounts. “The shop may grow busier. If one day we do nothing but press for goods and payment, we should take this out and remember how the first coin was earned.”')
+    ],
+    V3_08:[
+      lines('小满把约定逐字看了一遍。「我不怕活多，只怕答应时没说清，到了家里和工棚两边都误。把时辰写明，我做事也能更踏实。」','Xiaoman reads the agreement word by word. “I do not fear hard work. I fear agreeing without clarity and failing both home and workshop. With the hours written down, I can work with a steadier heart.”'),
+      lines('她将一缕碎竹屑拂到掌心。「急单来时，你告诉我为何急、急到哪一日。我若接下，就会做完。若接不了，也让你早些另作安排。」','She brushes a curl of bamboo into her palm. “When an urgent order comes, tell me why and by what day. If I take it, I will finish it. If I cannot, you will know early enough to make another plan.”')
+    ],
+    V3_18:[
+      lines('母亲顺着你的目光看向院门。「那盏灯不必很亮，能叫你走到巷口就看见便够了。哪日我晚归，你也替我留着。家不是只等一个人回来。」','Mother follows your gaze toward the courtyard gate. “The lamp need not be bright. It need only be visible from the lane. When I return late, leave it for me too. A home does not wait for only one person.”'),
+      lines('她把汤匙搁在碗边。「被人认得很好，可你不必每到一处都证明自己有用。有时坐在埠边听一会儿水，什么也不卖，也算去过那一天。」','She rests the spoon beside the bowl. “It is good to be known, but you need not prove your usefulness everywhere you go. Sometimes you may sit by the wharf and listen to the water, selling nothing, and that day still counts.”')
+    ],
+    V4_18:[
+      lines('祖父慢慢点头。「从前待客，先问官职来意，生怕失了礼数。到了南澜才知道，人走远路进门，最先需要的不过是一口热饭。许多话，吃过以后反倒说得明白。」','Grandfather nods slowly. “I once asked a guest’s office and purpose first, fearing any lapse in courtesy. In Nanlan I learned that one arriving after a long road first needs a warm meal. Many things become easier to say after eating.”'),
+      lines('祖父看着灯芯稳下来。「京里有人等咱们的信，南澜也有人等咱们开门。两边都是真的，不必非得舍下一头，才算在另一头安身。」','Grandfather watches the flame steady. “There are people in the Capital awaiting our letters, and people in Nanlan awaiting our door to open. Both are true. We need not abandon one before we may settle in the other.”')
+    ],
+    S5_05:[
+      lines('母亲把笔从圈出的日期旁挪开。「你替我看柜台，是一份心意。可我也想学着自己安排，不把歇息变成另一个人的劳累。到那日，咱们一起看看怎样最妥当。」','Mother moves the brush away from the circled day. “Your offer to mind the counter is kind. I also want to learn to arrange my own rest without turning it into someone else’s burden. When the day comes, we will decide together.”'),
+      lines('她想了一会儿，才笑道：「也许去看布，也许走到一半便回来。我从前出门总有一件非办不可的事。这一回，我想试试没有。」','After a moment she smiles. “Perhaps I will look at cloth. Perhaps I will turn back halfway. I once left the house only when something had to be done. This time, I would like to try leaving without such a reason.”')
+    ],
+    S5_18:[
+      lines('小满将纸收进自己的夹册。「从前别人排好日子，我只管去。如今能自己说哪日来、哪日不来，倒像这份活真正有一半是我的。」','Xiaoman slips the sheet into her own folder. “Before, others chose the days and I merely appeared. Now that I may say when I come and when I do not, the work feels truly half mine.”'),
+      lines('她用指尖点了点那片空白。「你也别把自己的日子全写满。管着这么多人做事，最容易忘了自己也在其中。留两日，等到了再决定怎样过。」','She taps the blank space. “Do not fill every day of your own. When you arrange work for so many people, it is easy to forget you are among them. Leave two days and decide how to spend them when they arrive.”')
+    ],
+    V6_06:[
+      lines('祖父松开按着封皮的手。「先听，再写。若他们不愿说，也把那一日怎样生火、怎样收网看在眼里。寻常日子本身就是故事，只是少有人替它留一页。」','Grandfather lifts his hand from the cover. “Listen before you write. If they prefer not to speak, watch how they light the fire and gather their nets. An ordinary day is a story in itself. Few think to leave it a page.”'),
+      lines('祖父笑了笑。「那我得挑一件你没听过的。等你回来，咱们都不许先看对方的册子，各自讲完，再看看记下来的和说出口的有何不同。」','Grandfather smiles. “Then I must choose one you have never heard. When you return, neither of us may look at the other’s book. We will tell our stories first, then see how the written and spoken versions differ.”')
+    ],
+    V6_18:[
+      lines('父亲把册子留在桌上，没有收入箱中。「走得越远，越知道回来吃饭不是一句小话。等大家坐齐，你慢慢讲。漏掉的地方，让同行的人替你补。」','Father leaves the book on the table instead of putting it away. “The farther one travels, the less small a thing it is to come home for a meal. When everyone is seated, tell us slowly. Let your companions fill in what you miss.”'),
+      lines('父亲看了看那些空页。「留白不是催你再走一次。哪怕往后只记院里哪棵树先开花，也一样值得。路由你选，册子只负责替你留住。」','Father looks at the blank pages. “They are not urging you to leave again. If you record only which courtyard tree flowers first, that is worth keeping too. You choose the road. The book merely remembers it.”')
+    ]
+  };
+
+  function show(exchange,back,id){
     activity(exchange.speaker[0],L(...exchange.question),'dialogue-scene');
     dialogObject=null;
     for(const [i,[answer,reply]] of exchange.answers.entries()){
       button(L(...answer),()=>{
         activity(exchange.speaker[0],L(...reply),'dialogue-scene');
+        const more=afterthoughts[id]?.[i];
+        if(more)navButton(L('再听他说下去','Listen a little longer'),()=>{
+          activity(exchange.speaker[0],L(...more),'dialogue-scene');
+          navButton(L('收起这段话','Close this conversation'),back,'scene-return');
+        },'scene-more-'+i);
         navButton(L('收起这段话','Close this conversation'),back,'scene-return');
       },'scene-answer-'+i,false,false);
     }
@@ -90,7 +147,7 @@
   function after(id){
     if(!moments[id])return;
     const label=L('再听一句','Hear one more thing');
-    const open=()=>show(moments[id],()=>closeDialog(true));
+    const open=()=>show(moments[id],()=>closeDialog(true),id);
     if(!$('dialog').hidden){navButton(label,open,'scene-after');return;}
     const link=document.createElement('button');
     link.className='receipt-open';link.textContent=label;link.onclick=()=>{if(active)open();};
@@ -104,7 +161,7 @@
     activity(L('走过的故事','Story Conversations'),L('这里留着一路上家人和街坊说过的话。','Words from family and neighbors along the road.'),'dialogue-scene');
     dialogObject=null;
     for(const [id,exchange] of Object.entries(moments).reverse()){
-      if(N.done(state(),id))navButton(N.titles[id],()=>show(exchange,catalog),'scene-revisit-'+id);
+      if(N.done(state(),id))navButton(N.titles[id],()=>show(exchange,catalog,id),'scene-revisit-'+id);
     }
     navButton(L('回到记事','Return to the journal'),showQuest,'scene-catalog-back');
   }
@@ -132,6 +189,18 @@
     liang:[lines('梁问炊','Liang Wenchui'),lines('梁问炊用竹勺从锅沿拨出一点汤。「我试味只取这么多。做饭的人喝第一口，才知道待会儿端给人家的是怎样一碗。」','Liang takes a little broth from the edge of the pot. “This is all I need to taste. The cook should try the first sip and know what they are about to serve.”'),lines('「若今日盐少些，也不妨让客人先尝。吃饭的人，未必都喜欢咱们一样的味道。」','“If there’s less salt today, let your guests try it first. They need not like exactly what we do.”')],
     seaMerchant:[lines('苏茂','Su Mao'),lines('苏茂按住被风掀起的单子。「海上有许多能带走的东西，也有许多得留在岸上的约。出船前，先把后一桩说清。」','Su Mao holds down a slip the wind lifts. “You can carry a great deal out to sea. The promises you leave ashore need settling first.”'),lines('「若还没说清，就坐下来再问一遍。宁可改一回船期，也别让人守着空码头等。」','“If anything is still unclear, sit and ask again. Better to change the sailing once than leave someone waiting at an empty quay.”')],
     landlord:[lines('郑掌柜','Landlord Zheng'),lines('郑掌柜抬头看了一眼屋檐。「租出去的屋，雨天才最容易看清。看铺时若碰上晴日，记得回来再看一回。」','Zheng glances up at the eaves. “You learn the most about a shop in the rain. If you first see it in fine weather, come back and look again.”'),lines('「哪处该由谁修，都写清罢。以后抬头看见那块瓦，就不用再争。」','“Write down who mends what. The next time you look up at that tile, you won’t have to argue.”')]
+  };
+  const everydayMore={
+    mother:lines('母亲把活重新拿起来，却没有立刻动手。「我也想看看南澜人怎样过日子，不只学会把家里照看好。等咱们得空，慢慢走，不赶着买什么。」','Mother picks up her work but does not begin at once. “I want to see how people in Nanlan live, beyond learning to keep our own household. When we have time, let us walk slowly, with nothing we must buy.”'),
+    father:lines('父亲在路图旁留出一块空白。「从前我总觉得走错了便该抹掉。如今留着也好，家里人看见，便知道哪条路天黑以后不要走。」','Father leaves a blank space beside the map. “I once thought every wrong turn should be erased. Better to keep it. The family will know which path to avoid after dark.”'),
+    grandfather:lines('祖父蘸了墨，又停住。「今日不记生意，也不记远路。就写院里那只鸟落了三回，第三回终于敢来啄米。」','Grandfather dips his brush, then pauses. “Today we will record neither business nor distant roads. We will write that the courtyard bird landed three times, and on the third finally dared to peck at the rice.”'),
+    chen:lines('陈伯把自己的茶也添满。「村里的事说不尽。你不必件件都替人办，只要听明白，知道哪一件该找谁，已经帮了大忙。」','Uncle Chen fills his own cup. “A village has more affairs than anyone can settle. You need not handle them all. Listening well enough to know who should be asked is already a great help.”'),
+    doctor:lines('青禾把两束草重新包好。「人会记错名字，鼻子和手却常记得气味、叶背与茎上的棱。认草木时，多用几样记法，才不怕一时想不起字。」','Qinghe wraps the two bundles again. “Names slip from memory, while nose and hand remember scent, leaf and stem. Learn a plant in several ways, and forgetting a word will not leave you helpless.”'),
+    cen:lines('阿岑把小刀递过来，刀背朝着你。「你试两下便停。山里的活不是一口气做完的，手还稳，明日才走得远。」','A-Cen offers the knife with its back toward you. “Try twice, then stop. Work in the hills is not finished in one breath. A steady hand today lets you travel farther tomorrow.”'),
+    xiaoman:lines('小满把折好的纸按在桌角。「我回去以后，先吃饭，再想明日。这里若有急事，写在纸上，明早我会看见。今晚就让今晚是自己的。」','Xiaoman weighs the folded page at the corner of the table. “When I go home, I will eat before thinking of tomorrow. If anything is urgent, write it here and I will see it in the morning. Tonight may belong to itself.”'),
+    boatman:lines('何行舟顺着水面比了一个弯。「岸上的路靠脚记，水上的路靠许多远处的东西一同记。少看一棵树，回来的弯就可能认成另一个。」','Xingzhou traces a bend over the water. “A road ashore is remembered by the feet. A route on water is held by many distant things together. Miss one tree, and the returning bend may look like another.”'),
+    lin:lines('林师傅把锉刀放平。「停手不是偷懒。木头已经告诉你今日到这里，再硬做下去，明日只剩补救。」','Master Lin lays the file flat. “Stopping is not idleness. The wood has told you that today ends here. Press on, and tomorrow will be spent repairing it.”'),
+    liang:lines('梁问炊把勺洗净挂回原处。「一锅饭不必每回都惊艳。天冷时够热，劳作后够饱，家里人愿意再添半碗，就是好饭。」','Liang rinses the ladle and hangs it back. “A meal need not astonish every time. Hot in cold weather, filling after work, and welcome enough for another half bowl—that is good cooking.”')
   };
   function everydayWords(role,s){
     const entry=everyday[role];
@@ -161,6 +230,11 @@
       activity(name[0],L(...first),'dialogue-scene');dialogObject=o;
       navButton(L('再听一句','Listen a little longer'),()=>{
         activity(name[0],L(...reply),'dialogue-scene');dialogObject=o;
+        const more=everydayMore[role];
+        if(more)navButton(L('再坐一会儿','Stay a little longer'),()=>{
+          activity(name[0],L(...more),'dialogue-scene');dialogObject=o;
+          navButton(L('回到眼前的事','Return to what brought you here'),back,'scene-local-back');
+        },'scene-local-more');
         navButton(L('回到眼前的事','Return to what brought you here'),back,'scene-local-back');
       },'scene-local-continue');
       navButton(L('回到眼前的事','Return to what brought you here'),back,'scene-local-back');

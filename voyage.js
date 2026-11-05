@@ -129,11 +129,26 @@ const epilogueLines=[
   ['归程的水声轻了些。何行舟把借来的物件数齐。「回去吧。下回再出海，也可以只是看看海。」','The water sounds softer on the way back. Xingzhou counts the borrowed things. “Let’s go home. Next time we come out, it can be just to look at the sea.”']
  ]
 ];
+const epilogueExtended={
+ '0:0':['母亲把那只碗在袖口擦了擦，又轻声说：「从前家宴总要顾着规矩，谁先坐、哪道菜先上，都不能错。这一回只看谁有空、谁想来。坐得久一点，也没人催。」','Mother wipes the bowl on her sleeve. “At formal feasts, every seat and every dish had its rule. This time we will ask only who has time and who wishes to come. They may stay as long as they like.”'],
+ '0:3':['祖父在空页上方只写了日期。「其余的等大家自己说。有人记得饭香，有人记得一句玩笑，同一晚本来就可以有许多种记法。」','Grandfather writes only the date at the top of the page. “The rest should come from those who were here. One may remember the food, another a joke. A single evening may be kept in many ways.”'],
+ '1:0':['母亲看着两件货，停了一会儿。「我替家里做过许多决定，却很少有人问我自己喜欢怎样摆。今日不必保证一定卖得好，我想先看看自己的眼光能走到哪里。」','Mother studies the two pieces. “I have made many decisions for this household, but few have asked how I would arrange things for myself. Today need not promise a good sale. I want to see where my own judgment leads.”'],
+ '1:3':['她没有立刻拆掉陈列，只把价签收进匣里。「摆法可以留一晚。明早再看，若我仍喜欢，就不是一时兴起。」','She does not dismantle the display, only puts the price slip away. “The arrangement can stay overnight. If I still like it in the morning, it was more than a passing thought.”'],
+ '2:0':['祖父将手洗净才碰纸。「旧物能留下来，是因为前面的人小心。咱们今日若多一分克制，后来的人便多一分看清原样的机会。」','Grandfather washes his hands before touching the paper. “Old things survive because someone before us was careful. A little restraint today gives those after us a better chance to see what was truly here.”'],
+ '2:3':['孩子们围过来时，他先让他们看那处空白。「不知道便写不知道，这不丢人。把猜的当成真的写下去，才会叫后来的人走错路。」','When the children gather, he first shows them the blank. “There is no shame in writing that we do not know. Writing a guess as truth is what sends those after us down the wrong road.”'],
+ '3:0':['父亲的拇指在信封边停了很久。「陪着便好。许多旧话不是不想说，只是得先知道，说完以后仍有人坐在这里。」','Father’s thumb rests on the edge of the letter. “Sitting with me is enough. Some old things are difficult to say until one knows someone will still be here afterward.”'],
+ '3:3':['走到家门前，父亲才又开口：「这封信怎样处置，是今日的决定。里面那些年怎样过去，却不必今日一次讲完。往后想起一段，再同你说一段。」','Only at the gate does Father speak again. “What happens to the letter is today’s decision. The years inside it need not all be told today. When I remember a piece, I will tell you a piece.”'],
+ '4:0':['小满检查完最后一行，才把笔交回去。「做事时有人等我拿主意，歇下以后也该由我拿主意。今日若只是走走、看看，也不算把光阴白过了。」','After checking the final line, Xiaoman returns the brush. “At work, people wait for my judgment. Away from work, the choice should be mine as well. If today holds only walking and looking, it is not time wasted.”'],
+ '4:3':['她走出几步又回头。「下回换我来约。地方不一定远，也不一定花钱。找一处能说完话的地方就好。」','After a few steps she turns back. “Next time I will invite you. It need not be far or cost anything. We only need somewhere a conversation can finish.”'],
+ '5:0':['何行舟把去程和回程分别指了一遍。「出海看朋友，心里也得留一根归家的绳。不是扫兴，是知道回得来，坐下以后才真能安心。」','Xingzhou points out the outward and return routes separately. “Even a friendly voyage needs a line tied homeward. It does not spoil the pleasure. Knowing we can return is what lets us sit at ease when we arrive.”'],
+ '5:3':['船靠岸后，他仍坐了一会儿。「海不会因为咱们今日没办成大事就少一片。下次来，潮线还在，朋友也还认得这条船。」','After the boat docks, he remains seated a while. “The sea is no smaller because we achieved nothing grand today. When we return, the tide marks will remain, and our friend will still know this boat.”']
+};
+const epilogueText=(id,stage)=>P(epilogueLines[id][stage])+(epilogueExtended[id+':'+stage]?'\n\n'+P(epilogueExtended[id+':'+stage]):'');
 function extraPanel(){
  const s=state(),a=V.get(s)?.extra.active;if(!a||a.paused||V.day(s)<a.day){extras();return;}
  const b=V.bonus[a.id],target=V.extraTargets(a.id,a.stage);
  if(s.scene!==target[0]){extras();return;}
- activity(P(b.title),P(epilogueLines[a.id][a.stage]),'voyage-extra-story');note(P(b.stages[a.stage]));
+ activity(P(b.title),epilogueText(a.id,a.stage),'voyage-extra-story');note(P(b.stages[a.stage]));
  const run=(c,more={})=>job('voyageExtraStep',{id:a.id,stage:a.stage,choice:c,...more},()=>{if(V.get(state()).extra.active)extras();else replay(a.id);});
  const option=(zh,en,c,more={})=>button(L(zh,en),()=>run(c,more),'extra-choice-'+c);
  if(a.id===0&&a.stage===0){option('只约家人，留一桌清闲','Invite only family',0);option('约愿来的邻里，未赴约的不扣关系','Invite willing neighbours',1);}
@@ -156,9 +171,9 @@ function extraPanel(){
 }
 function replay(id){
  const s=state(),d=V.get(s)?.extra.done[id];if(!d)return;const b=V.bonus[id];
- activity(P(b.title)+' · '+L('回忆','Memory'),P(epilogueLines[id][3]),'voyage-memory');for(const receipt of d.record.receipts)note(P(receipt.text));
+ activity(P(b.title)+' · '+L('回忆','Memory'),epilogueText(id,3),'voyage-memory');for(const receipt of d.record.receipts)note(P(receipt.text));
  navButton(L('回听这一天的对白','Read the conversations from this day'),()=>{
-  activity(P(b.title)+' · '+L('对白','Conversations'),epilogueLines[id].map(P).join('\n\n'),'voyage-memory');
+  activity(P(b.title)+' · '+L('对白','Conversations'),epilogueLines[id].map((_,stage)=>epilogueText(id,stage)).join('\n\n'),'voyage-memory');
   navButton(L('回到这篇回忆','Return to this memory'),()=>replay(id),'extra-dialogue-back');
  },'extra-dialogue-replay');
  if(id===0){const img=document.createElement('img');img.src=DATA.assets[s.gender==='male'?'familyMealMale':'familyMealFemale'];img.alt=L('一家人围桌吃饭的回忆','A memory of the family sharing a meal');img.style.cssText='display:block;width:100%;max-height:340px;object-fit:contain;border-radius:8px';$('panelExtra').append(img);}

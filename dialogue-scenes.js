@@ -130,13 +130,17 @@
 
   function show(exchange,back,id){
     activity(exchange.speaker[0],L(...exchange.question),'dialogue-scene');
+    const total=afterthoughts[id]?3:2;
+    $('dialogKicker').textContent=L('一段闲话 · 1 / '+total,'Conversation · 1 / '+total);
     dialogObject=null;
     for(const [i,[answer,reply]] of exchange.answers.entries()){
       button(L(...answer),()=>{
         activity(exchange.speaker[0],L(...reply),'dialogue-scene');
+        $('dialogKicker').textContent=L('一段闲话 · 2 / '+total,'Conversation · 2 / '+total);
         const more=afterthoughts[id]?.[i];
         if(more)navButton(L('再听他说下去','Listen a little longer'),()=>{
           activity(exchange.speaker[0],L(...more),'dialogue-scene');
+          $('dialogKicker').textContent=L('一段闲话 · 3 / 3','Conversation · 3 / 3');
           navButton(L('收起这段话','Close this conversation'),back,'scene-return');
         },'scene-more-'+i);
         navButton(L('收起这段话','Close this conversation'),back,'scene-return');
@@ -272,11 +276,14 @@
       if(!nearObject(o))return;
       const back=()=>interact(o);
       activity(name[0],L(...first),'dialogue-scene');dialogObject=o;
+      $('dialogKicker').textContent=L('闲坐片刻 · 1 / 3','A quiet talk · 1 / 3');
       navButton(L('再听一句','Listen a little longer'),()=>{
         activity(name[0],L(...reply),'dialogue-scene');dialogObject=o;
         const more=everydayMore[role];
+        $('dialogKicker').textContent=L('闲坐片刻 · 2 / '+(more?3:2),'A quiet talk · 2 / '+(more?3:2));
         if(more)navButton(L('再坐一会儿','Stay a little longer'),()=>{
           activity(name[0],L(...more),'dialogue-scene');dialogObject=o;
+          $('dialogKicker').textContent=L('闲坐片刻 · 3 / 3','A quiet talk · 3 / 3');
           navButton(L('回到眼前的事','Return to what brought you here'),back,'scene-local-back');
         },'scene-local-more');
         navButton(L('回到眼前的事','Return to what brought you here'),back,'scene-local-back');

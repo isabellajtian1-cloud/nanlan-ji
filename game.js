@@ -170,6 +170,7 @@ function activity(title,text,kind='general'){
   $('dialogKicker').textContent=kind==='quest'?'南澜记 · 眼前的事':'南澜小事';
   $('dialogQuestNavigate').hidden=true;
   $('choices').hidden=false;$('next').hidden=true;$('dialog').hidden=false;$('skip').textContent=started?'返回游戏 ×':'返回启程页 ×';
+  $('dialog').scrollTop=0;
   $('skip').onclick=closeDialog;$('skip').focus();if(!['arrival','pantry','town-shop','dialogue-scene','voyage-extra-story','voyage-memory'].includes(kind))window.NanlanDesktop?.dialogue(title,text);
 }
 function button(label,fn,id,secondary=false,showOutcome=true){
@@ -195,7 +196,11 @@ function button(label,fn,id,secondary=false,showOutcome=true){
       }
     }finally{if(b.isConnected)b.dataset.busy='false';}
   };
-  $('choices').append(b);return b;
+  $('choices').append(b);
+  // The close button receives temporary focus while a panel is being built. Move it
+  // to the first real action so Space confirms the conversation instead of closing it.
+  if(!$('dialog').hidden&&document.activeElement===$('skip')&&!b.disabled)b.focus({preventScroll:true});
+  return b;
 }
 function navButton(label,fn,id){
   const b=button(label,fn,id,true,false);b.dataset.navigation='true';return b;
@@ -974,17 +979,18 @@ function addConversation(o){
 function showConversation(o){
   const C=NanlanConversations,role=C.roles[o.id],s=state(),t=C.topic(s,role),expected=s.choices['chatCount:'+role]||0;
   activity(C.cast[role].name+' · 闲话',(window.NanlanBonds?.greeting(s,role,window.NanlanI18n?.language==='en')||'')+'\n\n'+C.greeting(s,role));dialogObject=o;
+  const continuation=window.NanlanDialogueScenes?.followup(role,expected);
+  $('dialogKicker').textContent=continuation?deskText('闲话 · 1 / 3','Conversation · 1 / 3'):deskText('闲话 · 1 / 2','Conversation · 1 / 2');
   window.NanlanBondUI?.npc(o);
   for(const choice of [0,1])button(t[choice===0?1:3],async()=>{
     if(!nearObject(o)){notice('请先回到人物身旁。',true);closeDialog();return;}
     const result=engine.act('chat',{object:o.id,choice,expected});
     if(!result.ok){$('line').textContent=result.message;return;}
     activity(C.cast[role].name+' · 回应',t[choice===0?2:4]);dialogObject=o;
-    $('dialogKicker').textContent='这次交谈已记下';
-    const followup=window.NanlanDialogueScenes?.followup(role,expected);
-    if(followup)navButton(deskText('听他说完','Let them finish'),()=>{
-      activity(C.cast[role].name+' · 闲话',followup,'dialogue-scene');dialogObject=o;
-      $('dialogKicker').textContent=deskText('话说得久了一些','A longer conversation');
+    $('dialogKicker').textContent=continuation?deskText('闲话 · 2 / 3','Conversation · 2 / 3'):deskText('闲话 · 2 / 2','Conversation · 2 / 2');
+    if(continuation)navButton(deskText('听他说完','Let them finish'),()=>{
+      activity(C.cast[role].name+' · 闲话',continuation,'dialogue-scene');dialogObject=o;
+      $('dialogKicker').textContent=deskText('闲话 · 3 / 3','Conversation · 3 / 3');
       navButton(deskText('换个话题','Choose another topic'),()=>showConversation(o),'chat-more');
       navButton(deskText('结束交谈，回到场景','End the conversation'),closeDialog,'chat-leave');
     },'chat-followup');
@@ -1880,6 +1886,14 @@ window.addEventListener('keydown',e=>{
   if(e.ctrlKey||e.metaKey||e.altKey||['INPUT','TEXTAREA','SELECT'].includes(e.target?.tagName))return;
   const k=e.key.toLowerCase();
   if(k==='escape'){if(!$('gallery').hidden)$('galleryClose').click();else if(!$('worldMap').hidden)closeMap();else if(!$('dialog').hidden)closeDialog();return;}
+  if(!$('dialog').hidden){
+    const choices=[...$('choices').querySelectorAll('button:not([hidden]):not(:disabled)')];
+    if(['arrowup','arrowleft','arrowdown','arrowright'].includes(k)&&choices.length){
+      e.preventDefault();const at=choices.indexOf(document.activeElement),back=k==='arrowup'||k==='arrowleft';
+      choices[(at+(back?-1:1)+choices.length)%choices.length].focus({preventScroll:true});return;
+    }
+    if(/^[1-9]$/.test(k)&&choices[Number(k)-1]){e.preventDefault();if(!e.repeat)choices[Number(k)-1].click();return;}
+  }
   if(k==='m'&&!$('worldMap').hidden){e.preventDefault();closeMap();return;}
   if(!active)return;
   if(['arrowup','arrowdown','arrowleft','arrowright',' '].includes(k))e.preventDefault();

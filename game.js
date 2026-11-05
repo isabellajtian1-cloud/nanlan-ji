@@ -1532,7 +1532,7 @@ function render(){
       // Keep the small letter tray in scale with people; retain a forgiving touch target.
       if(im?.naturalWidth)actors.push({layer:40,y:o.y,draw:()=>{ctx.save();ctx.globalAlpha=s.flags.letterRead?.78:1;ctx.drawImage(im,o.x-w/2,o.y-h+5,w,h);ctx.restore();}});
       hitTargets.push({o,rect:null,anchor:{x:o.x-28,y:o.y-36,w:56,h:44}});
-      if(selected||isObjective||nearObject(o)){ctx.save();ctx.strokeStyle=isObjective?'#a6533f':'#e1c47c';ctx.lineWidth=1.2;ctx.globalAlpha=.65+.22*Math.sin(time/240);ctx.beginPath();ctx.ellipse(o.x,o.y-2,23,7,0,0,Math.PI*2);ctx.stroke();ctx.restore();}
+      if(selected||isObjective||nearObject(o)){ctx.save();ctx.strokeStyle=isObjective?'#9bc6b3':'#e1c47c';ctx.lineWidth=1.2;ctx.globalAlpha=.65+.22*Math.sin(time/240);ctx.beginPath();ctx.ellipse(o.x,o.y-2,23,7,0,0,Math.PI*2);ctx.stroke();ctx.restore();}
       continue;
     }
     if(o.action?.startsWith('sealGather')){
@@ -1586,7 +1586,7 @@ function render(){
       continue;
     }
     if(selected||isObjective)ellipse(o.x,o.y,selected?18:13,selected?8:5,locked?'#80674988':selected?'#f4cb6faa':'#f4e1a066');
-    if(selected||isObjective){ctx.save();ctx.strokeStyle=isObjective?'#a6533f':'#ebc66f';ctx.lineWidth=selected?2.4:1.5;ctx.globalAlpha=.72+.22*Math.sin(time/240);ctx.beginPath();ctx.ellipse(o.x,o.y,selected?25:20,selected?11:9,0,0,Math.PI*2);ctx.stroke();ctx.restore();}
+    if(selected||isObjective){ctx.save();ctx.strokeStyle=isObjective?'#9bc6b3':'#ebc66f';ctx.lineWidth=selected?2.4:1.5;ctx.globalAlpha=.72+.22*Math.sin(time/240);ctx.beginPath();ctx.ellipse(o.x,o.y,selected?25:20,selected?11:9,0,0,Math.PI*2);ctx.stroke();ctx.restore();}
     if(resourceTypes.includes(o.type)&&!(o.type==='weed'&&s.scene==='yard')){
       const im=resourceImages[o.type],size={herb:38,wood:48,stone:38,bamboo:49,mushroom:33,shoot:35,shell:28,seaweed:39,clam:27,weed:58,ginseng:43,agarwood:64,huali:68}[o.type];
       if(im?.naturalWidth){const height=size*im.naturalHeight/im.naturalWidth;ctx.drawImage(im,o.x-size/2,o.y-height+3,size,height);}

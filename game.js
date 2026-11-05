@@ -3,6 +3,12 @@ const $=id=>document.getElementById(id);
 const N=NanlanEngine, DATA=window.NANLAN_DATA, world=DATA.world;
 // The painted garden extends slightly beyond the old walking limit; this lets the actor reach its edge without stepping on crops.
 world.yard.bounds[2]=970;
+world.village.objects.find(o=>o.id==='villagePantry').label='乡邻余粮 · 种子与补给';
+(()=>{
+ const labels=window.NANLAN_EN||(window.NANLAN_EN={});
+ labels['乡邻余粮 · 种子与补给']='Neighbor’s Pantry · Seeds and Supplies';
+ window.NanlanI18n?.configure(labels);
+})();
 const canvas=$('game'),ctx=canvas.getContext('2d',{alpha:false}),W=1100,H=733;
 const storage={getItem:key=>localStorage.getItem(key),setItem:(key,value)=>localStorage.setItem(key,value)};
 const engine=new N.Engine(storage,world);
@@ -484,7 +490,7 @@ function itemSource(id){
   if(id==='pondMud')return '起鱼时取得，敷回桑畦可促长叶。';
   if(id==='sealTimber')return '阿岑指路，在青岚山取下；交林师傅刻木印。';
   if(id==='sealPebble')return '沈晚渔指路，在海湾旧泊岸拾得；交林师傅磨石印。';
-  const m={rice:'村中乡邻余粮可补购',ingredient:'村中乡邻补给，或用自种菜蔬代替',seed:'采收返还一份；村中也可补购',
+  const m={rice:'村中乡邻余粮可补购',ingredient:'村中乡邻补给，或用自种菜蔬代替',seed:window.NanlanI18n?.language==='en'?'Neighbor’s Pantry in Nanlan Village · '+N.supplyPrices.seed+' coins per packet; harvesting returns one packet.':'南澜村「乡邻余粮 · 种子与补给」常备 · 每份 '+N.supplyPrices.seed+' 文；采收也会返还一份',
     repair:'家中带来 2 份；村中可补购',wood:'清草前两处回收；村边、山脚、竹林均可拾',
     lychee:'山脚荔枝树 · 每次 2 份 · 1 游戏日刷新 · 每份 4 文',longan:'山脚龙眼树 · 每次 2 份 · 1 游戏日刷新 · 每份 4 文',mandarin:'山路柑橘树 · 每次 2 份 · 1 游戏日刷新 · 每份 3 文',
     ginseng:'山顶旧药畦 · 长柄锄挖取 · 5 体力 · 3 游戏日刷新 · 售价 28 文',agarwood:'竹林枯木 · 木柄斧劈取 · 6 体力 · 2 游戏日刷新 · 售价 22 文',huali:'山腰枯木 · 木柄斧劈取 · 8 体力 · 3 游戏日刷新 · 售价 26 文',
@@ -577,11 +583,15 @@ function showAccounts(){
 }
 function showPantry(){
   const fresh=$('dialog').hidden,s=state();if(fresh)for(const item of Object.keys(pantryDraft))pantryDraft[item]=0;
-  activity('乡邻余粮 · 补给','挑选实际需要的物资，可以混合选择并自行填写数量。确认前只计算合计，不会扣除家用。\n\n目前家用 '+s.coins+' 文。');
+  const en=window.NanlanI18n?.language==='en',L=(zh,english)=>en?english:zh;
+  activity('乡邻余粮 · 种子与补给',L('挑选实际需要的物资，可以混合选择并自行填写数量。确认前只计算合计，不会扣除家用。\n\n目前家用 '+s.coins+' 文。','Choose the supplies and quantities you need. Nothing is charged until you confirm.\n\nHousehold savings: '+s.coins+' coins.'));
+  const seedNote=document.createElement('p');seedNote.className='prerequisite-note';seedNote.dataset.noLocalize='';
+  seedNote.textContent=L('乡邻这里常备种子，每份 '+N.supplyPrices.seed+' 文。一份可播一块地，青菜与药草共用，买好就放进行囊。','Seeds are always available here at '+N.supplyPrices.seed+' coins per packet. One packet plants one plot; the same seeds are used for vegetables and herbs. Purchased seeds go into your satchel.');
+  $('panelExtra').append(seedNote);
   if(s.production.kit)window.NanlanVillage?.supplies();globalThis.NanlanV3?.supplies();
   const board=document.createElement('div');board.className='pantry-board';const controls=[];
-  for(const item of Object.keys(N.supplyPrices)){
-    const price=N.supplyPrices[item],row=document.createElement('div');row.className='pantry-row';
+  for(const item of ['seed',...Object.keys(N.supplyPrices).filter(id=>id!=='seed')]){
+    const price=N.supplyPrices[item],row=document.createElement('div');row.className='pantry-row';row.dataset.item=item;
     const art=document.createElement('div');art.className='pantry-art';art.innerHTML=inventoryArt(item);
     const info=document.createElement('div');info.className='pantry-info';info.innerHTML='<strong>'+N.itemNames[item]+'</strong><small>行囊已有 '+N.quantity(s,item)+' · 单价 '+price+' 文 / 份</small>';
     const stepper=document.createElement('div');stepper.className='pantry-stepper';
@@ -591,11 +601,22 @@ function showPantry(){
     stepper.append(minus,input,plus);row.append(art,info,stepper);board.append(row);controls.push({item,input,minus,plus});
   }
   const summary=document.createElement('div');summary.className='pantry-summary';summary.setAttribute('role','status');$('panelExtra').append(board,summary);
-  const checkout=button('请先选择物资',async()=>{const items=Object.fromEntries(Object.entries(pantryDraft).filter(([,quantity])=>quantity>0));return perform('buy',{items},()=>{for(const item of Object.keys(pantryDraft))pantryDraft[item]=0;showPantry();});},'pantry-checkout');
+  const checkout=button('请先选择物资',async()=>{
+    const items=Object.fromEntries(Object.entries(pantryDraft).filter(([,quantity])=>quantity>0));
+    return perform('buy',{items},()=>{
+      const goods=Object.entries(items).map(([id,n])=>(en?window.NanlanI18n.t(N.itemNames[id]):N.itemNames[id])+' ×'+n).join(en?', ':'、');
+      for(const item of Object.keys(pantryDraft))pantryDraft[item]=0;
+      showPantry();
+      const receipt=document.createElement('p');receipt.className='gather-receipt';receipt.dataset.noLocalize='';receipt.setAttribute('role','status');
+      receipt.textContent=L('已购入 '+goods+'，已放入行囊。','Purchased '+goods+'. Added to your satchel.');
+      $('panelExtra').prepend(receipt);notice(receipt.textContent);
+    });
+  },'pantry-checkout');
   function updatePantry(){
     let count=0,total=0;for(const {item,input,minus,plus}of controls){const quantity=Math.max(0,Math.min(99,Math.trunc(Number(input.value)||0)));pantryDraft[item]=quantity;if(input.value!==String(quantity))input.value=String(quantity);minus.disabled=quantity===0;plus.disabled=quantity===99;count+=quantity;total+=quantity*N.supplyPrices[item];}
-    checkout.disabled=count===0||total>s.coins;checkout.textContent=count?'确认购入 · '+count+' 份 / '+total+' 文':'请先选择物资';
-    if(!count){summary.className='pantry-summary';summary.textContent='尚未选择物资 · 本次不会扣款。';}
+    checkout.disabled=!N.done(s,'M04')||count===0||total>s.coins;checkout.textContent=count?'确认购入 · '+count+' 份 / '+total+' 文':'请先选择物资';
+    if(!N.done(s,'M04')){summary.className='pantry-summary';summary.textContent=L('请先回正厅与家人分享第一顿饭，再来乡邻这里购买。','Share the first meal with your family in the hall before buying supplies here.');}
+    else if(!count){summary.className='pantry-summary';summary.textContent='尚未选择物资 · 本次不会扣款。';}
     else if(total>s.coins){summary.className='pantry-summary shortage';summary.textContent='已选 '+count+' 份 · 合计 '+total+' 文。家用不足，还差 '+(total-s.coins)+' 文。';}
     else{summary.className='pantry-summary ready';summary.textContent='已选 '+count+' 份 · 合计 '+total+' 文。确认后一次放入行囊。';}
   }

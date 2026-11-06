@@ -79,22 +79,41 @@ function loadImage(id){
   });
   return imagePromises[key];
 }
-async function loadSceneAssets(scene){
-  const required=[scene,'playerIdle'];
+async function loadSceneAssets(scene,sceneState=state()){
+  const required=[scene,'playerIdle',sceneState.gender==='male'?'walkMale':'walkFemale'];
   if(scene==='prefTea')required.push('teaServings','teaExtras');
   if(globalThis.NanlanTown.rooms.includes(scene))required.push(...world[scene].objects.filter(o=>o.role).map(o=>'npc_'+o.role));
   if(scene==='backHall')required.push('backHallReady');
   if(world[scene]?.objects?.some(o=>o.v3Art!=null))required.push('v3Props');
-  if(scene==='yard')required.push('gardenStages','productionStages','productionItems','waterJar','stove');
-  if(state().actorState?.outfit==='nanlanSilk')required.push('familySilk',state().gender==='male'?'walkMaleSilk':'walkFemaleSilk');
+  if(scene==='yard')required.push('gardenStages','productionStages','productionItems','waterJar','stove','weedPatch');
+  if(sceneState.actorState?.outfit==='nanlanSilk')required.push('familySilk',sceneState.gender==='male'?'walkMaleSilk':'walkFemaleSilk');
   if(['mountain','coast'].includes(scene))required.push('seals');
   if(['foothill','mountain'].includes(scene))required.push('fruitTrees','fruitTreesPicked');
   if(scene==='store')required.push('storePickups','inventoryHousehold','inventoryCrafts','workbench');
   if(scene==='bed')required.push('bed','bedDamage','bedPatched');
   if(scene==='hall')required.push('diningTable','familyMealFemale','familyMealMale');
   if(scene==='village')required.push('villageLetter');
-  return (await Promise.all(required.map(loadImage))).every(Boolean);
+  const unique=[...new Set(required.map(id=>world[id]?.asset||id))];
+  const overlay=$('sceneLoading'),previous=document.activeElement;
+  let ready=0,finished=0;
+  $('loadingTitle').textContent=deskText('正在走进 · '+world[scene].name,'Entering · '+world[scene].name);
+  $('loadingHint').textContent=deskText('正在备好场景与人物。','Preparing the scene and characters.');
+  const progress=()=>{
+    $('loadingProgress').max=unique.length;$('loadingProgress').value=ready;
+    $('loadingCount').textContent=deskText('已备好 '+ready+' / '+unique.length,'Ready '+ready+' / '+unique.length);
+  };
+  progress();overlay.hidden=false;overlay.focus({preventScroll:true});
+  const slow=setTimeout(()=>{$('loadingHint').textContent=deskText('首次载入稍久，请稍候。原有进度已保留。','The first visit can take a little longer. Your saved progress is safe.');},5000);
+  try{
+    const results=await Promise.all(unique.map(async id=>{const ok=await loadImage(id);finished++;if(ok)ready++;progress();if(!ok)$('loadingHint').textContent=deskText('部分画面尚未备好，正在完成其余加载。','Some artwork is unavailable; finishing the remaining items.');return ok;}));
+    return finished===unique.length&&results.every(Boolean);
+  }finally{
+    clearTimeout(slow);overlay.hidden=true;settlePointerInput();
+    if(previous?.isConnected)previous.focus({preventScroll:true});
+  }
 }
+// Loading is a temporary modal: keyboard shortcuts cannot change the save or open another panel underneath it.
+window.addEventListener('keydown',e=>{if(!$('sceneLoading').hidden&&!e.ctrlKey&&!e.metaKey&&!e.altKey){e.preventDefault();e.stopImmediatePropagation();}},true);
 function clearSceneNotice(){
   clearTimeout(messageTimer);messageTimer=0;$('message').replaceChildren();$('message').classList.add('fade');
 }
@@ -250,7 +269,7 @@ const DOOR_REACH=18;
 function nearObject(o){return !o||(o.type==='door'?Math.hypot(o.x-state().player.x,o.y-state().player.y)<=DOOR_REACH:engine.near(o));}
 async function perform(name,p={},rerender){
   if(dialogObject&&!nearObject(dialogObject)){const failed={ok:false,message:'请先走到物件旁，再进行操作。'};closeDialog();notice(failed.message,true);return failed;}
-  if(name==='openGate'&&!await loadImage('yard')){const failed={ok:false,message:'庭院图片未能载入，请重试。原有进度已保留。'};notice(failed.message,true);return failed;}
+  if(name==='openGate'&&!await loadSceneAssets('yard')){const failed={ok:false,message:'庭院图片未能载入，请重试。原有进度已保留。'};notice(failed.message,true);return failed;}
   if(['shareFirst','shareFeast','liangShare'].includes(name)&&!await loadImage(state().gender==='male'?'familyMealMale':'familyMealFemale')){const failed={ok:false,message:'用餐画面未加载完成，请再试一次；饭菜尚未扣除。'};notice(failed.message,true);return failed;}
   if(name==='estateImprove'||name==='estateGift'){
     const keys=name==='estateImprove'?['estateYard','estateHall']:['estateGift'];
@@ -1497,13 +1516,17 @@ function tryKeyboardExit(dx,dy,dt){
 function worldPoint(e){const r=canvas.getBoundingClientRect();return {x:(e.clientX-r.left-camera.ox)/camera.scale,y:(e.clientY-r.top-camera.oy)/camera.scale};}
 function resolveHit(p){
   const within=(p,r)=>!!r&&p.x>=r.x&&p.x<=r.x+r.w&&p.y>=r.y&&p.y<=r.y+r.h;
-  return hitTargets.find(h=>within(p,h.rect))?.o||hitTargets.filter(h=>within(p,h.anchor)).sort((a,b)=>Math.hypot(a.o.x-p.x,a.o.y-p.y)-Math.hypot(b.o.x-p.x,b.o.y-p.y))[0]?.o;
+  // Garden plots share a safe walking destination at the fence, but each painted tile remains its own click target.
+  const distance=h=>Math.hypot((h.o.visualX??h.o.x)-p.x,(h.o.visualY!==undefined?h.o.visualY-8:h.o.y)-p.y);
+  return hitTargets.find(h=>within(p,h.rect))?.o||hitTargets.filter(h=>within(p,h.anchor)).sort((a,b)=>distance(a)-distance(b))[0]?.o;
 }
 canvas.addEventListener('pointerdown',e=>{
   if(!active||transitioning)return;cancelNavigation();const p=worldPoint(e),o=resolveHit(p);
   if(o){approach(o);return;}focusedObjectId=null;if(blocked(p.x,p.y)){notice('请点击可走的道路或场景标记。');return;}
   path=findPath(p)||[];if(!path.length)notice('这里暂时走不到。可以从「场景互动」选择物件。');
 });
+canvas.addEventListener('pointermove',e=>{if(e.pointerType!=='touch')canvas.style.cursor=active&&!transitioning&&resolveHit(worldPoint(e))?'pointer':'default';});
+canvas.addEventListener('pointerleave',()=>{canvas.style.cursor='default';});
 function update(dt){
   if(!active||transitioning||document.hidden)return;
   const destination=path[path.length-1]?.object;
@@ -1858,7 +1881,7 @@ function reviewSave(check){
       const candidate=check.state,q=N.current(candidate);
       activity('导入进度 · 确认内容','地点：'+world[candidate.scene].name+'\n任务：'+(q?q+' '+N.titles[q]:candidate.flags.volume4Complete?deskText('第四卷已完成','Volume IV complete'):candidate.flags.volume3Complete?deskText('第三卷已完成','Volume III complete'):candidate.flags.volume2Complete?'第二卷已完成':'第一卷已完成')+'\n家用：'+candidate.coins+' 文\n\n确认后替换本页进度。原进度将保留一份备份，可在行囊下载。');
       button('确认导入这份进度',async()=>{
-        if(!await loadSceneAssets(candidate.scene)){notice('场景图片加载失败，尚未修改进度。',true);return;}
+        if(!await loadSceneAssets(candidate.scene,candidate)){notice('场景图片加载失败，尚未修改进度。',true);return;}
         try{
           const previous=started?JSON.stringify(state()):localStorage.getItem(N.SAVE_KEY);
           if(previous)localStorage.setItem('nanlan_before_import',previous);
@@ -1924,7 +1947,7 @@ async function restoreAutomaticBackup(){
   const raw=localStorage.getItem('nanlan_v20_previous');if(!raw){notice('目前没有可恢复的自动备份。',true);return;}
   const check=new N.Engine(storage,world);try{check.load(raw);}catch(e){notice('自动备份无法读取，当前进度没有改变。',true);return;}
   const q=N.current(check.state);activity('恢复自动备份？','备份地点：'+world[check.state.scene].name+'\n备份进度：'+(q?N.titles[q]:'已完成的日常')+'\n家用：'+check.state.coins+' 文\n\n确认后会把当前进度另存一份，再恢复新旅程开始前的存档。','restore-backup');
-  button('确认恢复这份自动备份',async()=>{if(!await loadSceneAssets(check.state.scene)){notice('备份场景图片未能载入，当前进度没有改变。',true);return;}try{const current=started?JSON.stringify(state()):localStorage.getItem(N.SAVE_KEY);if(current)localStorage.setItem('nanlan_before_import',current);storage.setItem(N.SAVE_KEY,raw);engine.load(raw);storedRaw=raw;started=true;active=true;$('start').hidden=true;$('hud').hidden=false;closeDialog();render();refreshHud();notice('自动备份已恢复。恢复前的进度仍可在行囊下载。');}catch(e){notice('恢复失败，当前进度没有改变。',true);}},'confirm-restore-auto');
+  button('确认恢复这份自动备份',async()=>{if(!await loadSceneAssets(check.state.scene,check.state)){notice('备份场景图片未能载入，当前进度没有改变。',true);return;}try{const current=started?JSON.stringify(state()):localStorage.getItem(N.SAVE_KEY);if(current)localStorage.setItem('nanlan_before_import',current);storage.setItem(N.SAVE_KEY,raw);engine.load(raw);storedRaw=raw;started=true;active=true;$('start').hidden=true;$('hud').hidden=false;closeDialog();render();refreshHud();notice('自动备份已恢复。恢复前的进度仍可在行囊下载。');}catch(e){notice('恢复失败，当前进度没有改变。',true);}},'confirm-restore-auto');
   button('取消，保留当前进度',closeDialog,'cancel-restore-auto',true);
 }
 async function beginGame(confirmed=false){
@@ -1937,7 +1960,8 @@ async function beginGame(confirmed=false){
   }
   transitioning=true;$('begin').disabled=true;
   try{
-    if(!await loadImage('gate')){$('loadWarning').hidden=false;$('loadWarning').textContent='旧宅门前图片未能载入，请稍后再试。';return;}
+    $('loadWarning').hidden=true;
+    if(!await loadSceneAssets('gate',{gender})){$('loadWarning').hidden=false;$('loadWarning').textContent='旧宅门前图片未能载入，请稍后再试。';return;}
     if(storedRaw&&!engine.memoryOnly){storage.setItem('nanlan_v20_previous',storedRaw);$('restoreAutoBackup').hidden=false;}
     engine.reset(gender);if(!engine.memoryOnly)localStorage.removeItem('nanlan_last_night');started=true;active=true;$('start').hidden=true;$('hud').hidden=false;storedRaw=null;
     refreshHud();playArrival();
@@ -1953,11 +1977,11 @@ $('restoreAutoBackup').onclick=restoreAutomaticBackup;
 $('continueGame').onclick=async()=>{
   if(!storedRaw||transitioning)return;
   const check=new N.Engine(storage,world);try{check.load(storedRaw);}catch(e){$('loadWarning').hidden=false;$('loadWarning').textContent='存档暂时无法读取，原数据已保留。可以备份后重新开局。';return;}
-  transitioning=true;
+  transitioning=true;$('continueGame').disabled=true;$('loadWarning').hidden=true;
   try{
-    if(!await loadSceneAssets(check.state.scene)){$('loadWarning').hidden=false;$('loadWarning').textContent='场景物资图片未加载完整。请重试继续游戏，原存档已保留。';return;}
+    if(!await loadSceneAssets(check.state.scene,check.state)){$('loadWarning').hidden=false;$('loadWarning').textContent='场景物资图片未加载完整。请重试继续游戏，原存档已保留。';return;}
     engine.load(storedRaw);started=true;active=true;settlePointerInput();$('start').hidden=true;$('hud').hidden=false;render();refreshHud();notice(!state().flags.volume2Started&&N.done(state(),'M20')?(window.NanlanI18n?.language==='en'?'Progress restored. Volume II is available; open the South Street notice in your task panel.':'进度已恢复。第二卷已可开启，打开任务栏里的「南街铺讯」，到正厅与家人商议。'):deskText('进度已恢复。左上角查看当前任务，点「引路」前往目标。','Progress restored. View your current quest at the top left; use Guide to reach its destination.'));
-  }finally{transitioning=false;}
+  }finally{transitioning=false;$('continueGame').disabled=false;}
 };
 try{
   storedRaw=localStorage.getItem(N.SAVE_KEY);oldRaw=localStorage.getItem('nanlan_v16');
@@ -1984,7 +2008,7 @@ window.addEventListener('keydown',e=>{
   if(window.NanlanSettings?.isOpen())return;
   if(e.ctrlKey||e.metaKey||e.altKey||['INPUT','TEXTAREA','SELECT'].includes(e.target?.tagName))return;
   const k=e.key.toLowerCase();
-  if(k==='escape'){if(!$('gallery').hidden)$('galleryClose').click();else if(!$('worldMap').hidden)closeMap();else if(!$('dialog').hidden)closeDialog();return;}
+  if(k==='escape'){if(!$('gallery').hidden)$('galleryClose').click();else if(!$('worldMap').hidden)closeMap();else if(!$('dialog').hidden)closeDialog();else if(active){cancelNavigation();path=[];keys={};moving=false;focusedObjectId=null;clearSceneNotice();}return;}
   if(!$('dialog').hidden){
     const choices=[...$('choices').querySelectorAll('button:not([hidden]):not(:disabled)')];
     if(['arrowup','arrowleft','arrowdown','arrowright'].includes(k)&&choices.length){
@@ -2011,7 +2035,8 @@ document.addEventListener('keydown',e=>{
   else if(!e.shiftKey&&document.activeElement===buttons[buttons.length-1]){e.preventDefault();buttons[0].focus();}
 });
 window.addEventListener('beforeunload',()=>{if(started)engine.save();});
-loadImage('playerIdle');loadImage('walkFemale');loadImage('walkMale');loadImage('bedDamage');loadImage('storePickups');loadImage('bed');loadImage('gate');loadImage('yard');loadImage('npc_playerFemale');loadImage('npc_playerMale');loadImage('bedPatched');loadImage('weedPatch');refreshHud();requestAnimationFrame(frame);
+// Keep first-load bandwidth for the entrance and actors; room props load when that room is needed.
+loadImage('gate');loadImage('playerIdle');loadImage('walkFemale');loadImage('walkMale');loadImage('yard');loadImage('npc_playerFemale');loadImage('npc_playerMale');refreshHud();requestAnimationFrame(frame);
 
 document.addEventListener('nanlanlanguagechange',()=>{if(started)refreshHud();});
 

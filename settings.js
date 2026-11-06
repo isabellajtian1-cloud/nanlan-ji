@@ -58,6 +58,7 @@ const dictionary=window.NANLAN_EN;
 Object.assign(dictionary,{
   '设置与记录':'Settings & Journal','关闭设置':'Close settings','显示与语言':'Display & language',
   '试听与说明':'Preview & sound notes','言起有应':'Conversation & Comfort',
+  '行旅渐安':'Journeys at Ease','场景载入进度':'Scene loading progress',
   '六卷与番外开发试玩':'Six-volume development preview with epilogues',
   '声音与音量':'Sound & volume','行旅与记录':'Journey & journal','更多记录':'More journals',
   '大字号':'Large text','全屏显示':'Full screen','舆图':'Map','互动':'Interact','行囊':'Satchel',

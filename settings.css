@@ -41,3 +41,38 @@
 #taskToggle{min-height:44px}#questGuide:focus-visible{outline:2px solid #e5bc71;outline-offset:3px}
 @media(max-width:600px){.quest-panel-heading>span{font-size:9px}#questGuide{font-size:11px}}
 
+/* Reading and travelling take precedence over the task HUD beneath them. */
+#dialog{z-index:22}
+#wrap:has(#dialog:not([hidden])) #hud{pointer-events:none}
+#wrap:has(#dialog:not([hidden])) #hud *{pointer-events:none}
+#dialog .sheet{overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#ab9162 transparent}
+#dialog .dialog-top{gap:12px;min-height:44px}
+#dialog #skip{min-width:44px;min-height:44px}
+.brand>div{min-width:0;flex:1}.brand small{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.brand .seal,.brand .version{flex-shrink:0}
+
+/* A measured loading state, using the same paper, brass and ink as the game. */
+#sceneLoading{position:fixed;inset:0;z-index:120;display:grid;place-items:center;padding:24px;background:#162c23d9;backdrop-filter:blur(4px);outline:0}
+.loading-sheet{width:min(400px,100%);padding:30px 28px 27px;text-align:center;color:#40533c;background:linear-gradient(140deg,#f5ecd6,#e8d9b6);border:1px solid #b99b65;border-radius:14px;box-shadow:0 16px 60px #081e1959;animation:loading-arrive .25s ease both}
+.loading-sheet svg{width:54px;height:54px;fill:none;stroke:#917043;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.loading-sheet h2{font-size:20px;font-weight:normal;line-height:1.6;margin:12px 0 20px}
+#loadingProgress{display:block;width:100%;height:6px;border:0;border-radius:5px;overflow:hidden;background:#d4c4a1;accent-color:#617652}
+#loadingProgress::-webkit-progress-bar{background:#d4c4a1;border-radius:5px}#loadingProgress::-webkit-progress-value{background:#617652;border-radius:5px}#loadingProgress::-moz-progress-bar{background:#617652;border-radius:5px}
+#loadingCount{font-size:12px;margin:12px 0;color:#5b684c;font-variant-numeric:tabular-nums}.loading-sheet small{display:block;min-height:2.8em;font-size:12px;line-height:1.7;color:#82704f}
+@keyframes loading-arrive{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){.loading-sheet{animation:none}}
+
+/* Fit the status above the quest on narrow screens without wrapped identity lines. */
+@media(max-width:600px) and (orientation:portrait){
+  #status{width:calc(100% - 145px);max-width:238px;padding:9px 10px}
+  #status .brand{gap:7px}#status .brand strong{font-size:16px;letter-spacing:.08em}
+  #status .brand small{font-size:9px}#status .version{display:none}
+  #statusTime{margin:6px 0;font-size:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #tasks{top:129px;width:min(218px,calc(100% - 20px));max-height:31dvh}
+  #taskToggle small{font-size:9px}#taskToggle strong{font-size:13px;line-height:1.6}
+  #chapterClock{width:115px;max-width:115px}#chapterClock #clock{padding:8px;font-size:11px}#chapterClock #clock small{font-size:9px}
+  #chapterMark{min-height:32px;font-size:9px}
+  #dialog .sheet h2{line-height:1.5}#dialog #line{font-size:15px;line-height:1.95}
+  #dialog #choices button{font-size:14px;min-height:48px}
+  #dialog .dialog-top{gap:8px}#dialog #skip{font-size:12px}
+}
+

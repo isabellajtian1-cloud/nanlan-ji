@@ -63,6 +63,7 @@ Object.assign(dictionary,{
   '大字号':'Large text','全屏显示':'Full screen','舆图':'Map','互动':'Interact','行囊':'Satchel',
   '舆图 · M':'Map · M','行囊 · B':'Satchel · B',
   '道路与入口标记':'Routes & entrances',
+  '当前任务':'Current quest','引路':'Guide','为当前任务引路':'Guide me to the current quest',
   '入口 · 确认前往':'Entrance · Confirm travel','留在这里':'Stay here',
   '你已走到入口。':'You have reached the entrance.',
   '请重新走到入口，再选择前往。':'Return to the entrance before travelling.',

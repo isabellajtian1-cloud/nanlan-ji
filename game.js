@@ -1181,20 +1181,46 @@ function localObjectiveObject(){
   if(!target||target.scene!==state().scene||!target.object)return null;
   return visibleObjects().find(o=>o.id===target.object)||null;
 }
+// One nearby target drives the prompt, mouse/touch and both keyboard shortcuts.
+function nearbyInteractionObject(){
+  const p=state().player,nearby=visibleObjects().filter(nearObject);
+  return nearby.find(o=>o.id===focusedObjectId)||nearby.sort((a,b)=>Math.hypot(a.x-p.x,a.y-p.y)-Math.hypot(b.x-p.x,b.y-p.y))[0]||null;
+}
+function interactionAction(o){
+  if(o.type==='door')return objectGate(o)?deskText('查看','Inspect'):deskText('进入','Enter');
+  if(npcRole(o)||o.type==='npc')return deskText('交谈','Talk');
+  if(o.type==='weed')return deskText('清理','Clear');
+  if(o.action==='garden')return deskText('照料','Tend');
+  if(isGatherable(o))return deskText('采集','Gather');
+  if(['sickle','water','oldAxe'].includes(o.id))return deskText('拾取','Pick up');
+  if(o.type==='read')return deskText('阅读','Read');
+  return deskText('查看','Inspect');
+}
+function contextActionAvailable(){
+  return started&&active&&!moving&&!path.length&&$('dialog').hidden&&$('worldMap').hidden&&$('gallery').hidden&&$('nightNote').hidden&&!window.NanlanSettings?.isOpen();
+}
 function refreshInteractionHint(){
   const hint=$('interactionHint');if(!hint)return;
-  if(!started||!active||!$('dialog').hidden||!$('worldMap').hidden||!$('gallery').hidden||!$('nightNote').hidden){hint.hidden=true;lastInteractionHint='';return;}
-  const objects=visibleObjects();if(!objects.length){hint.hidden=true;lastInteractionHint='';return;}
-  const travelling=path[path.length-1]?.object,objective=localObjectiveObject();
-  const nearest=[...objects].sort((a,b)=>Math.hypot(a.x-state().player.x,a.y-state().player.y)-Math.hypot(b.x-state().player.x,b.y-state().player.y))[0];
-  const nearbyResource=objects.filter(o=>isGatherable(o)&&nearObject(o)).sort((a,b)=>Math.hypot(a.x-state().player.x,a.y-state().player.y)-Math.hypot(b.x-state().player.x,b.y-state().player.y))[0];
-  const o=travelling||objects.find(v=>v.id===focusedObjectId&&nearObject(v))||nearbyResource||objective||nearest,near=nearObject(o);
-  const mode=travelling?'travelling':near?'near':objective===o?'objective':'nearby';
-  const firstSteps=N.current(state())==='M01',gather=isGatherable(o);
-  const kicker=firstSteps?(travelling?'初行引导 · 正在走近':near?'初行引导 · 按空格或点击互动':'初行引导 · 点击这里自动走近'):travelling?(gather?'正在走近物资 · 到达后采集':'正在前往 · 点击可重新聚焦'):near?(o.type==='weed'?'清理杂草 · 选好镰刀后点击':gather&&o.action!=='garden'?(N.resourceRequirement(state(),o.type)||(N.rareResources[o.type]?.tool==='axe'?'可劈取 · 点击采料':o.type==='ginseng'?'可挖取 · 点击采参':'可采集 · 点击拾取')):'已经走近 · 点击互动'):objective===o?'当前任务目标 · 点击前往':'附近可互动 · 点击前往';
-  const key=[state().scene,o.id,mode,objectLabel(o),kicker].join('|');
-  if(key!==lastInteractionHint){hint.className='panel '+mode;$('interactionHintMark').textContent=mode==='objective'?'令':near?'近':travelling?'行':'寻';$('interactionHintKicker').textContent=kicker;$('interactionHintLabel').textContent=objectLabel(o);hint.setAttribute('aria-label',kicker+'：'+objectLabel(o));lastInteractionHint=key;}
+  const o=contextActionAvailable()?nearbyInteractionObject():null;
+  if(!o){hint.hidden=true;delete hint.dataset.object;lastInteractionHint='';return;}
+  const action=interactionAction(o),label=objectLabel(o).replace(/\s*·\s*(交谈|查看|采集|拾取)$/,''),touch=window.matchMedia('(pointer:coarse)').matches;
+  const key=[state().scene,o.id,action,label,touch].join('|');
+  if(key!==lastInteractionHint){
+    $('interactionHintMark').textContent=touch?deskText('点','Tap'):'E';
+    $('interactionHintKicker').textContent=action;$('interactionHintLabel').textContent=label;
+    hint.setAttribute('aria-label',action+'：'+label+deskText(touch?'，点击互动':'，按 E、空格或点击',touch?', tap to interact':', press E, Space or click'));
+    lastInteractionHint=key;
+  }
   hint.dataset.object=o.id;hint.hidden=false;
+}
+function activateContextAction(){
+  const o=nearbyInteractionObject();
+  if(!contextActionAvailable()||!o||o.id!==$('interactionHint').dataset.object){refreshInteractionHint();return;}
+  interact(o);
+}
+function guideCurrentQuest(){
+  if(!active||typeof nextObjective!=='function')return;
+  const target=nextObjective();if(target)chooseTaskRoute(target);
 }
 async function interact(o){
   if(!o||transitioning)return;
@@ -1888,7 +1914,7 @@ function showStartGuide(){
 }
 function finishOpeningIntro(){
   closeDialog(true);focusedObjectId='familyLuggage';lastInteractionHint='';
-  notice(deskText('母亲在门边招手。点右下角提示走过去，或自己走近后按空格。','Mother beckons by the gate. Tap the guide at the lower right, or walk up and press Space.'),true);
+  notice(deskText('母亲在门边招手。左上角「引路」可带你走近，也可以自己走过去。','Mother beckons by the gate. Use Guide in the top-left quest panel, or walk over yourself.'),true);
   refreshInteractionHint();
 }
 function goToArrival(action){
@@ -1946,7 +1972,7 @@ $('continueGame').onclick=async()=>{
   transitioning=true;
   try{
     if(!await loadSceneAssets(check.state.scene)){$('loadWarning').hidden=false;$('loadWarning').textContent='场景物资图片未加载完整。请重试继续游戏，原存档已保留。';return;}
-    engine.load(storedRaw);started=true;active=true;settlePointerInput();$('start').hidden=true;$('hud').hidden=false;render();refreshHud();notice(!state().flags.volume2Started&&N.done(state(),'M20')?(window.NanlanI18n?.language==='en'?'Progress restored. Volume II is available; open the South Street notice in your task panel.':'进度已恢复。第二卷已可开启，打开任务栏里的「南街铺讯」，到正厅与家人商议。'):'进度已恢复。可点右下角提示继续任务。');
+    engine.load(storedRaw);started=true;active=true;settlePointerInput();$('start').hidden=true;$('hud').hidden=false;render();refreshHud();notice(!state().flags.volume2Started&&N.done(state(),'M20')?(window.NanlanI18n?.language==='en'?'Progress restored. Volume II is available; open the South Street notice in your task panel.':'进度已恢复。第二卷已可开启，打开任务栏里的「南街铺讯」，到正厅与家人商议。'):deskText('进度已恢复。左上角查看当前任务，点「引路」前往目标。','Progress restored. View your current quest at the top left; use Guide to reach its destination.'));
   }finally{transitioning=false;}
 };
 try{
@@ -1962,7 +1988,8 @@ $('cameraView').onclick=()=>{
   overviewCamera=!overviewCamera;cameraOverviewUntil=0;
   refreshHud();
 };
-$('interactionHint').onclick=()=>{if(!active)return;const o=visibleObjects().find(v=>v.id===$('interactionHint').dataset.object);if(!o)return;if(nearObject(o))interact(o);else approach(o);};
+$('interactionHint').onclick=activateContextAction;
+$('questGuide').onclick=guideCurrentQuest;
 $('startGuide').onclick=showStartGuide;
 $('openingReplay').onclick=()=>window.NanlanOpening?.replay();
 $('clock').onclick=showTime;
@@ -1987,7 +2014,7 @@ window.addEventListener('keydown',e=>{
   if(['arrowup','arrowdown','arrowleft','arrowright',' '].includes(k))e.preventDefault();
   if(k==='b'){e.preventDefault();showBag();return;}
   if(k==='m'){e.preventDefault();showMap();return;}if(k==='j'){e.preventDefault();showQuest();return;}
-  if((k==='e'||k===' ')&&!e.repeat){const near=visibleObjects().filter(o=>engine.near(o)).sort((a,b)=>Math.hypot(a.x-state().player.x,a.y-state().player.y)-Math.hypot(b.x-state().player.x,b.y-state().player.y))[0];if(near)interact(near);else notice('靠近场景物件或微光采集物，再按空格或 E。');return;}
+  if((k==='e'||k===' ')&&!e.repeat){const near=nearbyInteractionObject();if(near)interact(near);else notice('靠近场景物件或微光采集物，再按空格或 E。');return;}
   const index=['1','2','3','4','5','6','7','8','9','0','-','='].indexOf(k);if(index>=0){e.preventDefault();if(!e.repeat)selectTool(index);return;}keys[k]=true;
 });
 window.addEventListener('keyup',e=>{const k=e.key.toLowerCase();keys[k]=false;if(['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright'].includes(k))edgeExitAttempt=null;});

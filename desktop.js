@@ -37,7 +37,7 @@ window.addEventListener('keydown',e=>{
     : [...$('choices').querySelectorAll('button:not(:disabled)')];
   if($('choices').hidden||!options.length)return;let i=options.indexOf(document.activeElement);i=(i+(k==='arrowdown'?1:-1)+options.length)%options.length;options[i].focus();return;
  }
- if(k===' '&&active){stop();if(e.repeat)return;const near=visibleObjects().filter(o=>engine.near(o)).sort((a,b)=>Math.hypot(a.x-state().player.x,a.y-state().player.y)-Math.hypot(b.x-state().player.x,b.y-state().player.y))[0];if(near)interact(near);else notice('靠近人物或物件，按空格或 E 互动。');}
+ if(k===' '&&active){stop();if(e.repeat)return;const near=nearbyInteractionObject();if(near)interact(near);else notice('靠近人物或物件，按空格或 E 互动。');}
 },true);
 window.addEventListener('keyup',e=>{if(e.key===' '&&!['INPUT','TEXTAREA'].includes(e.target?.tagName)){e.preventDefault();}},true);
 })();

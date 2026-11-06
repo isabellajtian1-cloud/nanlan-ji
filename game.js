@@ -15,6 +15,15 @@ const engine=new N.Engine(storage,world);
 let active=false,started=false,gender='female',dialogKind=null,dialogObject=null;
 let path=[],keys={},moving=false,direction='down',walkFrame=0,lastFrame=0,lastHud=0,transitioning=false;
 let storedRaw=null,oldRaw=null,previousFocus=null,messageTimer=0,rewardTimer=0,lastAutosave=0;
+let pointerQuietUntil=0;
+function settlePointerInput(){pointerQuietUntil=performance.now()+450;}
+// A second tap must not activate a different control revealed by the first tap.
+function blockCarryoverPointer(e){
+  if(performance.now()>=pointerQuietUntil||(e.type==='click'&&e.detail===0))return;
+  e.preventDefault();e.stopImmediatePropagation();
+}
+document.addEventListener('pointerdown',blockCarryoverPointer,true);
+document.addEventListener('click',blockCarryoverPointer,true);
 let camera={scale:1,ox:0,oy:0,dpr:1,vw:W,vh:H},hitTargets=[],focusedObjectId=null,lastInteractionHint='';
 let overviewCamera=false,cameraOverviewUntil=0;
 const reduceCameraMotion=window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -27,6 +36,7 @@ DATA.assets.bedDamage='bed-damage-v39.png';
 DATA.assets.storePickups='store-pickups-v39.png';
 DATA.assets.walkFemale='player-female-walk-v39.png';
 DATA.assets.walkMale='player-male-walk-v39.png';
+DATA.assets.playerIdle='player-idle-v6911.png';
 DATA.assets.inventoryHousehold='inventory-household-v392.png';
 DATA.assets.inventoryCrafts='inventory-crafts-v392.png';
 DATA.assets.gardenStages='garden-stages-v395.png';
@@ -60,7 +70,7 @@ function loadImage(id){
   return imagePromises[key];
 }
 async function loadSceneAssets(scene){
-  const required=[scene];
+  const required=[scene,'playerIdle'];
   if(scene==='prefTea')required.push('teaServings','teaExtras');
   if(globalThis.NanlanTown.rooms.includes(scene))required.push(...world[scene].objects.filter(o=>o.role).map(o=>'npc_'+o.role));
   if(scene==='backHall')required.push('backHallReady');
@@ -75,8 +85,16 @@ async function loadSceneAssets(scene){
   if(scene==='village')required.push('villageLetter');
   return (await Promise.all(required.map(loadImage))).every(Boolean);
 }
+function clearSceneNotice(){
+  clearTimeout(messageTimer);messageTimer=0;$('message').replaceChildren();$('message').classList.add('fade');
+}
+function clearDialogNotice(){
+  $('dialogNotice').replaceChildren();$('dialogNotice').hidden=true;
+}
 function notice(text,sticky=false){
-  $('message').textContent=text;$('message').classList.remove('fade');clearTimeout(messageTimer);
+  clearSceneNotice();
+  if(!$('dialog').hidden){$('dialogNotice').textContent=text;$('dialogNotice').hidden=!text;return;}
+  $('message').textContent=text;$('message').classList.remove('fade');
   if(!sticky)messageTimer=setTimeout(()=>$('message').classList.add('fade'),8500);
 }
 const storyHooks={
@@ -164,6 +182,8 @@ function showDialoguePortraits(title){
 function activity(title,text,kind='general'){
   globalThis.NanlanScholar?.interrupt();
   if(typeof cancelNavigation==='function')cancelNavigation();
+  clearSceneNotice();clearDialogNotice();
+  settlePointerInput();
   previousFocus=document.activeElement;active=false;path=[];keys={};moving=false;dialogKind=kind;
   showDialoguePortraits(title);$('speaker').textContent=title;$('line').textContent=text;$('panelExtra').replaceChildren();$('choices').replaceChildren();
   $('dialog').classList.remove('arrival-mode');
@@ -207,8 +227,10 @@ function navButton(label,fn,id){
 }
 function closeDialog(force=false){
   globalThis.NanlanScholar?.interrupt();
+  settlePointerInput();
   if(force===true)window.NanlanDesktop?.discard();else if(window.NanlanDesktop?.restore())return;
   window.NanlanAudio?.setDialogue(false);
+  clearDialogNotice();
   $('dialog').hidden=true;$('dialog').classList.remove('arrival-mode');dialogKind=null;dialogObject=null;path=[];keys={};
   active=started&&!transitioning&&!document.hidden&&$('gallery').hidden&&$('worldMap').hidden;
   if(previousFocus?.isConnected)previousFocus.focus({preventScroll:true});
@@ -216,7 +238,7 @@ function closeDialog(force=false){
 $('skip').onclick=closeDialog;
 function nearObject(o){return !o||engine.near(o);}
 async function perform(name,p={},rerender){
-  if(dialogObject&&!nearObject(dialogObject)){const failed={ok:false,message:'请先走到物件旁，再进行操作。'};notice(failed.message,true);closeDialog();return failed;}
+  if(dialogObject&&!nearObject(dialogObject)){const failed={ok:false,message:'请先走到物件旁，再进行操作。'};closeDialog();notice(failed.message,true);return failed;}
   if(name==='openGate'&&!await loadImage('yard')){const failed={ok:false,message:'庭院图片未能载入，请重试。原有进度已保留。'};notice(failed.message,true);return failed;}
   if(['shareFirst','shareFeast','liangShare'].includes(name)&&!await loadImage(state().gender==='male'?'familyMealMale':'familyMealFemale')){const failed={ok:false,message:'用餐画面未加载完成，请再试一次；饭菜尚未扣除。'};notice(failed.message,true);return failed;}
   if(name==='estateImprove'||name==='estateGift'){
@@ -271,9 +293,8 @@ async function perform(name,p={},rerender){
     const received=Object.entries(state().bag).filter(([id,n])=>n>(beforeBag[id]||0)).map(([id,n])=>(N.itemNames[id]||id)+' ×'+(n-(beforeBag[id]||0)));
     if(received.length){
       const text=(name==='harvest'?'采收获得：':name==='clearWeed'?'清理获得：':'已采得：')+received.join('、');
-      notice(text+(state().selected==='basket'?' · 已放入竹背篓':' · 已放入行囊'));
-      const open=document.createElement('button');open.className='receipt-open';open.textContent='查看行囊';open.onclick=()=>{if(started)showBag();};$('message').append(open);
-      if(!$('dialog').hidden){const receipt=document.createElement('p');receipt.className='gather-receipt';receipt.setAttribute('role','status');receipt.textContent=text+(state().selected==='basket'?'，已放入竹背篓。':'，已放入行囊。');$('panelExtra').prepend(receipt);button('按 B 查看全部行囊物资',showBag,'harvest-bag',true);}
+      if(!$('dialog').hidden){clearDialogNotice();const receipt=document.createElement('p');receipt.className='gather-receipt';receipt.setAttribute('role','status');receipt.textContent=text+(state().selected==='basket'?'，已放入竹背篓。':'，已放入行囊。');$('panelExtra').prepend(receipt);button('按 B 查看全部行囊物资',showBag,'harvest-bag',true);}
+      else{notice(text+(state().selected==='basket'?' · 已放入竹背篓':' · 已放入行囊'));const open=document.createElement('button');open.className='receipt-open';open.textContent='查看行囊';open.onclick=()=>{if(started)showBag();};$('message').append(open);}
     }
   }
   if(result.completed)window.NanlanDialogueScenes?.after(result.completed);
@@ -983,7 +1004,7 @@ function showConversation(o){
   $('dialogKicker').textContent=continuation?deskText('闲话 · 1 / 3','Conversation · 1 / 3'):deskText('闲话 · 1 / 2','Conversation · 1 / 2');
   window.NanlanBondUI?.npc(o);
   for(const choice of [0,1])button(t[choice===0?1:3],async()=>{
-    if(!nearObject(o)){notice('请先回到人物身旁。',true);closeDialog();return;}
+    if(!nearObject(o)){closeDialog();notice('请先回到人物身旁。',true);return;}
     const result=engine.act('chat',{object:o.id,choice,expected});
     if(!result.ok){$('line').textContent=result.message;return;}
     activity(C.cast[role].name+' · 回应',t[choice===0?2:4]);dialogObject=o;
@@ -1366,7 +1387,7 @@ async function switchScene(to){
     if(!result.ok){cancelNavigation();notice(result.message,true);return;}
     window.NanlanAudio?.play('door');focusedObjectId=null;lastInteractionHint='';
     if(result.completed)reward(result.completed);render();refreshHud();notice('来到'+world[to].name+'。');$('saveState').textContent='已保存';
-  }finally{transitioning=false;active=wasActive&&$('dialog').hidden&&$('worldMap').hidden&&!document.hidden;}
+  }finally{settlePointerInput();transitioning=false;active=wasActive&&$('dialog').hidden&&$('worldMap').hidden&&!document.hidden;}
   if(active)continueNavigation();
 }
 function objectFootprint(o){
@@ -1471,9 +1492,10 @@ function update(dt){
   }
   moving=!!(dx||dy);
   if(moving){
-    const s=state(),len=Math.hypot(dx,dy),step=Math.min(targetDistance,(keys.shift?255:205)*dt),nx=s.player.x+dx/len*step,ny=s.player.y+dy/len*step;
+    const s=state(),startX=s.player.x,startY=s.player.y,len=Math.hypot(dx,dy),step=Math.min(targetDistance,(keys.shift?255:205)*dt),nx=startX+dx/len*step,ny=startY+dy/len*step;
     direction=Math.abs(dx)>Math.abs(dy)?dx>0?'right':'left':dy>0?'down':'up';
-    if(!movementBlocked(nx,s.player.y,s.player.x,s.player.y))engine.move(nx,s.player.y);if(!movementBlocked(state().player.x,ny,state().player.x,s.player.y))engine.move(state().player.x,ny);walkFrame+=dt*10;
+    if(!movementBlocked(nx,s.player.y,s.player.x,s.player.y))engine.move(nx,s.player.y);if(!movementBlocked(state().player.x,ny,state().player.x,s.player.y))engine.move(state().player.x,ny);
+    moving=Math.hypot(state().player.x-startX,state().player.y-startY)>.001;if(moving)walkFrame+=dt*10;
     if(keyboardSteering&&tryKeyboardExit(dx/len,dy/len,dt))return;
   }
 }
@@ -1605,17 +1627,26 @@ function drawPerson(role,x,y,height=84,flip=false){
 }
 function renderCharacter(t){
   const s=state(),p=s.player,oldKey=s.gender==='male'?'walkMale':'walkFemale',key=s.actorState?.outfit==='nanlanSilk'?oldKey+'Silk':oldKey;
-  if(!images[key])loadImage(key);const im=images[key]||images[oldKey];
+  const walking=moving&&active&&!transitioning;
+  if(!images[key])loadImage(key);if(!images.playerIdle)loadImage('playerIdle');
+  const idle=!walking&&images.playerIdle?.naturalWidth,im=idle?images.playerIdle:images[key]||images[oldKey];
   const elapsed=Math.min(.1,(t-(lastPoseTime||t))/1000);lastPoseTime=t;
-  gaitBlend+=(Number(moving&&active)-gaitBlend)*Math.min(1,elapsed*12);
+  gaitBlend=walking?gaitBlend+(1-gaitBlend)*Math.min(1,elapsed*12):0;
   if(!im?.naturalWidth){drawPerson(s.gender==='male'?'playerMale':'playerFemale',p.x,p.y,84,direction==='left');return;}
-  const col=direction==='down'?0:direction==='up'?1:2,row=gaitBlend>.15?Math.floor(walkFrame/Math.PI)%2:0;
+  const col=direction==='down'?0:direction==='up'?1:2,row=walking?Math.floor(walkFrame/Math.PI)%2:0;
   const bob=-Math.abs(Math.sin(walkFrame))*1.7*gaitBlend;
   ctx.save();const shadow=ctx.createRadialGradient(p.x,p.y,1,p.x,p.y,18);shadow.addColorStop(0,'#26332255');shadow.addColorStop(1,'#26332200');ctx.fillStyle=shadow;ctx.beginPath();ctx.ellipse(p.x,p.y,18,5,0,0,Math.PI*2);ctx.fill();
   ctx.translate(p.x,p.y+bob);if(direction==='left')ctx.scale(-1,1);
   ctx.rotate(Math.sin(walkFrame)*.012*gaitBlend);
   ctx.filter='brightness('+(1-N.daylight(s).darkness*.28)+')';
-  ctx.drawImage(im,col*384,row*512,384,512,-34,-87,68,91);ctx.restore();
+  if(idle){
+    // Each resting view has its own foot anchor, so changing direction never slides it.
+    const idleRow=(s.actorState?.outfit==='nanlanSilk'?2:0)+(s.gender==='male'?1:0),cellW=im.naturalWidth/3,cellH=im.naturalHeight/4;
+    const anchors=[[[198,18,350],[180,18,350],[154,18,350]],[[198,8,342],[179,10,342],[154,10,342]],[[198,14,346],[179,16,346],[152,16,346]],[[198,6,344],[180,10,344],[154,10,344]]];
+    const [center,top,foot]=anchors[idleRow][col],scale=(s.gender==='male'?88:84)/(foot-top);
+    ctx.drawImage(im,col*cellW,idleRow*cellH,cellW,cellH,-center*scale,-foot*scale,362*scale,362*scale);
+  }else ctx.drawImage(im,col*384,row*512,384,512,-34,-87,68,91);
+  ctx.restore();
 }
 function isGatherable(o){return resourceTypes.includes(o.type)||o.action==='garden';}
 function storePickup(o){return state().scene==='store'?({tools:0,bucket:1,axe:2}[o.action]):undefined;}
@@ -1861,7 +1892,7 @@ $('continueGame').onclick=async()=>{
   transitioning=true;
   try{
     if(!await loadSceneAssets(check.state.scene)){$('loadWarning').hidden=false;$('loadWarning').textContent='场景物资图片未加载完整。请重试继续游戏，原存档已保留。';return;}
-    engine.load(storedRaw);started=true;active=true;$('start').hidden=true;$('hud').hidden=false;render();refreshHud();notice(!state().flags.volume2Started&&N.done(state(),'M20')?(window.NanlanI18n?.language==='en'?'Progress restored. Volume II is available; open the South Street notice in your task panel.':'进度已恢复。第二卷已可开启，打开任务栏里的「南街铺讯」，到正厅与家人商议。'):'进度已恢复。可点右下角提示继续任务。');
+    engine.load(storedRaw);started=true;active=true;settlePointerInput();$('start').hidden=true;$('hud').hidden=false;render();refreshHud();notice(!state().flags.volume2Started&&N.done(state(),'M20')?(window.NanlanI18n?.language==='en'?'Progress restored. Volume II is available; open the South Street notice in your task panel.':'进度已恢复。第二卷已可开启，打开任务栏里的「南街铺讯」，到正厅与家人商议。'):'进度已恢复。可点右下角提示继续任务。');
   }finally{transitioning=false;}
 };
 try{
@@ -1915,7 +1946,7 @@ document.addEventListener('keydown',e=>{
   else if(!e.shiftKey&&document.activeElement===buttons[buttons.length-1]){e.preventDefault();buttons[0].focus();}
 });
 window.addEventListener('beforeunload',()=>{if(started)engine.save();});
-loadImage('walkFemale');loadImage('walkMale');loadImage('bedDamage');loadImage('storePickups');loadImage('bed');loadImage('gate');loadImage('yard');loadImage('npc_playerFemale');loadImage('npc_playerMale');loadImage('bedPatched');loadImage('weedPatch');refreshHud();requestAnimationFrame(frame);
+loadImage('playerIdle');loadImage('walkFemale');loadImage('walkMale');loadImage('bedDamage');loadImage('storePickups');loadImage('bed');loadImage('gate');loadImage('yard');loadImage('npc_playerFemale');loadImage('npc_playerMale');loadImage('bedPatched');loadImage('weedPatch');refreshHud();requestAnimationFrame(frame);
 
 document.addEventListener('nanlanlanguagechange',()=>{if(started)refreshHud();});
 

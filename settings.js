@@ -59,6 +59,7 @@ Object.assign(dictionary,{
   '六卷与番外开发试玩':'Six-volume development preview with epilogues',
   '声音与音量':'Sound & volume','行旅与记录':'Journey & journal','更多记录':'More journals',
   '大字号':'Large text','全屏显示':'Full screen','舆图':'Map','互动':'Interact','行囊':'Satchel',
+  '舆图 · M':'Map · M','行囊 · B':'Satchel · B',
   '打开舆图（M）':'Open map (M)','查看附近可互动的人与物':'Find nearby people and objects',
   '打开行囊（B）':'Open satchel (B)','设置':'Settings'
 });

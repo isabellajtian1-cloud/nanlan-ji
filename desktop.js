@@ -1,7 +1,7 @@
 /* Desktop controls keep menu history in memory, never in the game save. */
 (function(){
 let returnView=null,bagSession=false;
-const parts=['speaker','line','panelExtra','choices','dialogPortraits','dialogKicker'];
+const parts=['speaker','line','panelExtra','dialogNotice','choices','dialogPortraits','dialogKicker'];
 function capture(){return {dialog:!$('dialog').hidden,map:!$('worldMap').hidden,gallery:!$('gallery').hidden,kind:dialogKind,object:dialogObject,focus:document.activeElement,previous:previousFocus,scroll:$('dialog').scrollTop,parts:parts.map(id=>({id,nodes:[...$(id).childNodes],hidden:$(id).hidden,className:$(id).className})),next:{hidden:$('next').hidden,text:$('next').textContent,onclick:$('next').onclick}};}
 function restore(){if(!bagSession)return false;const v=returnView;bagSession=false;returnView=null;
  $('dialog').hidden=true;$('worldMap').hidden=!v.map;$('gallery').hidden=!v.gallery;
@@ -15,7 +15,7 @@ function enterBag(){if(bagSession)return;returnView=capture();bagSession=true;$(
 function dialogue(title,text){$('choices').hidden=false;if(!dialogueCast(title).length)return;
  const paragraphs=String(text).split(/\n+/).filter(Boolean),pages=[];
  for(const paragraph of paragraphs){const sentences=paragraph.match(/[^。！？.!?]+[。！？.!?]?[”」]?/g)||[paragraph];let page='';for(const sentence of sentences){if(page.length+sentence.length>200&&page){pages.push(page);page='';}page+=sentence;}if(page)pages.push(page);}
- if(!pages.length)return;let cursor=0;const paint=()=>{$('line').textContent=pages[cursor];$('choices').hidden=cursor<pages.length-1;$('next').hidden=false;$('next').textContent=cursor<pages.length-1?'继续 · 空格':'继续 / 选择 · 空格';};paint();
+ if(!pages.length)return;let cursor=0;const paint=()=>{clearDialogNotice();$('line').textContent=pages[cursor];$('choices').hidden=cursor<pages.length-1;$('next').hidden=false;$('next').textContent=cursor<pages.length-1?'继续 · 空格':'继续 / 选择 · 空格';};paint();
  $('next').onclick=()=>{if(cursor<pages.length-1){cursor++;paint();return;}const choices=[...$('choices').querySelectorAll('button:not(:disabled)')];if(choices.length){$('next').hidden=true;choices[0].focus();}else closeDialog();};
 }
 window.NanlanDesktop={restore,discard(){bagSession=false;returnView=null;},toggleBag,enterBag,dialogue};

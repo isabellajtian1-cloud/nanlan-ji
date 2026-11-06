@@ -1,11 +1,12 @@
 @font-face{font-family:NanlanSerif;src:url(nanlan-serif.woff) format("woff");font-display:swap}
 :root{--pine:#233b30;--ink:#342f25;--gold:#c4a36a;--paper:#f3e8cc;--line:#baa174;--muted:#c9b991}
-/* Keep task navigation and prerequisite feedback reachable above dialog shade (12).
- * Maps, title and other full-screen screens keep their existing higher layers. */
+/* Task navigation remains reachable; scene toasts never cover a conversation. */
 #tasks{z-index:13}
 #message{z-index:14}
 /* Empty live regions stay in the DOM but must not paint a floating badge. */
 #message:empty{display:none}
+#wrap:has(#dialog:not([hidden])) #message{display:none}
+#dialogNotice{clear:both;margin:12px 0;padding:10px 14px;border-left:3px solid #b49a6b;border-radius:3px;background:#b49a6b18;color:#66543a;font-size:14px;line-height:1.7;overflow-wrap:anywhere}
 *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#172b24;color:var(--paper);font-family:NanlanSerif,"Songti SC","STSong","SimSun",serif}
 button{font:inherit;cursor:pointer;color:inherit;touch-action:manipulation}button:focus-visible{outline:3px solid #eac786;outline-offset:3px}button:active{filter:brightness(.93)}button:disabled{opacity:.48;cursor:default}
 [hidden]{display:none!important}#wrap{position:relative;width:100vw;height:100dvh;overflow:hidden}#game{width:100%;height:100%;display:block;touch-action:none}

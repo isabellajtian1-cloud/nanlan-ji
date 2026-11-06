@@ -8,6 +8,7 @@ $('audioClose').hidden=true;
 const isOpen=()=>!panel.hidden;
 function sync(){
   $('settingsReadSize').setAttribute('aria-pressed',String(document.documentElement.classList.contains('large-read')));
+  $('settingsSceneGuides').setAttribute('aria-pressed',String(sceneGuides));
   $('settingsScreenMode').hidden=!document.fullscreenEnabled;
   $('settingsScreenMode').setAttribute('aria-pressed',String(!!document.fullscreenElement));
   $('settingsGameOptions').hidden=!started;$('cameraView').hidden=!started;
@@ -36,6 +37,7 @@ $('settingsClose').onclick=()=>close();
 panel.addEventListener('click',e=>{if(e.target===panel)close();});
 $('settingsAudio').addEventListener('toggle',()=>{audio.hidden=!isOpen()||!$('settingsAudio').open;});
 $('settingsReadSize').onclick=()=>{toggleReadingSize();sync();};
+$('settingsSceneGuides').onclick=()=>{sceneGuides=!sceneGuides;try{localStorage.setItem('nanlan_scene_guides',sceneGuides?'1':'0');}catch{}sync();};
 $('settingsScreenMode').onclick=toggleGameScreen;
 document.addEventListener('fullscreenchange',sync);
 // Close before opening another game panel, so its focus and pause state are retained.
@@ -60,6 +62,10 @@ Object.assign(dictionary,{
   '声音与音量':'Sound & volume','行旅与记录':'Journey & journal','更多记录':'More journals',
   '大字号':'Large text','全屏显示':'Full screen','舆图':'Map','互动':'Interact','行囊':'Satchel',
   '舆图 · M':'Map · M','行囊 · B':'Satchel · B',
+  '道路与入口标记':'Routes & entrances',
+  '入口 · 确认前往':'Entrance · Confirm travel','留在这里':'Stay here',
+  '你已走到入口。':'You have reached the entrance.',
+  '请重新走到入口，再选择前往。':'Return to the entrance before travelling.',
   '打开舆图（M）':'Open map (M)','查看附近可互动的人与物':'Find nearby people and objects',
   '打开行囊（B）':'Open satchel (B)','设置':'Settings'
 });

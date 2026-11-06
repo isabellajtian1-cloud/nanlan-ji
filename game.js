@@ -3,6 +3,10 @@ const $=id=>document.getElementById(id);
 const N=NanlanEngine, DATA=window.NANLAN_DATA, world=DATA.world;
 // The painted garden extends slightly beyond the old walking limit; this lets the actor reach its edge without stepping on crops.
 world.yard.bounds[2]=970;
+// Extend the walkable approach onto the painted hall steps, not the surrounding roofs.
+world.yard.bounds[1]=205;
+world.yard.collisions.push([300,205,160,19],[550,205,420,19]);
+Object.assign(world.yard.objects.find(o=>o.id==='hall'),{x:500,y:210});
 world.village.objects.find(o=>o.id==='villagePantry').label='乡邻余粮 · 种子与补给';
 (()=>{
  const labels=window.NANLAN_EN||(window.NANLAN_EN={});
@@ -10,6 +14,8 @@ world.village.objects.find(o=>o.id==='villagePantry').label='乡邻余粮 · 种
  window.NanlanI18n?.configure(labels);
 })();
 const canvas=$('game'),ctx=canvas.getContext('2d',{alpha:false}),W=1100,H=733;
+// Keep authored coordinates and old saves, while increasing world distances in actor-sized steps.
+const EXPLORATION_SCALE=1.3,ACTOR_SCALE=1/EXPLORATION_SCALE;
 const storage={getItem:key=>localStorage.getItem(key),setItem:(key,value)=>localStorage.setItem(key,value)};
 const engine=new N.Engine(storage,world);
 let active=false,started=false,gender='female',dialogKind=null,dialogObject=null;
@@ -186,7 +192,7 @@ function activity(title,text,kind='general'){
   settlePointerInput();
   previousFocus=document.activeElement;active=false;path=[];keys={};moving=false;dialogKind=kind;
   showDialoguePortraits(title);$('speaker').textContent=title;$('line').textContent=text;$('panelExtra').replaceChildren();$('choices').replaceChildren();
-  $('dialog').classList.remove('arrival-mode');
+  $('dialog').classList.remove('arrival-mode','travel-confirm');
   $('dialogKicker').textContent=kind==='quest'?'南澜记 · 眼前的事':'南澜小事';
   $('dialogQuestNavigate').hidden=true;
   $('choices').hidden=false;$('next').hidden=true;$('dialog').hidden=false;$('skip').textContent=started?'返回游戏 ×':'返回启程页 ×';
@@ -231,12 +237,13 @@ function closeDialog(force=false){
   if(force===true)window.NanlanDesktop?.discard();else if(window.NanlanDesktop?.restore())return;
   window.NanlanAudio?.setDialogue(false);
   clearDialogNotice();
-  $('dialog').hidden=true;$('dialog').classList.remove('arrival-mode');dialogKind=null;dialogObject=null;path=[];keys={};
+  $('dialog').hidden=true;$('dialog').classList.remove('arrival-mode','travel-confirm');dialogKind=null;dialogObject=null;path=[];keys={};
   active=started&&!transitioning&&!document.hidden&&$('gallery').hidden&&$('worldMap').hidden;
   if(previousFocus?.isConnected)previousFocus.focus({preventScroll:true});
 }
 $('skip').onclick=closeDialog;
-function nearObject(o){return !o||engine.near(o);}
+const DOOR_REACH=18;
+function nearObject(o){return !o||(o.type==='door'?Math.hypot(o.x-state().player.x,o.y-state().player.y)<=DOOR_REACH:engine.near(o));}
 async function perform(name,p={},rerender){
   if(dialogObject&&!nearObject(dialogObject)){const failed={ok:false,message:'请先走到物件旁，再进行操作。'};closeDialog();notice(failed.message,true);return failed;}
   if(name==='openGate'&&!await loadImage('yard')){const failed={ok:false,message:'庭院图片未能载入，请重试。原有进度已保留。'};notice(failed.message,true);return failed;}
@@ -1196,6 +1203,7 @@ async function interact(o){
 }
 async function interactCore(o){
   if(!o||transitioning)return;
+  if(o.type==='door'&&!nearObject(o)){approach(o);return;}
   if(!nearObject(o)){notice('先走近'+o.label+'。');return;}
   if(globalThis.NanlanFestivalUI?.offer(o)){dialogObject=o;return;}
   if(globalThis.NanlanTownUI?.offer(o)){dialogObject=o;return;}
@@ -1207,7 +1215,7 @@ async function interactCore(o){
   if(globalThis.NanlanV5?.offer(o)){dialogObject=o;window.NanlanBondUI?.npc(o);return;}
   if(globalThis.NanlanV4?.offer(o)){dialogObject=o;window.NanlanBondUI?.npc(o);return;}
   if(globalThis.NanlanV3?.offer(o)){dialogObject=o;window.NanlanBondUI?.npc(o);return;}
-  if(o.type==='door'){const why=objectGate(o);if(why){notice(why,true);return;}await switchScene(o.to);return;}
+  if(o.type==='door'){const why=objectGate(o);if(why){notice(why,true);return;}confirmSceneEntry(o);return;}
   if(o.type==='locked'||o.type==='property'){activity(o.label,o.lines||'这个地点暂未开放，后续篇章会有新安排。');dialogObject=o;return;}
   if(o.type==='npc'){npc(o);dialogObject=o;globalThis.NanlanTownUI?.family(o);return;}
   if(o.type==='view'||o.type==='read'){activity(o.label,o.lines||'这里记着家中旧事。');dialogObject=o;return;}
@@ -1377,6 +1385,25 @@ function showNearby(){
     if(cooldown){b.disabled=true;b.title='这处物资还需 '+remaining+' 游戏分钟恢复。';}
   }
 }
+function confirmSceneEntry(o){
+  if(!nearObject(o)){approach(o);return;}
+  const from=state().scene,route=typeof getNavigationPlan==='function'?getNavigationPlan():null;
+  const destination=world[o.to].name;
+  activity(deskText('前往'+destination+'？','Go to '+destination+'?'),
+    deskText('你已走到入口。\n从「'+world[from].name+'」前往「'+destination+'」。','You have reached the entrance.\nFrom '+world[from].name+' to '+destination+'.'),'travel-confirm');
+  $('dialog').classList.add('travel-confirm');$('dialogKicker').textContent=deskText('入口 · 确认前往','Entrance · Confirm travel');
+  dialogObject=null;edgeExitAttempt=from+':'+o.id;
+  button(deskText('进入 · '+destination,'Enter · '+destination),async()=>{
+    const entrance=visibleObjects().find(v=>v.type==='door'&&v.id===o.id&&v.to===o.to);
+    if(state().scene!==from||!entrance||!nearObject(entrance)){
+      closeDialog(true);notice(deskText('请重新走到入口，再选择前往。','Return to the entrance before travelling.'),true);return;
+    }
+    const why=objectGate(entrance);if(why){notice(why,true);return;}
+    closeDialog(true);await switchScene(entrance.to);
+    if(state().scene===entrance.to&&route)startNavigation(route.scene,route.object);
+  },'travel-enter',false,false);
+  navButton(deskText('留在这里','Stay here'),()=>closeDialog(true),'travel-stay');
+}
 async function switchScene(to){
   if(transitioning)return;const why=N.sceneGate(state(),to);if(why){notice(why,true);return;}
   const wasActive=active;transitioning=true;active=false;path=[];keys={};
@@ -1395,7 +1422,7 @@ function objectFootprint(o){
   const fixed={familyLuggage:[48,28],mealTable:[88,42],bedRest:[66,31],workbench:[75,35],bookBox:[28,18],goodsCrates:[62,32],silkPond:[76,44],herbPlot:[67,36],waterJar:[24,14],stove:[42,25],shelter:[55,28],generalStoreKeeper:[62,27],v2Shelf:[48,25],villageLetter:[23,10]};
   if(fixed[o.id])return fixed[o.id];
   if(fruitTypes.includes(o.type))return [38,22];
-  if(npcRole(o)||o.type==='npc')return [22,14];
+  if(npcRole(o)||o.type==='npc')return [22*ACTOR_SCALE,14*ACTOR_SCALE];
   if(['activity','locked','property','view','read'].includes(o.type))return [27,18];
   return null;
 }
@@ -1426,14 +1453,14 @@ function movementBlocked(x,y,fromX,fromY){
   return false;
 }
 function findPath(target){
-  const s=state(),step=18,b=world[s.scene].bounds,cols=Math.ceil((b[2]-b[0])/step)+1,rows=Math.ceil((b[3]-b[1])/step)+1;
+  const s=state(),step=14,b=world[s.scene].bounds,cols=Math.ceil((b[2]-b[0])/step)+1,rows=Math.ceil((b[3]-b[1])/step)+1;
   const cell=(x,y)=>[Math.max(0,Math.min(cols-1,Math.round((x-b[0])/step))),Math.max(0,Math.min(rows-1,Math.round((y-b[1])/step)))];
   const xy=(x,y)=>({x:b[0]+x*step,y:b[1]+y*step}),start=cell(s.player.x,s.player.y),end=cell(target.x,target.y),key=(x,y)=>x+','+y;
   const queue=[start],previous=new Map([[key(...start),null]]);
   let finish=null;
   for(let n=0;n<queue.length;n++){
     const [x,y]=queue[n],p=xy(x,y);
-    if((target.object&&Math.hypot(p.x-target.object.x,p.y-target.object.y)<=70)||(!target.object&&Math.hypot(x-end[0],y-end[1])<=.1)){finish=[x,y];break;}
+    if((target.object&&Math.hypot(p.x-target.object.x,p.y-target.object.y)<=(target.object.type==='door'?16:64))||(!target.object&&Math.hypot(x-end[0],y-end[1])<=.1)){finish=[x,y];break;}
     for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]]){
       const nx=x+dx,ny=y+dy,k=key(nx,ny),np=xy(nx,ny);if(nx<0||ny<0||nx>=cols||ny>=rows||previous.has(k)||blocked(np.x,np.y,10))continue;
       if(dx&&dy&&(blocked(p.x,np.y,10)||blocked(np.x,p.y,10)))continue;
@@ -1462,12 +1489,12 @@ function tryKeyboardExit(dx,dy,dt){
   const s=state(),doors=visibleObjects().filter(o=>o.type==='door').map(o=>{
     const [ex,ey]=keyboardExitDirection(o),rx=o.x-s.player.x,ry=o.y-s.player.y;
     return {o,d:Math.hypot(rx,ry),along:rx*ex+ry*ey,across:Math.abs(rx*ey-ry*ex),facing:dx*ex+dy*ey};
-  }).filter(v=>v.d<=94&&v.across<=68&&v.along>=-40&&v.along<=56&&v.facing>=.5).sort((a,b)=>a.d-b.d);
-  // A road has width: crossing beside its centre must work as well as hitting its exact point.
+  }).filter(v=>v.d<=DOOR_REACH&&v.facing>=.5).sort((a,b)=>a.d-b.d);
+  // Only reaching the entrance can open a prompt; walking nearby never changes scene.
   if(!doors.length){edgeExitAttempt=null;return false;}
   const {o}=doors[0],attempt=s.scene+':'+o.id;
   if(edgeExitCooldown||edgeExitAttempt===attempt)return false;
-  edgeExitAttempt=attempt;edgeExitCooldown=1.1;notice('沿路前往'+world[o.to].name+'…');void interact(o);return true;
+  edgeExitAttempt=attempt;edgeExitCooldown=1.1;void interact(o);return true;
 }
 function worldPoint(e){const r=canvas.getBoundingClientRect();return {x:(e.clientX-r.left-camera.ox)/camera.scale,y:(e.clientY-r.top-camera.oy)/camera.scale};}
 function resolveHit(p){
@@ -1482,17 +1509,17 @@ canvas.addEventListener('pointerdown',e=>{
 function update(dt){
   if(!active||transitioning||document.hidden)return;
   const destination=path[path.length-1]?.object;
-  if(destination&&engine.near(destination)){path=[];moving=false;interact(destination);return;}
+  if(destination&&nearObject(destination)){path=[];moving=false;interact(destination);return;}
   engine.tick(dt);let targetDistance=Infinity,dx=Number(!!(keys.d||keys.arrowright))-Number(!!(keys.a||keys.arrowleft)),dy=Number(!!(keys.s||keys.arrowdown))-Number(!!(keys.w||keys.arrowup));
   const keyboardSteering=!!(dx||dy);if(keyboardSteering){path=[];cancelNavigation();}
   else if(path.length){
     const p=path[0],distance=Math.hypot(p.x-state().player.x,p.y-state().player.y);
-    if(distance<7){path.shift();if(p.object){moving=false;interact(p.object);return;}}
+    if(distance<(p.object?.type==='door'?2:7)){path.shift();if(p.object){moving=false;interact(p.object);return;}}
     else{targetDistance=distance;dx=(p.x-state().player.x)/distance;dy=(p.y-state().player.y)/distance;}
   }
   moving=!!(dx||dy);
   if(moving){
-    const s=state(),startX=s.player.x,startY=s.player.y,len=Math.hypot(dx,dy),step=Math.min(targetDistance,(keys.shift?255:205)*dt),nx=startX+dx/len*step,ny=startY+dy/len*step;
+    const s=state(),startX=s.player.x,startY=s.player.y,len=Math.hypot(dx,dy),step=Math.min(targetDistance,(keys.shift?255:205)*ACTOR_SCALE*dt),nx=startX+dx/len*step,ny=startY+dy/len*step;
     direction=Math.abs(dx)>Math.abs(dy)?dx>0?'right':'left':dy>0?'down':'up';
     if(!movementBlocked(nx,s.player.y,s.player.x,s.player.y))engine.move(nx,s.player.y);if(!movementBlocked(state().player.x,ny,state().player.x,s.player.y))engine.move(state().player.x,ny);
     moving=Math.hypot(state().player.x-startX,state().player.y-startY)>.001;if(moving)walkFrame+=dt*10;
@@ -1500,7 +1527,7 @@ function update(dt){
   }
 }
 function setupCamera(rect,now){
-  const s=state(),dpr=Math.min(window.devicePixelRatio||1,2);
+  const s=state(),dpr=Math.min(window.devicePixelRatio||1,3,Math.sqrt(12000000/Math.max(1,rect.width*rect.height)));
   const vw=Math.max(1,rect.width),vh=Math.max(1,rect.height);
   const width=Math.round(vw*dpr),height=Math.round(vh*dpr);
   if(canvas.width!==width||canvas.height!==height){canvas.width=width;canvas.height=height;}
@@ -1508,7 +1535,7 @@ function setupCamera(rect,now){
   const fullScale=Math.min(vw/W,vh/H);
   const portraitScale=vh>vw?Math.max(fullScale,Math.min(vw/650,vh/H)):fullScale;
   const whole=!started||overviewCamera||now<cameraOverviewUntil;
-  const targetScale=whole?fullScale:portraitScale*1.2;
+  const targetScale=whole?fullScale:portraitScale*1.2*EXPLORATION_SCALE;
   const targetX=whole?W/2:s.player.x;
   // Frame the character's body above its feet without hiding the path ahead.
   const targetY=whole?H/2:s.player.y-34;
@@ -1540,11 +1567,11 @@ function paintDifferenceLayers(){
   if(sc==='bed'){
     const damage=images.bedDamage,clean=images.bed;
     if(damage?.naturalWidth&&clean?.naturalWidth){
-      ctx.drawImage(damage,0,0,W,H);
+      ctx.drawImage(NanlanClimate.picture(damage,sc,s),0,0,W,H);
       // Independently restore each repaired part, including old saves that repaired only one.
       if(f.windowPatched)ctx.drawImage(clean,490,0,350,210,490/1536*W,0,350/1536*W,210/1024*H);
       if(f.leakPatched)ctx.drawImage(clean,840,0,696,475,840/1536*W,0,696/1536*W,475/1024*H);
-      if(f.windowPatched&&f.leakPatched)ctx.drawImage(clean,0,0,W,H);
+      if(f.windowPatched&&f.leakPatched)ctx.drawImage(NanlanClimate.picture(clean,sc,s),0,0,W,H);
     }
     if(!f.leakPatched){
       const tick=performance.now()/1000;
@@ -1607,16 +1634,17 @@ function drawNaturalPerson(o,t){
   if(o.role==='children'){drawPerson('children',o.x,o.y,62,false);return;}
  const pose=npcPresentation(o,t),col=['grandfather','father','mother','cen'].indexOf(pose.role);
  const silk=window.NanlanProduction?.portrait(pose.role),sheet=images.npcIdle;
- ctx.save();ctx.translate(o.x,o.y);ctx.rotate(pose.lean);ctx.scale(1,pose.breath);ctx.translate(-o.x,-o.y);
+  ctx.save();ctx.translate(o.x,o.y);ctx.rotate(pose.lean);ctx.scale(ACTOR_SCALE,ACTOR_SCALE*pose.breath);ctx.translate(-o.x,-o.y);
  if(col>=0&&!silk&&sheet?.naturalWidth){
   const cw=sheet.naturalWidth/4,ch=sheet.naturalHeight/2;
   ctx.save();ctx.translate(o.x,o.y);if(pose.flip)ctx.scale(-1,1);
   ctx.filter='brightness('+(1-N.daylight(state()).darkness*.28)+')';
   ctx.drawImage(sheet,col*cw,pose.talking?ch:0,cw,ch,-34,-87,68,91);ctx.restore();
- }else drawPerson(pose.role,o.x,o.y,84,pose.flip);
+ }else drawPerson(pose.role,o.x,o.y,84,pose.flip,false);
  ctx.restore();
 }
-function drawPerson(role,x,y,height=84,flip=false){
+function drawPerson(role,x,y,height=84,flip=false,scaleActor=true){
+  if(scaleActor)height*=ACTOR_SCALE;
   const costume=window.NanlanProduction?.portrait(role);if(costume&&!images[costume.asset])loadImage(costume.asset);
   const dressed=costume&&images[costume.asset]?.naturalWidth,im=dressed?images[costume.asset]:images['npc_'+role];if(!im?.naturalWidth){loadImage('npc_'+role);return;}
   const width=height*(dressed?costume.rect[2]/costume.rect[3]:im.naturalWidth/im.naturalHeight);
@@ -1636,7 +1664,7 @@ function renderCharacter(t){
   const col=direction==='down'?0:direction==='up'?1:2,row=walking?Math.floor(walkFrame/Math.PI)%2:0;
   const bob=-Math.abs(Math.sin(walkFrame))*1.7*gaitBlend;
   ctx.save();const shadow=ctx.createRadialGradient(p.x,p.y,1,p.x,p.y,18);shadow.addColorStop(0,'#26332255');shadow.addColorStop(1,'#26332200');ctx.fillStyle=shadow;ctx.beginPath();ctx.ellipse(p.x,p.y,18,5,0,0,Math.PI*2);ctx.fill();
-  ctx.translate(p.x,p.y+bob);if(direction==='left')ctx.scale(-1,1);
+  ctx.translate(p.x,p.y+bob*ACTOR_SCALE);ctx.scale(ACTOR_SCALE,ACTOR_SCALE);if(direction==='left')ctx.scale(-1,1);
   ctx.rotate(Math.sin(walkFrame)*.012*gaitBlend);
   ctx.filter='brightness('+(1-N.daylight(s).darkness*.28)+')';
   if(idle){
@@ -1651,20 +1679,45 @@ function renderCharacter(t){
 function isGatherable(o){return resourceTypes.includes(o.type)||o.action==='garden';}
 function storePickup(o){return state().scene==='store'?({tools:0,bucket:1,axe:2}[o.action]):undefined;}
 function personBounds(role,x,y){
-  const im=images['npc_'+role],height=84,width=role==='playerMale'||role==='playerFemale'?68:im?.naturalWidth?height*im.naturalWidth/im.naturalHeight:64;
+  const im=images['npc_'+role],height=84*ACTOR_SCALE,width=role==='playerMale'||role==='playerFemale'?68*ACTOR_SCALE:im?.naturalWidth?height*im.naturalWidth/im.naturalHeight:64*ACTOR_SCALE;
   return {x:x-width/2-6,y:y-height-8,w:width+12,h:height+18};
+}
+let sceneGuides=true;
+try{sceneGuides=localStorage.getItem('nanlan_scene_guides')!=='0';}catch{}
+function drawWalkingRoute(){
+  if(!sceneGuides||!path.length)return;
+  ctx.save();ctx.beginPath();ctx.moveTo(state().player.x,state().player.y);
+  for(const p of path)ctx.lineTo(p.x,p.y);
+  ctx.strokeStyle='#263c3280';ctx.lineWidth=5/camera.scale;ctx.stroke();
+  ctx.strokeStyle='#f9e2a9cc';ctx.lineWidth=2/camera.scale;ctx.setLineDash([4/camera.scale,6/camera.scale]);ctx.stroke();ctx.restore();
+}
+function drawEntranceSigns(){
+  if(!sceneGuides||!started)return;
+  const scale=camera.scale,left=-camera.ox/scale,right=(camera.vw-camera.ox)/scale,top=-camera.oy/scale,bottom=(camera.vh-camera.oy)/scale;
+  for(const o of visibleObjects().filter(v=>v.type==='door')){
+    if(o.x<left+20||o.x>right-20||o.y<top+22||o.y>bottom-35)continue;
+    const locked=!!objectGate(o),name=window.NanlanI18n?.t(o.label)||o.label;
+    ctx.save();ctx.font='14px NanlanSerif,serif';
+    const width=Math.min(230,ctx.measureText(name).width+36),x=Math.max(left+4,Math.min(right-width/scale-4,o.x-width/scale/2)),y=o.y+10/scale;
+    ctx.translate(x,y);ctx.scale(1/scale,1/scale);ctx.fillStyle=locked?'#554b3bea':'#263f32ed';ctx.strokeStyle=locked?'#ae9970':'#e3c381';ctx.lineWidth=1;
+    ctx.beginPath();ctx.roundRect(0,0,width,28,5);ctx.fill();ctx.stroke();
+    ctx.strokeStyle='#e8d4a7';ctx.strokeRect(9,7,10,14);ctx.beginPath();ctx.moveTo(12,10);ctx.lineTo(16,14);ctx.lineTo(12,18);ctx.stroke();
+    ctx.fillStyle=locked?'#cfbf9f':'#f7e8c6';ctx.textBaseline='middle';ctx.fillText(name,27,14,width-33);ctx.restore();
+    hitTargets.push({o,rect:{x,y,w:width/scale,h:28/scale},anchor:null});
+  }
 }
 function render(){
   setupCamera(canvas.getBoundingClientRect(),performance.now());
   ctx.setTransform(1,0,0,1,0,0);ctx.fillStyle='#20392d';ctx.fillRect(0,0,canvas.width,canvas.height);
   const {scale,ox,oy,dpr}=camera;
-  ctx.setTransform(scale*dpr,0,0,scale*dpr,ox*dpr,oy*dpr);ctx.imageSmoothingEnabled=true;
+  ctx.setTransform(scale*dpr,0,0,scale*dpr,ox*dpr,oy*dpr);ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
   const s=state(),fallback=s.scene==='backHall'&&s.flags.v4_room?'backHallReady':s.scene==='bed'&&s.flags.leakPatched?'bedPatched':world[s.scene].asset;
   const baseKey=window.NanlanEstateUI?.backdrop(s,s.scene,fallback)||fallback;
   const base=images[baseKey]||images[world[s.scene].asset];if(base?.naturalWidth)ctx.drawImage(NanlanClimate.picture(base,s.scene,s),0,0,W,H);
   NanlanClimate.atmosphere(ctx,s.scene,s,performance.now(),W,H);
   window.NanlanWeather?.atmosphere(ctx,s.scene,s,performance.now(),W,H);
   paintDifferenceLayers();hitTargets=[];
+  drawWalkingRoute();
   const left=Math.max(8,-camera.ox/camera.scale+8),right=Math.min(W-8,(camera.vw-camera.ox)/camera.scale-8);
   const time=performance.now(),objective=localObjectiveObject(),destination=path[path.length-1]?.object;
   const people=visibleObjects().filter(o=>npcRole(o));
@@ -1777,6 +1830,7 @@ function render(){
 
   }
   actors.sort((a,b)=>a.y-b.y).forEach(actor=>actor.draw());
+  drawEntranceSigns();
   if(path.length){const p=path[path.length-1];ctx.strokeStyle='#f5dfa3aa';ctx.lineWidth=1.5;ctx.beginPath();ctx.ellipse(p.x,p.y,11,5,0,0,Math.PI*2);ctx.stroke();}
   renderGardenWorkFx(time);
   renderCompletionFeedback(time);

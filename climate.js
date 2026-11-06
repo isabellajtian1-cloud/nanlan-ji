@@ -16,14 +16,23 @@ const outdoor=new Set(['gate','yard','village','market','county','foothill','mou
 const gardens=new Set(['yard','village','foothill','mountain','mountainside','summit','bambooGrove','oldTrail','qBamboo']);
 const cache=new Map();
 function picture(image,scene,s){
- if(!image?.naturalWidth||!outdoor.has(scene)||typeof document==='undefined')return image;
+ if(!image?.naturalWidth||typeof document==='undefined')return image;
  const season=at(s),key=image.src+'|'+scene+'|'+season.key;
  if(cache.has(key)){const c=cache.get(key);cache.delete(key);cache.set(key,c);return c;}
  const canvas=document.createElement('canvas');canvas.width=image.naturalWidth;canvas.height=image.naturalHeight;
  const c=canvas.getContext('2d',{willReadFrequently:true});if(!c)return image;
  c.drawImage(image,0,0);
  try{
-  const data=c.getImageData(0,0,canvas.width,canvas.height),p=data.data;
+  const data=c.getImageData(0,0,canvas.width,canvas.height),p=data.data,original=new Uint8ClampedArray(p),stride=canvas.width*4;
+  // Modest bounded detail contrast keeps every original scene readable without bright edge halos.
+  for(let y=1;y<canvas.height-1;y++)for(let x=1;x<canvas.width-1;x++){
+    const i=y*stride+x*4;
+    for(let channel=0;channel<3;channel++){
+      const j=i+channel,detail=original[j]-(original[j-4]+original[j+4]+original[j-stride]+original[j+stride])/4;
+      p[j]=original[j]+Math.max(-10,Math.min(10,detail*.42));
+    }
+  }
+  if(outdoor.has(scene)){
   for(let i=0;i<p.length;i+=4){
    const r=p[i],g=p[i+1],b=p[i+2],green=(gardens.has(scene)?1:0)*Math.max(0,Math.min(1,(g-b-6)/35))*Math.max(0,Math.min(1,(g-r+18)/45));
    if(season.index===0){p[i]=r+green*7;p[i+1]=g+green*11;p[i+2]=b+green*2;}
@@ -31,9 +40,10 @@ function picture(image,scene,s){
    if(season.index===2){p[i]=r+green*24;p[i+1]=g+green*3;p[i+2]=b-green*6;}
    if(season.index===3){const grey=r*.28+g*.53+b*.19;p[i]=r*.88+grey*.12;p[i+1]=g*.88+grey*.12;p[i+2]=b*.87+grey*.13+2;}
   }
+  }
   c.putImageData(data,0,0);
  }catch{ /* A cross-origin image still renders; only the fine vegetation grading is skipped. */ }
- c.fillStyle=['rgba(232,239,198,.035)','rgba(243,214,139,.025)','rgba(239,202,143,.045)','rgba(193,213,218,.07)'][season.index];c.fillRect(0,0,canvas.width,canvas.height);
+ if(outdoor.has(scene)){c.fillStyle=['rgba(232,239,198,.02)','rgba(243,214,139,.015)','rgba(239,202,143,.025)','rgba(193,213,218,.04)'][season.index];c.fillRect(0,0,canvas.width,canvas.height);}
  cache.set(key,canvas);while(cache.size>8)cache.delete(cache.keys().next().value);return canvas;
 }
 function atmosphere(c,scene,s,time,w,h){

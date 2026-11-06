@@ -2,10 +2,10 @@
 (function(){
 let returnView=null,bagSession=false;
 const parts=['speaker','line','panelExtra','dialogNotice','choices','dialogPortraits','dialogKicker'];
-function capture(){return {dialog:!$('dialog').hidden,map:!$('worldMap').hidden,gallery:!$('gallery').hidden,kind:dialogKind,object:dialogObject,focus:document.activeElement,previous:previousFocus,scroll:$('dialog').scrollTop,parts:parts.map(id=>({id,nodes:[...$(id).childNodes],hidden:$(id).hidden,className:$(id).className})),next:{hidden:$('next').hidden,text:$('next').textContent,onclick:$('next').onclick}};}
+function capture(){return {dialog:!$('dialog').hidden,dialogClass:$('dialog').className,map:!$('worldMap').hidden,gallery:!$('gallery').hidden,kind:dialogKind,object:dialogObject,focus:document.activeElement,previous:previousFocus,scroll:$('dialog').scrollTop,parts:parts.map(id=>({id,nodes:[...$(id).childNodes],hidden:$(id).hidden,className:$(id).className})),next:{hidden:$('next').hidden,text:$('next').textContent,onclick:$('next').onclick}};}
 function restore(){if(!bagSession)return false;const v=returnView;bagSession=false;returnView=null;
  $('dialog').hidden=true;$('worldMap').hidden=!v.map;$('gallery').hidden=!v.gallery;
- if(v.dialog){for(const p of v.parts){$(p.id).replaceChildren(...p.nodes);$(p.id).hidden=p.hidden;$(p.id).className=p.className;}dialogKind=v.kind;dialogObject=v.object;previousFocus=v.previous;$('next').hidden=v.next.hidden;$('next').textContent=v.next.text;$('next').onclick=v.next.onclick;$('dialog').hidden=false;$('dialog').scrollTop=v.scroll;}
+ if(v.dialog){for(const p of v.parts){$(p.id).replaceChildren(...p.nodes);$(p.id).hidden=p.hidden;$(p.id).className=p.className;}$('dialog').className=v.dialogClass;dialogKind=v.kind;dialogObject=v.object;previousFocus=v.previous;$('next').hidden=v.next.hidden;$('next').textContent=v.next.text;$('next').onclick=v.next.onclick;$('dialog').hidden=false;$('dialog').scrollTop=v.scroll;}
  else{dialogKind=null;dialogObject=null;}
  active=started&&!v.dialog&&!v.map&&!v.gallery&&!transitioning&&!document.hidden;keys={};path=[];moving=false;window.NanlanAudio?.setDialogue(v.dialog&&!$('dialogPortraits').hidden);if(v.kind==='silk-reel')v.parts.find(p=>p.id==='panelExtra')?.nodes.find(n=>n.classList?.contains('silk-reel-board'))?.dispatchEvent(new Event('reelresume'));if(v.focus?.isConnected)v.focus.focus({preventScroll:true});return true;}
 function toggleBag(){if(bagSession){restore();return;}if(!started||transitioning)return;

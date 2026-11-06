@@ -184,6 +184,7 @@ function firstRoute(from,to){
   }return null;
 }
 function cancelNavigation(){navigationTarget=null;navigationObject=null;if($('navigationStatus'))$('navigationStatus').hidden=true;}
+function getNavigationPlan(){return navigationTarget?{scene:navigationTarget,object:navigationObject}:null;}
 function startNavigation(to,objectId=null){
   if(started&&!$('dialog').hidden)closeDialog(true);
   const route=firstRoute(state().scene,to);

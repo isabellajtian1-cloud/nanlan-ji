@@ -289,7 +289,7 @@
       const b=this.world[next.scene].bounds;
       if(next.player.x<b[0]||next.player.x>b[2]||next.player.y<b[1]||next.player.y>b[3])next.player={x:this.world[next.scene].spawn[0],y:this.world[next.scene].spawn[1]};
       this.state=next;return next;}
-    near(object) {return object&&Math.hypot(object.x-this.state.player.x,object.y-this.state.player.y)<=94;}
+    near(object) {return object&&Math.hypot(object.x-this.state.player.x,object.y-this.state.player.y)<=72;}
     move(x,y) {const b=this.world[this.state.scene].bounds;if(x>=b[0]&&x<=b[2]&&y>=b[1]&&y<=b[3]){this.state.player.x=x;this.state.player.y=y;}}
     tick(dt) {if(this.state.mode!=='daily')return;const s=this.state,c=clock(s);if(c.minute>=1320)return;
       s.worldTick+=Math.min(Math.max(dt,0),.1);if(clock(s).minute>=1320)s.worldTick=Math.floor(s.worldTick/1440)*1440+1320;

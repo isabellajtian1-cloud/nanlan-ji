@@ -130,3 +130,26 @@ button{font:inherit;cursor:pointer;color:inherit;touch-action:manipulation}butto
 .inventory-row strong em{display:inline-block;margin-left:8px;padding:2px 6px;border-radius:999px;background:#e7d4aa;color:#70452f;font-style:normal;font-size:11px}
 .inventory-row.required-missing strong em{background:#a95e45;color:#fff8e7}
 #restoreAutoBackup:not([hidden]){border-color:#927344;background:#efe2bd;color:#38543f}
+
+/* Entrance confirmation leaves the doorway and stopped actor visible. */
+#dialog.travel-confirm{background:#11271d66;padding-bottom:max(24px,env(safe-area-inset-bottom))}
+#dialog.travel-confirm .sheet{width:min(440px,100%);padding:17px 21px 20px}
+#dialog.travel-confirm #speaker{font-size:23px;margin:6px 0 12px}
+#dialog.travel-confirm #line{font-size:14px;line-height:1.8}
+#dialog.travel-confirm #choices{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:18px}
+#dialog.travel-confirm #choices button{min-height:46px;padding:10px 12px;text-align:center;font-size:14px}
+@media(max-width:480px){#dialog.travel-confirm .sheet{padding:15px 17px 18px}#dialog.travel-confirm #speaker{font-size:21px}}
+
+/* A calm title reveal; controls stay available throughout the animation. */
+#start .start-art{filter:brightness(.78) saturate(.96);transform-origin:50% 38%;animation:title-approach 24s ease-out both}
+#start .start-vignette{background:linear-gradient(90deg,#152b2577,transparent 50%,#192e2355);animation:title-light 1.8s ease-out both}
+#start .eyebrow{animation:title-reveal .8s .08s both}
+#start h1{animation:title-reveal 1.2s .18s both}
+#start .premise{animation:title-reveal 1.1s .42s both}
+#start .gender-choice,#start #selection{animation:title-reveal .9s .6s both}
+#start .start-buttons{animation:title-controls 1.1s .65s both}
+@keyframes title-approach{from{transform:scale(1.015)}to{transform:scale(1.09)}}
+@keyframes title-light{from{opacity:1}to{opacity:.8}}
+@keyframes title-reveal{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes title-controls{from{opacity:.65}to{opacity:1}}
+@media(prefers-reduced-motion:reduce){#start .start-art,#start .start-vignette,#start .eyebrow,#start h1,#start .premise,#start .gender-choice,#start #selection,#start .start-buttons{animation:none!important;transform:none;opacity:1}}

@@ -29,22 +29,15 @@
 #settingsPanel #audioPanel p{font-size:11px;line-height:1.65;color:#77684e}
 #settingsStatus{font-size:12px;color:#526b42;min-height:0;margin:12px 0 0}
 #settingsStatus:empty{display:none}
-@media(max-width:600px){#actions{gap:4px}#interactionHint{max-width:42%}#settingsPanel{padding:10px 10px max(10px,env(safe-area-inset-bottom))}.settings-sheet{width:100%;max-height:calc(100dvh - 20px);padding:16px}}
+@media(max-width:600px){#actions{gap:4px}#settingsPanel{padding:10px 10px max(10px,env(safe-area-inset-bottom))}.settings-sheet{width:100%;max-height:calc(100dvh - 20px);padding:16px}}
 @media(max-height:520px) and (orientation:landscape){#settingsPanel{align-items:center}.settings-sheet{width:440px}}
-@media(max-width:480px) and (orientation:portrait){#interactionHint{bottom:calc((100vw - 96px)/3 + 102px)}#message{bottom:calc((100vw - 96px)/3 + 148px)}}
+@media(max-width:480px) and (orientation:portrait){#message{bottom:calc((100vw - 96px)/3 + 148px)}}
 
-/* V6.9.13: one quest panel; a nearby action has a distinct, compact shape. */
+/* One task panel holds the current objective and its guide control. */
 .quest-panel-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:-5px 0 2px;border-bottom:1px solid #b49a6b44}
 .quest-panel-heading>span{font-size:10px;letter-spacing:.08em;color:#d9c39a}
 #questGuide{min-width:52px;min-height:44px;padding:4px 5px;border:0;border-radius:6px;background:transparent;color:#ead3a4;font-size:12px;white-space:nowrap}
 #questGuide:hover,#questGuide:focus-visible{background:#e4c58c22;color:#fff0cd}
-#taskToggle{min-height:44px}
-#interactionHint.context-action{display:flex;align-items:center;gap:10px;min-width:0;min-height:54px;max-width:min(260px,42vw);padding:7px 16px 7px 8px;border:1px solid #b59a69;border-radius:30px;background:#f0e4c8f5;color:#344c3c;box-shadow:0 4px 16px #10271c40;text-align:left}
-#interactionHint.context-action:hover{background:#fff1d2;border-color:#d1ad68}
-#interactionHint.context-action #interactionHintMark{display:grid;place-items:center;flex:0 0 34px;width:34px;height:34px;padding:0;border:1px solid #8b9b77;border-radius:50%;background:#dce1c9;color:#40593d;font-size:16px;line-height:1;transform:none}
-#interactionHint .context-action-copy{display:block;min-width:0}
-#interactionHint.context-action small{display:block;margin:0 0 2px;color:#6c7056;font-size:11px;line-height:1.25;letter-spacing:.06em}
-#interactionHint.context-action strong{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#344c3c;font-size:14px;line-height:1.4;font-weight:normal}
-#interactionHint.context-action:focus-visible,#questGuide:focus-visible{outline:2px solid #e5bc71;outline-offset:3px}
-@media(max-width:600px){#interactionHint.context-action{max-width:44vw;gap:7px;padding-right:12px}#interactionHint.context-action strong{font-size:12px}.quest-panel-heading>span{font-size:9px}#questGuide{font-size:11px}}
-@media(pointer:coarse){#interactionHint.context-action #interactionHintMark{font-size:12px}}
+#taskToggle{min-height:44px}#questGuide:focus-visible{outline:2px solid #e5bc71;outline-offset:3px}
+@media(max-width:600px){.quest-panel-heading>span{font-size:9px}#questGuide{font-size:11px}}
+

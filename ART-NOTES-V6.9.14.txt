@@ -1,0 +1,20 @@
+南澜记 V6.9.14 美术素材记录
+制作方式：内置 imagegen 工具。未使用外部图像 API 或 CLI。
+成品均已放入完整游戏包：
+stove-v6914.png
+water-jar-v6914.png
+garden-stages-v6914.png
+
+灶台初稿提示词：
+Use case: background-extraction / game prop adaptation. Edit the supplied kitchen artwork: take the traditional brick-and-plaster cooking hearth with its black iron pot from the upper-left panel and turn it into ONE isolated transparent game prop. Preserve the warm hand-painted Chinese courtyard art style, weathered pale tan plaster, grey-brown bricks, dark empty fire opening and black iron pot. Render a compact single-burner squat rectangular stove, fully visible on all sides, viewed from above at about 40 degrees in a three-quarter isometric game perspective, front fire opening facing toward the viewer and slightly left. The pot sits in the circular stove top; a small wooden lid can lean on its side. No fire, smoke, food, characters, walls, shelves, foliage, floor tiles, text or labels. True transparent alpha background. Tight centered framing with a small transparent margin; one complete standalone stove only, not a sheet of variants. Its shape should read clearly when reduced to about 100 pixels wide in the game.
+最终修订：保持砖灶、锅、木盖与角度，删除周围所有棕色光晕和宽阴影；保留真实透明背景，单个完整物件。
+
+水缸提示词：
+Edit this existing water jar sprite, keeping its silhouette, water-filled brown earthenware jar, wooden dipper resting across its rim, and elevated viewing angle. Make it fit a soft hand-painted historical Chinese courtyard game: muted weathered brown ceramic, gentle brush texture, restrained soft highlights, less glossy and less photographic. Preserve its identity as the same jar. Remove every surrounding colored fringe, glow and haze. Outside the physical jar and dipper silhouette must be fully transparent alpha zero. No painted ground, no broad shadow, no background. Tight framing with a small even transparent margin, entire jar base and entire dipper visible. Do not add any props, text, people or scenery.
+
+菜畦提示词：
+Edit the first image, a 4-column by 3-row game farming sprite sheet. The second image is ONLY a style and ground-perspective reference. Preserve the EXACT 4 by 3 grid, 1536x1024 aspect ratio, and the meaning and order of all 12 stages: row 1 dry tilled soil, wet tilled soil, dry seeded soil, wet seeded soil; row 2 vegetable sprouts, growing vegetables, mature cabbages, harvested vegetable bed; row 3 herb sprouts, growing herbs, flowering herbs, harvested herb bed. Keep one complete tile centered in each equal grid cell. Change the protruding rocky soil mounds into LOW, FLAT patches of cultivated earth that lie flush with the ground of the reference courtyard, with gentle shallow furrows and subtle irregular feathered soil edges. Remove the large stones around every tile and ALL surrounding yellow/brown glow, haze, background or drop shadows. The soil should not look like a floating island or a thick platform. Match the courtyard's soft hand-painted brushwork, muted olive greens and understated warm earth, avoiding glossy high contrast. Same elevated three-quarter view for every tile. Fully transparent background outside the actual soil/plants, no text, no labels, no grid lines. Do not add or remove stages.
+最终修订：保持 1536×1024、4 列 3 行、十二种状态和位置，清理各块耕地以外的背景、光晕和宽阴影。
+
+游戏内整合：灶台与水缸使用贴地阴影及昼夜亮度，菜畦采用更平缓的透视与柔和色调。保留原始生长、浇水、收获逻辑。
+

@@ -7,10 +7,13 @@ world.yard.bounds[2]=970;
 world.yard.bounds[1]=205;
 world.yard.collisions.push([300,205,160,19],[550,205,420,19]);
 Object.assign(world.yard.objects.find(o=>o.id==='hall'),{x:500,y:210});
+// Put the hearth beside the outdoor work bench, leaving the storeroom steps clear.
+Object.assign(world.yard.objects.find(o=>o.id==='stove'),{x:960,y:324,label:'灶台 · 做饭'});
 world.village.objects.find(o=>o.id==='villagePantry').label='乡邻余粮 · 种子与补给';
 (()=>{
  const labels=window.NANLAN_EN||(window.NANLAN_EN={});
  labels['乡邻余粮 · 种子与补给']='Neighbor’s Pantry · Seeds and Supplies';
+ labels['灶台 · 做饭']='Stove · Cook';labels['灶台']='Stove';
  window.NanlanI18n?.configure(labels);
 })();
 const canvas=$('game'),ctx=canvas.getContext('2d',{alpha:false}),W=1100,H=733;
@@ -30,7 +33,7 @@ function blockCarryoverPointer(e){
 }
 document.addEventListener('pointerdown',blockCarryoverPointer,true);
 document.addEventListener('click',blockCarryoverPointer,true);
-let camera={scale:1,ox:0,oy:0,dpr:1,vw:W,vh:H},hitTargets=[],focusedObjectId=null,lastInteractionHint='';
+let camera={scale:1,ox:0,oy:0,dpr:1,vw:W,vh:H},hitTargets=[],focusedObjectId=null;
 let overviewCamera=false,cameraOverviewUntil=0;
 const reduceCameraMotion=window.matchMedia('(prefers-reduced-motion: reduce)');
 let lastQuestSignature='';
@@ -45,12 +48,13 @@ DATA.assets.walkMale='player-male-walk-v39.png';
 DATA.assets.playerIdle='player-idle-v6911.png';
 DATA.assets.inventoryHousehold='inventory-household-v392.png';
 DATA.assets.inventoryCrafts='inventory-crafts-v392.png';
-DATA.assets.gardenStages='garden-stages-v395.png';
+DATA.assets.gardenStages='garden-stages-v6914.png';
 DATA.assets.diningTable='hall-table-v394.png';
 DATA.assets.familyMealFemale='family-meal-female-v394.png';
 DATA.assets.familyMealMale='family-meal-male-v394.png';
 DATA.assets.workbench='workbench-v3912.webp';
-DATA.assets.waterJar='water-jar-v3912.webp';
+DATA.assets.waterJar='water-jar-v6914.png';
+DATA.assets.stove='stove-v6914.png';
 DATA.assets.villageLetter='village-letter-v3915.webp';
 let gaitBlend=0,lastPoseTime=0;
 function state(){return engine.state;}
@@ -81,7 +85,7 @@ async function loadSceneAssets(scene){
   if(globalThis.NanlanTown.rooms.includes(scene))required.push(...world[scene].objects.filter(o=>o.role).map(o=>'npc_'+o.role));
   if(scene==='backHall')required.push('backHallReady');
   if(world[scene]?.objects?.some(o=>o.v3Art!=null))required.push('v3Props');
-  if(scene==='yard')required.push('gardenStages','productionStages','productionItems','waterJar');
+  if(scene==='yard')required.push('gardenStages','productionStages','productionItems','waterJar','stove');
   if(state().actorState?.outfit==='nanlanSilk')required.push('familySilk',state().gender==='male'?'walkMaleSilk':'walkFemaleSilk');
   if(['mountain','coast'].includes(scene))required.push('seals');
   if(['foothill','mountain'].includes(scene))required.push('fruitTrees','fruitTreesPicked');
@@ -276,12 +280,12 @@ async function perform(name,p={},rerender){
   if(!result.duplicate&&['openGate','estateImprove'].includes(name))cameraOverviewUntil=performance.now()+950;
   refreshHud();
   if(ferryTo){
-    closeDialog(true);focusedObjectId=null;lastInteractionHint='';render();
+    closeDialog(true);focusedObjectId=null;render();
     notice(name==='prefSail'?'沿水路抵达府城，回程船脚已付。':'已凭船凭回到南澜新河埠。');
     return result;
   }
   if(name==='openGate'){
-    closeDialog(true);focusedObjectId='bed';lastInteractionHint='';render();refreshInteractionHint();
+    closeDialog(true);focusedObjectId='bed';render();
     notice(deskText('门推开了。东厢的窗扇又响了一声，窗下还泛着湿光。去看看今晚能不能在那儿睡。','The gate opens. The east wing shutter knocks again, and the stone beneath it glistens. See if the room can shelter your family tonight.'),true);
     const lead=document.createElement('button');
     lead.className='receipt-open';lead.textContent=deskText('去看看东厢房','Look inside the East Wing');
@@ -776,7 +780,7 @@ function showArchive(){
 }
 let selectedPlot=0;
 const gardenSpots=[[930,412],[974,393],[944,443],[988,424],[958,474],[1002,455]];
-function gardenTarget(index){const [visualX,visualY]=gardenSpots[index];return {id:'gardenPlot'+index,label:plotName(index),type:'activity',action:'gardenDirect',plot:index,x:visualX,y:visualY,visualX,visualY};}
+function gardenTarget(index){const [visualX,visualY]=gardenSpots[index],edge=world.yard.objects.find(o=>o.id==='herbPlot');return {id:'gardenPlot'+index,label:plotName(index),type:'activity',action:'gardenDirect',plot:index,x:edge.x,y:edge.y,visualX,visualY};}
 function plotFrame(index){
   const s=state(),g=N.gardenPlot(s,index),c=N.crop(s,index);
   if(!c.planted)return g.harvestedKind?[3,g.harvestedKind==='herb'?2:1]:[0,0];
@@ -1181,42 +1185,10 @@ function localObjectiveObject(){
   if(!target||target.scene!==state().scene||!target.object)return null;
   return visibleObjects().find(o=>o.id===target.object)||null;
 }
-// One nearby target drives the prompt, mouse/touch and both keyboard shortcuts.
+// Both keyboard shortcuts use the same nearby target.
 function nearbyInteractionObject(){
   const p=state().player,nearby=visibleObjects().filter(nearObject);
   return nearby.find(o=>o.id===focusedObjectId)||nearby.sort((a,b)=>Math.hypot(a.x-p.x,a.y-p.y)-Math.hypot(b.x-p.x,b.y-p.y))[0]||null;
-}
-function interactionAction(o){
-  if(o.type==='door')return objectGate(o)?deskText('查看','Inspect'):deskText('进入','Enter');
-  if(npcRole(o)||o.type==='npc')return deskText('交谈','Talk');
-  if(o.type==='weed')return deskText('清理','Clear');
-  if(o.action==='garden')return deskText('照料','Tend');
-  if(isGatherable(o))return deskText('采集','Gather');
-  if(['sickle','water','oldAxe'].includes(o.id))return deskText('拾取','Pick up');
-  if(o.type==='read')return deskText('阅读','Read');
-  return deskText('查看','Inspect');
-}
-function contextActionAvailable(){
-  return started&&active&&!moving&&!path.length&&$('dialog').hidden&&$('worldMap').hidden&&$('gallery').hidden&&$('nightNote').hidden&&!window.NanlanSettings?.isOpen();
-}
-function refreshInteractionHint(){
-  const hint=$('interactionHint');if(!hint)return;
-  const o=contextActionAvailable()?nearbyInteractionObject():null;
-  if(!o){hint.hidden=true;delete hint.dataset.object;lastInteractionHint='';return;}
-  const action=interactionAction(o),label=objectLabel(o).replace(/\s*·\s*(交谈|查看|采集|拾取)$/,''),touch=window.matchMedia('(pointer:coarse)').matches;
-  const key=[state().scene,o.id,action,label,touch].join('|');
-  if(key!==lastInteractionHint){
-    $('interactionHintMark').textContent=touch?deskText('点','Tap'):'E';
-    $('interactionHintKicker').textContent=action;$('interactionHintLabel').textContent=label;
-    hint.setAttribute('aria-label',action+'：'+label+deskText(touch?'，点击互动':'，按 E、空格或点击',touch?', tap to interact':', press E, Space or click'));
-    lastInteractionHint=key;
-  }
-  hint.dataset.object=o.id;hint.hidden=false;
-}
-function activateContextAction(){
-  const o=nearbyInteractionObject();
-  if(!contextActionAvailable()||!o||o.id!==$('interactionHint').dataset.object){refreshInteractionHint();return;}
-  interact(o);
 }
 function guideCurrentQuest(){
   if(!active||typeof nextObjective!=='function')return;
@@ -1438,7 +1410,7 @@ async function switchScene(to){
     if(!await loadSceneAssets(to)){cancelNavigation();notice('目的地图片未能载入，仍留在原处。请稍后重试。',true);return;}
     const result=engine.enter(to);
     if(!result.ok){cancelNavigation();notice(result.message,true);return;}
-    window.NanlanAudio?.play('door');focusedObjectId=null;lastInteractionHint='';
+    window.NanlanAudio?.play('door');focusedObjectId=null;
     if(result.completed)reward(result.completed);render();refreshHud();notice('来到'+world[to].name+'。');$('saveState').textContent='已保存';
   }finally{settlePointerInput();transitioning=false;active=wasActive&&$('dialog').hidden&&$('worldMap').hidden&&!document.hidden;}
   if(active)continueNavigation();
@@ -1500,7 +1472,7 @@ function findPath(target){
 function approach(o){
   const target=findPath({x:o.x,y:o.y,object:o});
   if(!target){notice('这处还走不到。先看看通路是否清理，或从场景互动选择其他物件。',true);return;}
-  focusedObjectId=o.id;path=target;notice('前往'+o.label+'。');refreshInteractionHint();
+  focusedObjectId=o.id;path=target;notice('前往'+o.label+'。');
 }
 let edgeExitCooldown=0,edgeExitAttempt=null;
 function keyboardExitDirection(o){
@@ -1615,7 +1587,8 @@ function paintDifferenceLayers(){
       for(let i=0;i<(f.fullGarden?6:4);i++){
         if(i>0&&!N.gardenPlot(s,i).tilled)continue;
         const [col,row]=plotFrame(i),[x,y]=gardenSpots[i];
-        ctx.drawImage(images.gardenStages,col*384,row*1024/3,384,1024/3,x-28,y-36,56,50);
+        ctx.save();ctx.filter='saturate(.88) brightness(.96)';
+        ctx.drawImage(images.gardenStages,col*384,row*1024/3,384,1024/3,x-29,y-30,58,44);ctx.restore();
       }
     }
   }
@@ -1710,24 +1683,31 @@ function personBounds(role,x,y){
 }
 let sceneGuides=true;
 try{sceneGuides=localStorage.getItem('nanlan_scene_guides')!=='0';}catch{}
-function drawWalkingRoute(){
-  if(!sceneGuides||!path.length)return;
-  ctx.save();ctx.beginPath();ctx.moveTo(state().player.x,state().player.y);
-  for(const p of path)ctx.lineTo(p.x,p.y);
-  ctx.strokeStyle='#263c3280';ctx.lineWidth=5/camera.scale;ctx.stroke();
-  ctx.strokeStyle='#f9e2a9cc';ctx.lineWidth=2/camera.scale;ctx.setLineDash([4/camera.scale,6/camera.scale]);ctx.stroke();ctx.restore();
+function drawGroundedProp(im,x,y,w,h){
+  if(!im?.naturalWidth)return;
+  ctx.save();
+  // Contact shadow touches the base; the prop shares the courtyard's day/night light.
+  const groundY=im===images.stove?y-h*.08:y-1;
+  const shadow=ctx.createRadialGradient(x,groundY,1,x,groundY,w*.48);
+  shadow.addColorStop(0,'#20291ee0');shadow.addColorStop(.45,'#26302170');shadow.addColorStop(1,'#26302100');
+  ctx.fillStyle=shadow;ctx.beginPath();ctx.ellipse(x,groundY,w*.5,h*.12,0,0,Math.PI*2);ctx.fill();
+  ctx.filter='brightness('+(1-N.daylight(state()).darkness*.42)+') saturate(.88)';
+  const crop=im===images.stove?[68,110,1106,1074]:[214,70,1008,1044];
+  ctx.drawImage(im,...crop,x-w/2,y-h,w,h);ctx.restore();
 }
 function drawEntranceSigns(){
   if(!sceneGuides||!started)return;
   const scale=camera.scale,left=-camera.ox/scale,right=(camera.vw-camera.ox)/scale,top=-camera.oy/scale,bottom=(camera.vh-camera.oy)/scale;
-  for(const o of visibleObjects().filter(v=>v.type==='door')){
+  for(const o of visibleObjects().filter(v=>v.type==='door'||v.id==='stove')){
     if(o.x<left+20||o.x>right-20||o.y<top+22||o.y>bottom-35)continue;
-    const locked=!!objectGate(o),name=window.NanlanI18n?.t(o.label)||o.label;
+    const locked=!!objectGate(o),name=window.NanlanI18n?.t(o.id==='stove'?'灶台':o.label)||(o.id==='stove'?'灶台':o.label);
     ctx.save();ctx.font='14px NanlanSerif,serif';
     const width=Math.min(230,ctx.measureText(name).width+36),x=Math.max(left+4,Math.min(right-width/scale-4,o.x-width/scale/2)),y=o.y+10/scale;
     ctx.translate(x,y);ctx.scale(1/scale,1/scale);ctx.fillStyle=locked?'#554b3bea':'#263f32ed';ctx.strokeStyle=locked?'#ae9970':'#e3c381';ctx.lineWidth=1;
     ctx.beginPath();ctx.roundRect(0,0,width,28,5);ctx.fill();ctx.stroke();
-    ctx.strokeStyle='#e8d4a7';ctx.strokeRect(9,7,10,14);ctx.beginPath();ctx.moveTo(12,10);ctx.lineTo(16,14);ctx.lineTo(12,18);ctx.stroke();
+    ctx.strokeStyle='#e8d4a7';
+    if(o.id==='stove'){ctx.beginPath();ctx.ellipse(14,11,6,2,0,0,Math.PI*2);ctx.moveTo(8,11);ctx.quadraticCurveTo(8,20,14,20);ctx.quadraticCurveTo(20,20,20,11);ctx.stroke();}
+    else{ctx.strokeRect(9,7,10,14);ctx.beginPath();ctx.moveTo(12,10);ctx.lineTo(16,14);ctx.lineTo(12,18);ctx.stroke();}
     ctx.fillStyle=locked?'#cfbf9f':'#f7e8c6';ctx.textBaseline='middle';ctx.fillText(name,27,14,width-33);ctx.restore();
     hitTargets.push({o,rect:{x,y,w:width/scale,h:28/scale},anchor:null});
   }
@@ -1743,7 +1723,6 @@ function render(){
   NanlanClimate.atmosphere(ctx,s.scene,s,performance.now(),W,H);
   window.NanlanWeather?.atmosphere(ctx,s.scene,s,performance.now(),W,H);
   paintDifferenceLayers();hitTargets=[];
-  drawWalkingRoute();
   const left=Math.max(8,-camera.ox/camera.scale+8),right=Math.min(W-8,(camera.vw-camera.ox)/camera.scale-8);
   const time=performance.now(),objective=localObjectiveObject(),destination=path[path.length-1]?.object;
   const people=visibleObjects().filter(o=>npcRole(o));
@@ -1823,10 +1802,15 @@ function render(){
       ctx.drawImage(images.inventoryHousehold,0,414,418,391,o.x-52,o.y-68,72,68);
       ctx.drawImage(images.inventoryHousehold,836,0,418,414,o.x-5,o.y-62,72,72);
     }
+    if(s.scene==='yard'&&o.id==='stove'){
+      const w=74,h=60;
+      actors.push({layer:40,y:o.y,draw:()=>drawGroundedProp(images.stove,o.x,o.y,w,h)});
+      hitTargets.push({o,rect:null,anchor:{x:o.x-w/2,y:o.y-h,w,h:h+6}});continue;
+    }
     if(s.scene==='yard'&&o.id==='waterJar'){
       // The jar rests on the east-room paving, with the same depth order as people.
-      const im=images.waterJar,w=56,h=49;
-      if(im?.naturalWidth)actors.push({layer:40,y:o.y,draw:()=>{const shade=ctx.createRadialGradient(o.x,o.y-2,1,o.x,o.y-2,21);shade.addColorStop(0,'#29322444');shade.addColorStop(1,'#29322400');ctx.fillStyle=shade;ctx.fillRect(o.x-21,o.y-6,42,12);ctx.drawImage(im,o.x-w/2,o.y-h,w,h);}});
+      const im=images.waterJar,w=48,h=50;
+      if(im?.naturalWidth)actors.push({layer:40,y:o.y,draw:()=>drawGroundedProp(im,o.x,o.y,w,h)});
       hitTargets.push({o,rect:null,anchor:{x:o.x-30,y:o.y-h,w:60,h:h+6}});
       continue;
     }
@@ -1852,18 +1836,18 @@ function render(){
     // Keep the physical target clickable even when there is no safe space for its label.
     const target={o,rect:null,anchor:npcRole(o)?personBounds(npcRole(o),o.x,o.y):{x:o.x-26,y:o.y-42,w:52,h:48}};
     hitTargets.push(target);
-    // Names and instructions are shown only in the fixed interaction panel.
+    // The scene keeps physical hit areas; task instructions stay in the left quest panel.
 
   }
   actors.sort((a,b)=>a.y-b.y).forEach(actor=>actor.draw());
   drawEntranceSigns();
-  if(path.length){const p=path[path.length-1];ctx.strokeStyle='#f5dfa3aa';ctx.lineWidth=1.5;ctx.beginPath();ctx.ellipse(p.x,p.y,11,5,0,0,Math.PI*2);ctx.stroke();}
+
   renderGardenWorkFx(time);
   renderCompletionFeedback(time);
 }
 function frame(t){
   const dt=Math.min(.1,(t-(lastFrame||t))/1000);lastFrame=t;
-  try{update(dt);render();if(t-lastHud>300){refreshHud();refreshInteractionHint();lastHud=t;}
+  try{update(dt);render();if(t-lastHud>300){refreshHud();lastHud=t;}
     if(!window.NanlanSettings?.isOpen())void window.NanlanProduction?.maybeMorning();
     window.NanlanAudio?.setEnvironment(window.NanlanOpening?.environment()||world[state().scene].soundScene||state().scene,window.NanlanOpening?.running()?false:N.daylight(state()).darkness>.25,started&&active&&moving);
     if(started&&active&&t-lastAutosave>20000){const r=engine.save();$('saveState').textContent=r.ok?(engine.memoryOnly?'仅本次试玩':'已保存'):'自动保存失败 · 请手动保存';lastAutosave=t;}
@@ -1913,9 +1897,9 @@ function showStartGuide(){
   activity('启程前 · 怎样行动','点击地面行走，点击人物或物件互动。电脑可用 WASD / 方向键移动，空格或 E 互动；B 打开或收起行囊。\n\n不用预先记住所有系统。第一次遇到采集、修缮、种植或买卖时，游戏会在当时说明。');
 }
 function finishOpeningIntro(){
-  closeDialog(true);focusedObjectId='familyLuggage';lastInteractionHint='';
+  closeDialog(true);focusedObjectId='familyLuggage';
   notice(deskText('母亲在门边招手。左上角「引路」可带你走近，也可以自己走过去。','Mother beckons by the gate. Use Guide in the top-left quest panel, or walk over yourself.'),true);
-  refreshInteractionHint();
+  
 }
 function goToArrival(action){
   const target=visibleObjects().find(o=>o.action===action);
@@ -1988,7 +1972,7 @@ $('cameraView').onclick=()=>{
   overviewCamera=!overviewCamera;cameraOverviewUntil=0;
   refreshHud();
 };
-$('interactionHint').onclick=activateContextAction;
+
 $('questGuide').onclick=guideCurrentQuest;
 $('startGuide').onclick=showStartGuide;
 $('openingReplay').onclick=()=>window.NanlanOpening?.replay();

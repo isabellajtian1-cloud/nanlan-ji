@@ -5,18 +5,18 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#20382d">
   <meta name="description" content="南澜记：在明代岭南安顿家人、修整旧宅、采集种植，并与邻里共同过日子的叙事生活游戏。">
-  <title>南澜记 V6.9.9 · 闲话有节</title>
+  <title>南澜记 V6.9.10 · 言起有应</title>
   <link rel="stylesheet" href="style.css?v=600">
   <link rel="stylesheet" href="map.css"><link rel="stylesheet" href="opening.css?v=693"><link rel="stylesheet" href="chapter-mark.css?v=681">
   <link rel="stylesheet" href="journey.css?v=500"><link rel="stylesheet" href="town.css?v=670"><link rel="stylesheet" href="festival.css?v=680">
   <style>#audioHint{font-size:11px;color:#756142;line-height:1.8;margin:12px 0}#startSound{padding:5px 9px;font-size:11px;background:#e5d8b4;color:#405b41;border:1px solid #91754a;border-radius:3px}</style>
-<link rel="stylesheet" href="seals.css?v=500"><link rel="stylesheet" href="production.css?v=500"><link rel="stylesheet" href="locale.css?v=500"><script src="locale-en.js?v=500"></script><script src="locale.js?v=500"></script><style>html.large-read #dialog #line,html.large-read #dialog #choices button,html.large-read #dialog #panelExtra p{font-size:max(1.2rem,19px);line-height:1.65}html.large-read #dialog{max-height:92dvh;overflow-y:auto}</style></head>
+<link rel="stylesheet" href="seals.css?v=500"><link rel="stylesheet" href="production.css?v=500"><link rel="stylesheet" href="locale.css?v=500"><script src="locale-en.js?v=500"></script><script src="locale.js?v=500"></script><style>html.large-read #dialog #line,html.large-read #dialog #choices button,html.large-read #dialog #panelExtra p{font-size:max(1.2rem,19px);line-height:1.65}html.large-read #dialog{max-height:92dvh;overflow-y:auto}</style><link rel="stylesheet" href="settings.css?v=6910"></head>
 <body>
 <main id="wrap">
   <canvas id="game" width="1100" height="733" aria-label="南澜记可行走场景，点击地面行走，点击标记靠近互动"></canvas>
   <div id="hud" hidden>
     <section class="panel" id="status" aria-label="角色状态">
-      <div class="brand"><span class="seal">李</span><div><strong>南澜记</strong><small id="roleName">李家晚辈</small></div><span class="version">V6.9.9</span></div>
+      <div class="brand"><span class="seal">李</span><div><strong>南澜记</strong><small id="roleName">李家晚辈</small></div><span class="version">V6.9.10</span></div>
       <div id="statusTime"></div>
       <div class="vitals"><span>体力 <b id="energy">100</b></span><span>家用 <b id="coins">80</b> 文</span></div>
       <div class="energy-track"><span id="energyBar"></span></div>
@@ -30,8 +30,8 @@
     <div id="volumeIntertitle" role="status" hidden></div><div id="chapterToast" role="status" hidden></div>
     <div id="message" role="status" aria-live="polite"></div>
     <nav id="actions" aria-label="场景操作">
-      <button id="mapOpen">舆图 · 已知地点 M</button><button id="nearbyOpen">场景互动</button><button id="bagOpen">行囊 B</button><button id="peopleOpen">相识之人</button><button id="galleryOpen">旅途图景</button><button id="cameraView" type="button" data-no-localize>看全景</button>
-      <button id="estateOpen" hidden>宅院修葺</button><button id="save">保存</button><button id="sound" aria-pressed="false">环境音 关</button><button id="helpOpen">玩法</button><button id="languageToggle" data-no-localize aria-label="Switch language / 切换语言">中文 / English</button>
+      <button id="mapOpen" title="打开舆图（M）">舆图</button><button id="nearbyOpen" title="查看附近可互动的人与物">互动</button><button id="bagOpen" title="打开行囊（B）">行囊</button>
+      <button id="settingsOpen" type="button" aria-label="设置" title="设置" aria-expanded="false" aria-controls="settingsPanel" aria-haspopup="dialog"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9.5 3-.5 2-2 .9-1.8-.6-2.4 4.1 1.5 1.5v2.2L2.8 15l2.4 4.1 2-.6 1.8 1 .5 2.1h5l.5-2.1 1.8-1 2 .6 2.4-4.1-1.5-1.9v-2.2l1.5-1.5-2.4-4.1-1.8.6-2-.9-.5-2z"/><circle cx="12" cy="12" r="3.3"/></svg></button>
     </nav>
     <div id="navigationStatus" class="panel" hidden><span id="navigationLabel"></span><button id="navigationCancel" aria-label="停止导航">停止 ×</button></div>
     <button id="interactionHint" class="panel" hidden aria-live="polite"><span id="interactionHintMark">令</span><span><small id="interactionHintKicker">眼前要紧的事</small><strong id="interactionHintLabel"></strong></span></button>
@@ -56,7 +56,7 @@
         <p id="audioHint"><button id="startSound" aria-pressed="true">声音 开 · 环境与互动</button> 点击启程后启动环境音；可打开设置试听、调节音量。</p>
       </details>
       <p id="loadWarning" hidden></p>
-      <small class="version-note">V6.9.9 · 闲话有节 · 六卷与番外开发试玩</small>
+      <small class="version-note">V6.9.10 · 言起有应 · 六卷与番外开发试玩</small>
     </div>
   </section>
   <section id="dialog" role="dialog" aria-modal="true" aria-labelledby="speaker" hidden>
@@ -79,6 +79,22 @@
     <div id="galleryGrid"></div>
   </section>
 </main>
+<section id="settingsPanel" role="dialog" aria-modal="true" aria-labelledby="settingsHeading" hidden>
+  <div class="settings-sheet">
+    <header class="settings-heading"><h2 id="settingsHeading">设置与记录</h2><button id="settingsClose" type="button" aria-label="关闭设置">×</button></header>
+    <section><h3>显示与语言</h3><div class="settings-grid">
+      <button id="languageToggle" data-no-localize aria-label="Switch language / 切换语言">中文 / English</button>
+      <button id="settingsReadSize" aria-pressed="false">大字号</button>
+      <button id="cameraView" type="button" data-no-localize>看全景</button>
+      <button id="settingsScreenMode" aria-pressed="false" hidden>全屏显示</button>
+    </div></section>
+    <details id="settingsAudio"><summary>声音与音量</summary></details>
+    <section id="settingsGameOptions"><h3>行旅与记录</h3><div class="settings-grid"><button id="save">保存</button><button id="helpOpen">玩法</button></div>
+      <details><summary>更多记录</summary><div class="settings-grid"><button id="peopleOpen">相识之人</button><button id="galleryOpen">旅途图景</button><button id="estateOpen" hidden>宅院修葺</button></div></details>
+    </section>
+    <p id="settingsStatus" role="status" aria-live="polite"></p>
+  </div>
+</section>
 <section id="audioPanel" role="dialog" aria-label="声音设置" hidden>
 <strong>山海有声</strong><button id="audioClose" aria-label="关闭声音设置">关闭 ×</button>
 <p id="audioStatus" role="status" aria-live="polite">点击开启声音。</p>
@@ -86,11 +102,11 @@
 <label for="musicVolume">古风音乐 <span id="musicVolumeValue">65%</span></label><input id="musicVolume" type="range" min="0" max="100" value="65">
 <label for="ambientVolume">环境音 <span id="ambientVolumeValue">30%</span></label><input id="ambientVolume" type="range" min="0" max="100" value="30">
 <label for="effectVolume">操作音效 <span id="effectVolumeValue">50%</span></label><input id="effectVolume" type="range" min="0" max="100" value="50">
-<button id="audioMusicOnly">仅听音乐 · 关闭环境与操作声</button><button id="audioMusicTest">播放当前地点音乐</button><button id="audioToggle">开启声音</button><button id="audioTest">试听音效 · 两声提示</button>
-<p>若试听仍无声，请检查浏览器标签页是否静音及设备媒体音量。音乐为本游戏新编旋律，音色、环境音与操作音效由程序合成，未使用第三方录音或游戏原曲。各项音量可单独调至零。</p>
+<button id="audioToggle">开启声音</button><details><summary>试听与说明</summary><button id="audioMusicOnly">仅听音乐 · 关闭环境与操作声</button><button id="audioMusicTest">播放当前地点音乐</button><button id="audioTest">试听音效 · 两声提示</button>
+<p>若试听仍无声，请检查浏览器标签页是否静音及设备媒体音量。音乐为本游戏新编旋律，音色、环境音与操作音效由程序合成，未使用第三方录音或游戏原曲。各项音量可单独调至零。</p></details>
 </section>
-<script src="data.js?v=500"></script><script src="v5-world.js?v=610"></script><script src="voyage-world.js?v=650"></script><script src="town-world.js?v=670a"></script><script src="town-model.js?v=680"></script><script src="story2-model.js?v=652"></script><script src="conversations.js?v=500"></script><script src="bonds-model.js?v=650"></script><script src="seals-model.js?v=500"></script><script src="rural-model.js?v=504"></script><script src="production-model.js?v=500"></script><script src="v3-dialogue.js?v=500"></script><script src="v3-steps.js?v=500"></script><script src="story3-model.js?v=500"></script><script src="scholar-model.js?v=500"></script><script src="children-model.js?v=610"></script><script src="v4-script.js?v=500"></script><script src="v4-steps.js?v=500"></script><script src="story4-model.js?v=504"></script><script src="v5-script.js?v=600"></script><script src="v5-steps.js?v=600"></script><script src="story5-model.js?v=600"></script><script src="season5-model.js?v=650"></script><script src="voyage-model.js?v=653"></script><script src="climate.js?v=680"></script><script src="festival-model.js?v=680"></script><script src="prefecture-model.js?v=680"></script><script src="prefecture-world.js?v=680"></script><script src="weather.js?v=650"></script><script src="estate-model.js?v=690"></script><script src="engine.js?v=690"></script><script src="art.js?v=500"></script><script src="audio.js?v=697"></script><script src="story-threads.js?v=503"></script><script src="opening.js?v=693"></script><script src="game.js?v=699"></script><script src="map.js?v=690"></script><script src="volume2.js?v=652"></script><script src="seals.js?v=500"></script>
-<script src="production.js?v=500"></script><script src="village.js?v=504"></script><script src="volume3.js?v=503"></script><script src="children.js?v=500"></script><script src="scholar.js?v=500"></script><script src="volume4.js?v=503"></script><script src="guild.js?v=504"></script><script src="volume5.js?v=611"></script><script src="seasons.js?v=650"></script><script src="voyage.js?v=697"></script><script src="chapters.js?v=653"></script><script src="chapter-mark.js?v=681"></script><script src="ending-scenes.js?v=666"></script><script src="endings.js?v=666"></script><script src="bonds.js?v=641"></script><script src="desktop.js?v=500"></script><script src="town-ui.js?v=680"></script><script src="festival-ui.js?v=680"></script><script src="estate-ui.js?v=690"></script><script src="memory-book.js?v=694"></script><script src="dialogue-scenes.js?v=699"></script></body></html>
+<script src="data.js?v=500"></script><script src="v5-world.js?v=610"></script><script src="voyage-world.js?v=650"></script><script src="town-world.js?v=670a"></script><script src="town-model.js?v=680"></script><script src="story2-model.js?v=652"></script><script src="conversations.js?v=500"></script><script src="bonds-model.js?v=650"></script><script src="seals-model.js?v=500"></script><script src="rural-model.js?v=504"></script><script src="production-model.js?v=500"></script><script src="v3-dialogue.js?v=500"></script><script src="v3-steps.js?v=500"></script><script src="story3-model.js?v=500"></script><script src="scholar-model.js?v=500"></script><script src="children-model.js?v=610"></script><script src="v4-script.js?v=500"></script><script src="v4-steps.js?v=500"></script><script src="story4-model.js?v=504"></script><script src="v5-script.js?v=600"></script><script src="v5-steps.js?v=600"></script><script src="story5-model.js?v=600"></script><script src="season5-model.js?v=650"></script><script src="voyage-model.js?v=653"></script><script src="climate.js?v=680"></script><script src="festival-model.js?v=680"></script><script src="prefecture-model.js?v=680"></script><script src="prefecture-world.js?v=680"></script><script src="weather.js?v=650"></script><script src="estate-model.js?v=690"></script><script src="engine.js?v=690"></script><script src="art.js?v=500"></script><script src="audio.js?v=6910"></script><script src="story-threads.js?v=503"></script><script src="opening.js?v=693"></script><script src="game.js?v=6910"></script><script src="map.js?v=690"></script><script src="volume2.js?v=652"></script><script src="seals.js?v=500"></script>
+<script src="production.js?v=500"></script><script src="village.js?v=504"></script><script src="volume3.js?v=503"></script><script src="children.js?v=500"></script><script src="scholar.js?v=500"></script><script src="volume4.js?v=503"></script><script src="guild.js?v=504"></script><script src="volume5.js?v=611"></script><script src="seasons.js?v=650"></script><script src="voyage.js?v=697"></script><script src="chapters.js?v=653"></script><script src="chapter-mark.js?v=681"></script><script src="ending-scenes.js?v=666"></script><script src="endings.js?v=666"></script><script src="bonds.js?v=641"></script><script src="desktop.js?v=6910"></script><script src="town-ui.js?v=680"></script><script src="festival-ui.js?v=680"></script><script src="estate-ui.js?v=690"></script><script src="memory-book.js?v=694"></script><script src="dialogue-scenes.js?v=699"></script><script src="settings.js?v=6910"></script></body></html>
 
 
 

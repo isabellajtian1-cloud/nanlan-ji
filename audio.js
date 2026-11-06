@@ -31,7 +31,7 @@ async function enable(test=false){enabled=true;started=true;try{localStorage.set
 async function toggle(){if(!enabled||!playing){await enable();return;}enabled=false;error='';pause();try{localStorage.setItem('nanlan_sound','off');}catch(_){}status();}
 function setEnvironment(next,isNight,walking){const before=JSON.stringify(profile());scene=next;night=isNight;if(before!==JSON.stringify(profile())&&started)void environment();if(walking&&effect?.paused&&Date.now()-lastStep>650){lastStep=Date.now();void play('step');}}
 function setDialogue(value){dialogue=value;gains();}
-function openPanel(){$('audioPanel').hidden=false;status();$('audioTest').focus();}
+function openPanel(){status();if(window.NanlanSettings){window.NanlanSettings.open('audio');return;}$('audioPanel').hidden=false;$('audioTest').focus();}
 document.addEventListener('click',e=>{const b=e.target.closest?.('button');if(!b||b.disabled||['sound','startSound','audioTest','audioMusicTest','audioMusicOnly','audioToggle','audioClose'].includes(b.id))return;if(enabled){if(!started||!playing)void unlock();void play('click');}},true);
 document.addEventListener('keydown',e=>{if(enabled&&!started&&['Enter',' ','w','a','s','d','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key))void unlock();},{capture:true});
 document.addEventListener('visibilitychange',()=>{if(document.hidden)pause();else if(started&&enabled){gains();void environment();}});window.addEventListener('pagehide',pause);window.addEventListener('pageshow',()=>{if(started&&enabled)void environment();});

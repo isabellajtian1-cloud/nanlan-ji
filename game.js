@@ -1569,15 +1569,17 @@ const npcFacing=new Map();
 const npcHomeFacing={grandfather:false,father:false,mother:true,motherHall:true,villager:false,doctor:true,aCen:false,shenYu:true,shenYuCoast:true,chengWan:true,qiu:true,v2MotherCounter:true,v2FatherCounter:false,keyHandover:true,familyLuggage:false};
 DATA.assets.npcIdle='npc-idle-v3911.png';loadImage('npcIdle');
 function npcPresentation(o,t){
- const role=npcRole(o),s=state(),key=s.scene+':'+o.id,dx=s.player.x-o.x,dy=s.player.y-o.y;
- const seed=[...o.id].reduce((n,c)=>n+c.charCodeAt(0),0),near=Math.hypot(dx,dy)<125;
+ const role=npcRole(o),s=state(),key=s.scene+':'+o.id,dx=s.player.x-o.x;
+ const seed=[...o.id].reduce((n,c)=>n+c.charCodeAt(0),0);
+ // Only the person in the current conversation responds; passing by is idle.
+ const talking=!$('dialog').hidden&&!$('dialogPortraits').hidden&&dialogObject?.id===o.id&&nearObject(o);
  let flip=npcFacing.has(key)?npcFacing.get(key):(npcHomeFacing[o.id]??(seed%2===0));
  // Dead zone avoids rapid left/right flicker when standing directly in front.
- if(near&&Math.abs(dx)>22)flip=dx<0;
+ if(talking&&Math.abs(dx)>22)flip=dx<0;
  npcFacing.set(key,flip);
  const reduced=window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
  const phase=t/1000*(.65+seed%5*.08)+seed;
- return {role,flip,near,lean:reduced?0:Math.sin(phase)*.006,breath:reduced?1:1+Math.sin(phase*.85)*.003};
+ return {role,flip,talking,lean:reduced?0:Math.sin(phase)*.006,breath:reduced?1:1+Math.sin(phase*.85)*.003};
 }
 function drawNaturalPerson(o,t){
   if(o.role==='children'){drawPerson('children',o.x,o.y,62,false);return;}
@@ -1588,7 +1590,7 @@ function drawNaturalPerson(o,t){
   const cw=sheet.naturalWidth/4,ch=sheet.naturalHeight/2;
   ctx.save();ctx.translate(o.x,o.y);if(pose.flip)ctx.scale(-1,1);
   ctx.filter='brightness('+(1-N.daylight(state()).darkness*.28)+')';
-  ctx.drawImage(sheet,col*cw,pose.near?ch:0,cw,ch,-34,-87,68,91);ctx.restore();
+  ctx.drawImage(sheet,col*cw,pose.talking?ch:0,cw,ch,-34,-87,68,91);ctx.restore();
  }else drawPerson(pose.role,o.x,o.y,84,pose.flip);
  ctx.restore();
 }
@@ -1751,7 +1753,7 @@ function render(){
 function frame(t){
   const dt=Math.min(.1,(t-(lastFrame||t))/1000);lastFrame=t;
   try{update(dt);render();if(t-lastHud>300){refreshHud();refreshInteractionHint();lastHud=t;}
-    void window.NanlanProduction?.maybeMorning();
+    if(!window.NanlanSettings?.isOpen())void window.NanlanProduction?.maybeMorning();
     window.NanlanAudio?.setEnvironment(window.NanlanOpening?.environment()||world[state().scene].soundScene||state().scene,window.NanlanOpening?.running()?false:N.daylight(state()).darkness>.25,started&&active&&moving);
     if(started&&active&&t-lastAutosave>20000){const r=engine.save();$('saveState').textContent=r.ok?(engine.memoryOnly?'仅本次试玩':'已保存'):'自动保存失败 · 请手动保存';lastAutosave=t;}
   }catch(e){console.error(e);active=false;notice('画面暂停了，请先保存进度，再刷新重试。',true);}
@@ -1883,6 +1885,7 @@ $('taskToggle').onclick=()=>{refreshQuestBanner();const collapsed=$('tasks').cla
 $('bagOpen').onclick=showBag;
 $('save').onclick=()=>{const result=engine.save();$('saveState').textContent=result.ok?(engine.memoryOnly?'仅本次试玩':'已保存'):'保存失败 · 进度仍在';notice(result.ok?(engine.memoryOnly?'当前为仅本次试玩模式，可从行囊导出备份。':'进度已保存，下次选择继续即可。'):result.message,true);};
 window.addEventListener('keydown',e=>{
+  if(window.NanlanSettings?.isOpen())return;
   if(e.ctrlKey||e.metaKey||e.altKey||['INPUT','TEXTAREA','SELECT'].includes(e.target?.tagName))return;
   const k=e.key.toLowerCase();
   if(k==='escape'){if(!$('gallery').hidden)$('galleryClose').click();else if(!$('worldMap').hidden)closeMap();else if(!$('dialog').hidden)closeDialog();return;}
@@ -1904,7 +1907,7 @@ window.addEventListener('keydown',e=>{
 });
 window.addEventListener('keyup',e=>{const k=e.key.toLowerCase();keys[k]=false;if(['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright'].includes(k))edgeExitAttempt=null;});
 window.addEventListener('blur',()=>{keys={};path=[];moving=false;});
-document.addEventListener('visibilitychange',()=>{keys={};path=[];moving=false;if(document.hidden){active=false;if(started)engine.save();}else{active=started&&$('dialog').hidden&&$('gallery').hidden&&$('worldMap').hidden&&!transitioning&&!window.NanlanOpening?.running();lastFrame=performance.now();}});
+document.addEventListener('visibilitychange',()=>{keys={};path=[];moving=false;if(document.hidden){active=false;if(started)engine.save();}else{active=started&&$('dialog').hidden&&$('gallery').hidden&&$('worldMap').hidden&&!transitioning&&!window.NanlanOpening?.running()&&!window.NanlanSettings?.isOpen();lastFrame=performance.now();}});
 document.addEventListener('keydown',e=>{
   if(e.key!=='Tab')return;const root=!$('gallery').hidden?$('gallery'):!$('worldMap').hidden?$('worldMap'):!$('dialog').hidden?$('dialog'):null;if(!root)return;
   const buttons=[...root.querySelectorAll('button:not([hidden]):not(:disabled),input')];if(!buttons.length)return;

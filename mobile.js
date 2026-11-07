@@ -18,7 +18,7 @@ function closeOverview(){if(!looking)return;looking=false;overviewCamera=false;c
 view.onclick=()=>{if(looking){closeOverview();return;}if(!active||transitioning)return;resume=active;looking=true;active=false;keys={};path=[];moving=false;cancelNavigation();overviewCamera=true;cameraOverviewUntil=0;refresh();};
 const taskClick=$('taskToggle').onclick;$('taskToggle').onclick=()=>{if(media.matches){if(active)showQuest();}else taskClick();};
 media.addEventListener('change',()=>{closeOverview();refresh();});
-window.addEventListener('keydown',e=>{if(!looking)return;e.preventDefault();e.stopImmediatePropagation();if(e.key==='Escape')closeOverview();},true);
+window.addEventListener('keydown',e=>{if(!looking)return;if(e.key==='Tab'||e.target===view&&['Enter',' '].includes(e.key))return;e.preventDefault();e.stopImmediatePropagation();if(e.key==='Escape')closeOverview();},true);
 window.NanlanMobile={refresh,compact:()=>media.matches,isOverview:()=>looking};refresh();
 })();
 

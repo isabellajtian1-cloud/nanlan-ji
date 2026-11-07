@@ -10,6 +10,10 @@ const mapGroups=[['宅院与房间',['gate','yard','hall','study','bed','store']
   ['青岚山',['foothill','mountain','bambooGrove','mountainside','summit']],['南澜海湾',['coast','tidalflat']],['山海之间',['wharf','oldTrail','workshop','qingxi']],['海天帆影',['anchorage','guild','backHall']],['青屿远行',['qPier','qFair','qSalt','qBamboo','qBeacon','qLodge']]];
 const deferredPlaces=['county','pharmacy','generalStore','teahouse'];
 let selectedMapPlace='yard',selectedMapObject=null,navigationTarget=null,navigationObject=null,mapReturnFocus=null,mapZoom=1;
+function mapChapterRequirement(info){
+ if(window.NanlanI18n?.language!=='en')return info.requirement;
+ return info.questTitle?'Opens after “'+window.NanlanI18n.t(info.questTitle)+'”: '+window.NanlanI18n.t(info.stepLabel)+'.':info.requirementEn;
+}
 function mapAccess(id){
   const s=state(),why=N.sceneGate(s,id);if(why)return why;
   if(id==='bambooGrove'&&!s.flags.bridgeReady)return 'M06 在山路木道铺通竹林小径后开放。';
@@ -93,29 +97,31 @@ function drawMap(){
     else svg+='<path class="map-route" d="'+d+'" fill="none" stroke="#d8c59c" stroke-width="4" stroke-dasharray="7 7" opacity=".72"/><path class="map-route" d="'+d+'" fill="none" stroke="#6d6048" stroke-width="1.4" stroke-dasharray="7 7" opacity=".75"/>';
   }$('mapLines').innerHTML=svg;$('mapNodes').replaceChildren();
   for(const [id,[x,y]] of Object.entries(mapPositions)){
-    if(id==='prefDock'&&!globalThis.NanlanPrefecture.unlocked(s))continue;
     const why=mapAccess(id),known=mapKnown(id),b=document.createElement('button');
     b.className='map-node'+(!why?' open':'')+(s.scene===id?' current':'')+(objective.scene===id?' objective':'');
     b.dataset.mapPlace=id;b.style.left=(x/12)+'%';b.style.top=(y/8.2)+'%';
-    const label=known?world[id].name.replace('旧宅 · ','').replace('青岚山 · ','').replace('南澜海湾 · ','').replace('南澜县城 · ',''):'未题名';
-    b.innerHTML=clean(label)+'<small>'+(s.scene===id?'你在这里':known?(why?'尚未走通':objective.scene===id?'眼前要去':'已经认得'):'亲自走过后写入')+'</small>';
-    b.setAttribute('aria-label',(known?world[id].name:'尚未认识的地点')+'，'+(known&&!why?'已经认得':'等待探索'));
+    const label=world[id].name.replace('旧宅 · ','').replace('青岚山 · ','').replace('南澜海湾 · ','').replace('南澜县城 · ','');
+    const chapter=window.NanlanChapterCatalog.label(window.NanlanChapterCatalog.place(id).number,window.NanlanI18n?.language==='en');
+    b.innerHTML=clean(label)+'<small>'+clean(s.scene===id?'你在这里':why?chapter+' · 待开放':objective.scene===id?'眼前要去':'已经认得')+'</small>';
+    b.setAttribute('aria-label',world[id].name+'，'+chapter+'，'+(!why?'已经认得':'等待开放'));
     b.onclick=()=>inspectMapPlace(id);$('mapNodes').append(b);
   }
-  $('mapSummary').textContent='山海轮廓都在图上 · '+Object.keys(world).filter(mapKnown).length+' 处已经题名 · 其余等待你亲自走到';
+  $('mapSummary').textContent=deskText('地点与解锁卷数都在图上 · 点地点查看具体条件','All places show their opening volume · Select a place for exact conditions');
   $('mapTime').textContent=timeText().short+' · 查看地图时暂停';
   drawPlaceLists();filterMap();
 }
 function inspectMapPlace(id,objectId=null){
   selectedMapPlace=id;selectedMapObject=objectId;const s=state(),w=world[id],why=mapAccess(id),known=mapKnown(id),historical=id==='gate'&&s.flags.gateOpen;
   for(const b of $('mapNodes').children)b.classList.toggle('selected',b.dataset.mapPlace===id);
-  $('mapPlaceTitle').textContent=known?w.name:'尚未题名的地方';$('mapPlaceState').textContent=s.scene===id?'当前位置 · 你在这里':historical?'来时的旧宅门前':known?(why?'听说过 · 尚未走通':'已经认得 · 可以沿路抵达'):'只看得见山海轮廓';
+  const chapterInfo=window.NanlanChapterCatalog.place(id),chapterLabel=window.NanlanChapterCatalog.label(chapterInfo.number,window.NanlanI18n?.language==='en');
+  $('mapPlaceTitle').textContent=w.name;$('mapPlaceState').textContent=chapterLabel+' · '+(s.scene===id?'当前位置 · 你在这里':historical?'来时的旧宅门前':why?'尚未走通':'已开放 · 可以沿路抵达');
   const picture=window.NanlanEstateUI?.preview(s,id,DATA.assets[w.asset])||DATA.assets[w.asset];
   $('mapPlaceImage').src=picture;$('mapPlaceImage').dataset.seasonOriginal=picture;NanlanClimate.preview($('mapPlaceImage'),id,s);$('mapPlaceImage').alt=w.name+'原画预览';
   $('mapPlaceImage').classList.toggle('undiscovered',!known);$('mapPlaceActions').replaceChildren();$('mapPlaceDetails').replaceChildren();
-  if(!known){$('mapPlaceDescription').textContent='这处地方还没有进入你的故事。等家人或新认识的人提起它，舆图会写下名字和路线。';return;}
+  if(why)add(deskText('查看'+chapterLabel+'入口与条件','View '+chapterLabel+' Entrance & Conditions'),()=>window.NanlanChapters.show(chapterInfo.number),true);
+  if(!known){$('mapPlaceDescription').textContent=mapChapterRequirement(chapterInfo)+'\n\n'+deskText('当前条件：','Current condition: ')+why;return;}
   const target=historical?'yard':id,route=firstRoute(s.scene,target),o=w.objects.find(v=>v.id===objectId);
-  let description=historical?'接行李、拿钥匙、开院门的序章入口。现在可回庭院查看门前通路。':why||'沿已开放入口逐段行走，途经物资仍可停下采集。';
+  let description=historical?'接行李、拿钥匙、开院门的序章入口。现在可回庭院查看门前通路。':why?mapChapterRequirement(chapterInfo)+'\n\n'+deskText('当前条件：','Current condition: ')+why:'沿已开放入口逐段行走，途经物资仍可停下采集。';
   if(o)description='目标：'+o.label+'\n'+description;
   if(!why&&route?.length)description+='\n\n出行路线：'+[world[s.scene].name,...route.map(step=>world[step.to].name)].join(' → ');
   if(!why&&route===null)description+='\n当前通路尚未连通，先完成门前交接或当前修路任务。';
@@ -145,11 +151,9 @@ function inspectMapPlace(id,objectId=null){
 function drawPlaceLists(){
   $('allPlaceList').replaceChildren();
   mapGroups.forEach(([title,ids])=>{
-    if(title==='南街新铺'&&!state().flags.volume2Started)return;
-    if(title==='府城水路'&&!globalThis.NanlanPrefecture.unlocked(state()))return;
     const box=document.createElement('section');box.className='place-list-card';const heading=document.createElement('b');heading.textContent=title;box.append(heading);
     for(const id of ids){
-      const known=mapKnown(id),b=document.createElement('button');b.className='directory-scene';b.textContent=known?world[id].name+' · '+(mapAccess(id)?'尚未走通':'已经认得'):'未题名 · 等待探索';
+      const known=mapKnown(id),b=document.createElement('button');b.className='directory-scene';b.textContent=world[id].name+' · '+window.NanlanChapterCatalog.label(window.NanlanChapterCatalog.place(id).number,window.NanlanI18n?.language==='en')+' · '+(mapAccess(id)?'尚未走通':'已经认得');
       b.onclick=()=>{inspectMapPlace(id);centerMap(id);};box.append(b);
       if(!known)continue;
       const shown=new Set(visibleObjects(id,true).map(o=>o.id));
@@ -163,10 +167,12 @@ function drawPlaceLists(){
 }
 function filterMap(){
   const query=$('mapSearch').value.trim(),results=$('mapSearchResults');results.replaceChildren();results.hidden=!query;
-  for(const node of $('mapNodes').children){const id=node.dataset.mapPlace,w=world[id],searchable=mapKnown(id)?w.name+w.objects.map(o=>o.label).join(''):'';node.classList.toggle('dimmed',!!query&&!window.NanlanI18n.matches(searchable,query));}
+  for(const node of $('mapNodes').children){const id=node.dataset.mapPlace,w=world[id],searchable=w.name+window.NanlanChapterCatalog.label(window.NanlanChapterCatalog.place(id).number)+(mapKnown(id)?w.objects.map(o=>o.label).join(''):'');node.classList.toggle('dimmed',!!query&&!window.NanlanI18n.matches(searchable,query));}
   if(!query)return;
-  const matches=[];for(const [id,w] of Object.entries(world)){if(!mapKnown(id))continue;
-    if(window.NanlanI18n.matches(w.name,query))matches.push({id,label:w.name});
+  const matches=[];for(const [id,w] of Object.entries(world)){
+    const chapter=window.NanlanChapterCatalog.label(window.NanlanChapterCatalog.place(id).number);
+    if(window.NanlanI18n.matches(w.name+' '+chapter,query))matches.push({id,label:w.name+' · '+chapter+(mapAccess(id)?' · 尚未走通':'')});
+    if(!mapKnown(id))continue;
     for(const o of w.objects)if(window.NanlanI18n.matches(o.label,query))matches.push({id,object:o.id,label:w.name+' · '+o.label});
   }
   const note=document.createElement('p');note.textContent=matches.length?'找到 '+matches.length+' 项，点击查看位置与路线。':'没有找到这个地点。可试试「竹林」「灶」「药圃」或「待租」。';results.append(note);

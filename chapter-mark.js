@@ -36,7 +36,7 @@ function saveLabel(){
 function refresh(s=state(),live=started){
  const info=describe(s),mark=$('chapterMark');const value=label(info);
  if(mark.textContent!==value)mark.textContent=value;
- mark.setAttribute('aria-label',value+' · '+L('查看篇章行记','Open the Chapter Journal'));
+ mark.setAttribute('aria-label',value+' · '+L('查看六卷与番外入口','Open All Volumes and Epilogues'));
  saveLabel();
  if(!live){last=null;pending=null;$('volumeIntertitle').hidden=true;return;}
  if(last!==info.number){last=info.number;pending=info;}
@@ -55,6 +55,7 @@ function show(){
  }
  if(info.number<6){const future=document.createElement('p');future.className='chapter-unwritten';future.textContent=L('后面的纸页，尚未题名。','The pages ahead have yet to be named.');list.append(future);}
  $('panelExtra').append(list);
+ navButton(L('查看全部六卷与番外入口','View All Volumes and Epilogues'),()=>window.NanlanChapters.show(),'journal-all-chapters');
  window.NanlanMemoryBook?.link(show);
  window.NanlanEndings?.history();
  if(q)navButton(L('翻到眼前的记事 · ','Open the current entry · ')+(en()?window.NanlanI18n.t(N.titles[q]):N.titles[q]),showQuest,'chapter-current-entry');
@@ -62,7 +63,7 @@ function show(){
  navButton(L('合上行记，回到此间','Close the Journal'),()=>closeDialog(true),'chapter-journal-close');
 }
 $('chapterMark').dataset.noLocalize='';$('volumeIntertitle').dataset.noLocalize='';
-$('chapterMark').onclick=show;
+$('chapterMark').onclick=()=>window.NanlanChapters.show();
 window.NanlanChapterMark={describe,label,refresh,show};
 refresh();
 document.addEventListener('nanlanlanguagechange',()=>refresh());

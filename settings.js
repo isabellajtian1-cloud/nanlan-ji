@@ -41,7 +41,7 @@ $('settingsSceneGuides').onclick=()=>{sceneGuides=!sceneGuides;try{localStorage.
 $('settingsScreenMode').onclick=toggleGameScreen;
 document.addEventListener('fullscreenchange',sync);
 // Close before opening another game panel, so its focus and pause state are retained.
-for(const id of ['helpOpen','peopleOpen','galleryOpen','estateOpen'])$(id).addEventListener('click',()=>close(),true);
+for(const id of ['helpOpen','peopleOpen','galleryOpen','estateOpen','chaptersOpen'])$(id).addEventListener('click',()=>close(),true);
 $('save').addEventListener('click',()=>{$('settingsStatus').textContent=$('saveState').textContent;});
 window.addEventListener('keydown',e=>{
   if(!isOpen())return;

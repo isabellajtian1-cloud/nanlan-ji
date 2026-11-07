@@ -212,7 +212,7 @@ function startNavigation(to,objectId=null){
     if(o)approach(o);else notice(objectId?'已到达。这个物件随任务开放，可先查看「场景互动」。':'已经到达'+world[to].name+'。');return;
   }
   $('navigationLabel').textContent='前往 '+world[to].name+' · 还经 '+route.length+' 处入口';$('navigationStatus').hidden=false;
-  approach(route[0]);notice('导航到'+world[to].name+' · 下一处：'+route[0].label+'。',true);
+  if(!approach(route[0])){cancelNavigation();return;}notice('导航到'+world[to].name+' · 下一处：'+route[0].label+'。',true);
 }
 async function quickTravel(to,objectId=null){
   const s=state(),route=firstRoute(s.scene,to);

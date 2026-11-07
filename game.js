@@ -1496,13 +1496,13 @@ function blocked(x,y,clearance=0){
   if(baseBlocked(x,y,clearance))return true;
   return visibleObjects().some(o=>insideObjectFootprint(o,x,y,clearance));
 }
-function movementBlocked(x,y,fromX,fromY){
-  if(baseBlocked(x,y))return true;
+function movementBlocked(x,y,fromX,fromY,clearance=0){
+  if(baseBlocked(x,y,clearance))return true;
   for(const o of visibleObjects()){
-    const size=objectFootprint(o);if(!size||!insideObjectFootprint(o,x,y))continue;
+    const size=objectFootprint(o);if(!size||!insideObjectFootprint(o,x,y,clearance))continue;
     // Old saves may resume inside a newly-added footprint. They may walk outward, never farther in.
-    if(!insideObjectFootprint(o,fromX,fromY))return true;
-    const [rx,ry]=size,was=((fromX-o.x)/rx)**2+((fromY-o.y)/ry)**2,now=((x-o.x)/rx)**2+((y-o.y)/ry)**2;
+    if(!insideObjectFootprint(o,fromX,fromY,clearance))return true;
+    const [rx,ry]=size.map(n=>n+clearance),was=((fromX-o.x)/rx)**2+((fromY-o.y)/ry)**2,now=((x-o.x)/rx)**2+((y-o.y)/ry)**2;
     if(now<=was)return true;
   }
   return false;
@@ -1514,11 +1514,11 @@ function findPath(target){
   const queue=[start],previous=new Map([[key(...start),null]]);
   let finish=null;
   for(let n=0;n<queue.length;n++){
-    const [x,y]=queue[n],p=xy(x,y);
+    const [x,y]=queue[n],p=n===0?s.player:xy(x,y);
     if((target.object&&Math.hypot(p.x-target.object.x,p.y-target.object.y)<=(target.object.type==='door'?16:64))||(!target.object&&Math.hypot(x-end[0],y-end[1])<=.1)){finish=[x,y];break;}
     for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]]){
-      const nx=x+dx,ny=y+dy,k=key(nx,ny),np=xy(nx,ny);if(nx<0||ny<0||nx>=cols||ny>=rows||previous.has(k)||blocked(np.x,np.y,10))continue;
-      if(dx&&dy&&(blocked(p.x,np.y,10)||blocked(np.x,p.y,10)))continue;
+      const nx=x+dx,ny=y+dy,k=key(nx,ny),np=xy(nx,ny);if(nx<0||ny<0||nx>=cols||ny>=rows||previous.has(k)||movementBlocked(np.x,np.y,p.x,p.y,10))continue;
+      if(dx&&dy&&(movementBlocked(p.x,np.y,p.x,p.y,10)||movementBlocked(np.x,p.y,p.x,p.y,10)))continue;
       previous.set(k,[x,y]);queue.push([nx,ny]);
     }
   }
@@ -1528,8 +1528,8 @@ function findPath(target){
 }
 function approach(o){
   const target=findPath({x:o.x,y:o.y,object:o});
-  if(!target){notice('这处还走不到。先看看通路是否清理，或从场景互动选择其他物件。',true);return;}
-  focusedObjectId=o.id;path=target;notice('前往'+o.label+'。');
+  if(!target){path=[];notice('这处还走不到。先看看通路是否清理，或从场景互动选择其他物件。',true);return false;}
+  focusedObjectId=o.id;path=target;notice('前往'+o.label+'。');return true;
 }
 let edgeExitCooldown=0,edgeExitAttempt=null;
 function keyboardExitDirection(o){

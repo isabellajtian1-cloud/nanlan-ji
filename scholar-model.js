@@ -10,7 +10,7 @@ function normalise(s,need){const a=s.scholar;if(a===undefined)return;const count
  need(a&&typeof a==='object'&&['met','recipe','sat','shared','sharedCrust','tasted','signed'].every(k=>typeof a[k]==='boolean')&&['pots','practice','giftDay','lastOrder'].every(k=>count(a[k]))&&a.practice<=3&&a.practice<=a.pots&&(!a.recipe||a.met)&&(!a.pots||a.recipe)&&['','early','late'].includes(a.margin),'饭方记录不完整。');
  if(a.order){const o=a.order;need(a.recipe&&s.flags.v2Opened&&count(o.due)&&o.due>0&&count(o.shootRice)&&count(o.crustRice)&&o.shootRice+o.crustRice<=2,'取饭单记录不完整。');}}
 function judge(released,target,covered){if(released===null||released-target>1000)return 'late';if(target-released>1000)return 'early';return covered&&Math.abs(target-released)<=450?'perfect':'ordinary';}
-function cookingBlock(s){if(!s.scholar?.recipe)return '先带一份竹笋向锅边先生讨教。';if(!s.flags.stoveClean||!s.flags.drainClear)return '先清灶边和宅外水口。';if(!s.bucketWater)return '先到庭院水缸装一桶水。';
+function cookingBlock(s){if(!s.scholar?.recipe)return '先带一份竹笋向锅边先生讨教。';if(!s.flags.stoveClean||!s.flags.drainClear)return '先清灶边和庭院水口。';if(!s.bucketWater)return '先到庭院水缸装一桶水。';
  if(!s.bag.rice)return '米袋空了，村口乡邻余粮可补购。';if(!s.bag.shoot)return '还缺一份竹笋，可去竹林采。';if(!s.bag.wood)return '还缺一份枯枝，可在村边拾取。';return '';}
 function act(s,name,p,h){const {requireThat:need,requireScene:at,spend,give,log}=h;
  need(p.sequence===s.revision,'这份记录已更新，请重新查看后确认。');

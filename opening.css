@@ -43,3 +43,5 @@
 
 .opening-caption:has(.opening-portraits:empty){grid-template-columns:1fr}.opening-landscape img[hidden],.opening-loading[hidden]{display:none!important}.opening-loading{position:absolute;inset:0;display:grid;place-items:center;margin:0;padding:24px;color:#f3e7c8;text-align:center;background:#263d31;z-index:3}#openingFilm button:disabled{opacity:.65;cursor:wait}.opening-watch{display:block;width:100%;margin:12px 0 8px;padding:10px;border:1px solid #ad925e;border-radius:5px;background:#e7d8b2;color:#35543e;font:inherit;cursor:pointer}
 
+
+#openingRetry{font-size:12px;background:#e0ceaa;color:#42553c}.opening-loading{background:radial-gradient(ellipse at 50% 75%,#45614d,#253e32);font-size:16px;line-height:1.8}.opening-controls small{max-width:44%;line-height:1.6}@media(max-width:650px){.opening-controls small{max-width:42%}.opening-controls>div{gap:4px}}

@@ -152,3 +152,12 @@ button{font:inherit;cursor:pointer;color:inherit;touch-action:manipulation}butto
 @keyframes title-reveal{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 @keyframes title-controls{from{opacity:.65}to{opacity:1}}
 @media(prefers-reduced-motion:reduce){#start .start-art,#start .start-vignette,#start .eyebrow,#start h1,#start .premise,#start .gender-choice,#start #selection,#start .start-buttons{animation:none!important;transform:none;opacity:1}}
+
+/* Keycaps are shortcuts; only the separate × badge indicates quantity. */
+.slot-key{display:grid;place-items:center;min-width:18px;height:16px;padding:0 3px;border:1px solid #8b7456;border-bottom-width:2px;border-radius:3px;background:#f7edce;color:#54452f;font:10px/1 sans-serif;box-shadow:0 1px 1px #0002}
+.slot-count{font-variant-numeric:tabular-nums}.tool .slot-tip{line-height:1.6}
+.start-buttons button:disabled,#openingReplay:disabled{opacity:.65;cursor:wait}
+#bootStatus{font-size:12px;line-height:1.7;color:#685938;margin:12px 0}
+#bootRetry,#startLoadRetry{min-height:44px;padding:8px 16px;border:1px solid #8f744a;border-radius:6px;background:#eadbb8;color:#42533d;font:inherit;cursor:pointer}
+#choices button:disabled{opacity:.5;cursor:not-allowed;filter:saturate(.4)}
+@media(pointer:coarse){.slot-key{display:none}}

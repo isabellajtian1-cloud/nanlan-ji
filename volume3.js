@@ -177,8 +177,8 @@ function stallDisplay(){
  const s=state(),box=document.createElement('div');box.className='v3-shelf';
  for(const id of N.products.filter(k=>N.quantity(s,k)>0)){
    const f=document.createElement('figure');f.innerHTML=inventoryArt(id);const c=document.createElement('figcaption');
-   c.textContent=N.itemNames[id]+' · '+L('可摆','Available')+' '+N.available(s,id);
-   if(N.current(s)==='M10'&&!s.flags.productDisplayed){const b=document.createElement('button');b.textContent=L('摆上摊布','Set Out on the Cloth');b.onclick=()=>perform('displayProduct',{product:id},showTrade);f.append(b);}
+   c.textContent=N.itemNames[id]+' · '+L('行囊','Bag')+' '+N.quantity(s,id)+' · '+L('可用','Available')+' '+N.available(s,id);
+   // The single action list below owns display controls and their stock state.
    f.append(c);box.append(f);
  }if(box.children.length)$('panelExtra').append(box);
 }

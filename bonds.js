@@ -41,7 +41,7 @@ function personal(o){
 }
 function npc(o){
  const role=B.roleOf(o);if(!B.roles.includes(role)||$('choices').querySelector('[data-action="bond-open"],[data-action="bond-personal"]'))return;
- if(B.extra[role])navButton(L('聊聊近况 · ','Talk a while · ')+B.name(role,window.NanlanI18n?.language==='en'),()=>personal(o),'bond-personal');
+ if(B.extra[role])navButton(L('说说心事 · ','Personal stories · ')+B.name(role,window.NanlanI18n?.language==='en'),()=>personal(o),'bond-personal');
  const offer=B.offered(state(),role);
  if(offer)navButton(T(offer.title)+' · '+L('一起坐一刻','Spend a moment together'),()=>visit(o),'bond-open');
 }

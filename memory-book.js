@@ -118,7 +118,7 @@
     const checks = [
       {
         done: estate.settled(save), title: ['安顿旧宅', 'Settle the Old House'],
-        hint: ['安顿东厢房、清理院路、疏通宅外水口。', 'Settle the East Wing and clear the courtyard path and drain.']
+        hint: ['安顿东厢房、清理院路、疏通庭院水口。', 'Settle the East Wing and clear the courtyard path and drain.']
       },
       {
         done: save.flags.windowPatched && save.flags.leakPatched, title: ['东厢避风雨', 'Shelter from Wind and Rain'],

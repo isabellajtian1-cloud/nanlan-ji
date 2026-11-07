@@ -20,8 +20,16 @@ function mapAccess(id){
   if(id==='tidalflat'&&!N.tide(s).low)return '现在涨潮，下一轮低潮还有 '+Math.ceil(N.tide(s).remaining)+' 游戏分钟。可以先在海边走动，随时可以从滩涂返回。';
   return '';
 }
+function mapVisitStatus(id){
+  const s=state(),visited=id===s.scene||!!s.visits[id];
+  if(id===s.scene)return deskText('当前位置 · 你在这里','Current location');
+  if(N.sceneGate(s,id))return visited?deskText('已探索 · 暂不可进入','Explored · Temporarily unavailable'):deskText('未解锁','Locked');
+  if(id==='tidalflat'&&!N.tide(s).low)return visited?deskText('已探索 · 涨潮暂歇','Explored · High tide'):deskText('已开放 · 等待退潮','Open · Wait for low tide');
+  if(mapAccess(id))return visited?deskText('已探索 · 通路待修','Explored · Route needs repair'):deskText('通路待修','Route needs repair');
+  return visited?deskText('已探索 · 可以前往','Explored · Accessible'):deskText('已开放 · 尚未到访','Open · Not yet visited');
+}
 function mapKnown(id){
-  const s=state();if(globalThis.NanlanPrefecture.places.includes(id))return globalThis.NanlanPrefecture.unlocked(s);
+  const s=state();if(id===s.scene||s.visits[id])return true;if(globalThis.NanlanPrefecture.places.includes(id))return globalThis.NanlanPrefecture.unlocked(s);
   if(N.voyage.islands.includes(id))return true;return id===s.scene||id==='gate'||!!s.visits[id]||!mapAccess(id);
 }
 function objectiveForStep(flag,label){
@@ -102,8 +110,8 @@ function drawMap(){
     b.dataset.mapPlace=id;b.style.left=(x/12)+'%';b.style.top=(y/8.2)+'%';
     const label=world[id].name.replace('旧宅 · ','').replace('青岚山 · ','').replace('南澜海湾 · ','').replace('南澜县城 · ','');
     const chapter=window.NanlanChapterCatalog.label(window.NanlanChapterCatalog.place(id).number,window.NanlanI18n?.language==='en');
-    b.innerHTML=clean(label)+'<small>'+clean(s.scene===id?'你在这里':why?chapter+' · 待开放':objective.scene===id?'眼前要去':'已经认得')+'</small>';
-    b.setAttribute('aria-label',world[id].name+'，'+chapter+'，'+(!why?'已经认得':'等待开放'));
+    b.innerHTML=clean(label)+'<small>'+clean(chapter+' · '+mapVisitStatus(id))+'</small>';
+    b.setAttribute('aria-label',world[id].name+'，'+chapter+'，'+mapVisitStatus(id));
     b.onclick=()=>inspectMapPlace(id);$('mapNodes').append(b);
   }
   $('mapSummary').textContent=deskText('地点与解锁卷数都在图上 · 点地点查看具体条件','All places show their opening volume · Select a place for exact conditions');
@@ -114,14 +122,14 @@ function inspectMapPlace(id,objectId=null){
   selectedMapPlace=id;selectedMapObject=objectId;const s=state(),w=world[id],why=mapAccess(id),known=mapKnown(id),historical=id==='gate'&&s.flags.gateOpen;
   for(const b of $('mapNodes').children)b.classList.toggle('selected',b.dataset.mapPlace===id);
   const chapterInfo=window.NanlanChapterCatalog.place(id),chapterLabel=window.NanlanChapterCatalog.label(chapterInfo.number,window.NanlanI18n?.language==='en');
-  $('mapPlaceTitle').textContent=w.name;$('mapPlaceState').textContent=chapterLabel+' · '+(s.scene===id?'当前位置 · 你在这里':historical?'来时的旧宅门前':why?'尚未走通':'已开放 · 可以沿路抵达');
+  $('mapPlaceTitle').textContent=w.name;$('mapPlaceState').textContent=chapterLabel+' · '+(historical?'来时的旧宅门前':mapVisitStatus(id));
   const picture=window.NanlanEstateUI?.preview(s,id,DATA.assets[w.asset])||DATA.assets[w.asset];
   $('mapPlaceImage').src=picture;$('mapPlaceImage').dataset.seasonOriginal=picture;NanlanClimate.preview($('mapPlaceImage'),id,s);$('mapPlaceImage').alt=w.name+'原画预览';
   $('mapPlaceImage').classList.toggle('undiscovered',!known);$('mapPlaceActions').replaceChildren();$('mapPlaceDetails').replaceChildren();
-  if(why)add(deskText('查看'+chapterLabel+'入口与条件','View '+chapterLabel+' Entrance & Conditions'),()=>window.NanlanChapters.show(chapterInfo.number),true);
+  if(why&&N.sceneGate(s,id))add(deskText('查看'+chapterLabel+'入口与条件','View '+chapterLabel+' Entrance & Conditions'),()=>window.NanlanChapters.show(chapterInfo.number),true);
   if(!known){$('mapPlaceDescription').textContent=mapChapterRequirement(chapterInfo)+'\n\n'+deskText('当前条件：','Current condition: ')+why;return;}
   const target=historical?'yard':id,route=firstRoute(s.scene,target),o=w.objects.find(v=>v.id===objectId);
-  let description=historical?'接行李、拿钥匙、开院门的序章入口。现在可回庭院查看门前通路。':why?mapChapterRequirement(chapterInfo)+'\n\n'+deskText('当前条件：','Current condition: ')+why:'沿已开放入口逐段行走，途经物资仍可停下采集。';
+  let description=historical?'接行李、拿钥匙、开院门的序章入口。现在可回庭院查看门前通路。':why?(N.sceneGate(s,id)?mapChapterRequirement(chapterInfo)+'\n\n':'')+deskText('当前条件：','Current condition: ')+why:'沿已开放入口逐段行走，途经物资仍可停下采集。';
   if(o)description='目标：'+o.label+'\n'+description;
   if(!why&&route?.length)description+='\n\n出行路线：'+[world[s.scene].name,...route.map(step=>world[step.to].name)].join(' → ');
   if(!why&&route===null)description+='\n当前通路尚未连通，先完成门前交接或当前修路任务。';
@@ -153,7 +161,7 @@ function drawPlaceLists(){
   mapGroups.forEach(([title,ids])=>{
     const box=document.createElement('section');box.className='place-list-card';const heading=document.createElement('b');heading.textContent=title;box.append(heading);
     for(const id of ids){
-      const known=mapKnown(id),b=document.createElement('button');b.className='directory-scene';b.textContent=world[id].name+' · '+window.NanlanChapterCatalog.label(window.NanlanChapterCatalog.place(id).number,window.NanlanI18n?.language==='en')+' · '+(mapAccess(id)?'尚未走通':'已经认得');
+      const known=mapKnown(id),b=document.createElement('button');b.className='directory-scene';b.textContent=world[id].name+' · '+window.NanlanChapterCatalog.label(window.NanlanChapterCatalog.place(id).number,window.NanlanI18n?.language==='en')+' · '+mapVisitStatus(id);
       b.onclick=()=>{inspectMapPlace(id);centerMap(id);};box.append(b);
       if(!known)continue;
       const shown=new Set(visibleObjects(id,true).map(o=>o.id));
@@ -171,7 +179,7 @@ function filterMap(){
   if(!query)return;
   const matches=[];for(const [id,w] of Object.entries(world)){
     const chapter=window.NanlanChapterCatalog.label(window.NanlanChapterCatalog.place(id).number);
-    if(window.NanlanI18n.matches(w.name+' '+chapter,query))matches.push({id,label:w.name+' · '+chapter+(mapAccess(id)?' · 尚未走通':'')});
+    if(window.NanlanI18n.matches(w.name+' '+chapter,query))matches.push({id,label:w.name+' · '+chapter+(' · '+mapVisitStatus(id))});
     if(!mapKnown(id))continue;
     for(const o of w.objects)if(window.NanlanI18n.matches(o.label,query))matches.push({id,object:o.id,label:w.name+' · '+o.label});
   }

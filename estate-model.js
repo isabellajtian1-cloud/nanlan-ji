@@ -22,7 +22,7 @@
   }
   function improvement(s){
     if(furnished(s))return '';
-    if(!settled(s))return '先安顿卧房、清出院路和宅外水口。';
+    if(!settled(s))return '先安顿卧房、清出院路和庭院水口。';
     if(!s.flags.windowPatched||!s.flags.leakPatched)return '东厢房的漏点和窗格都补好后，再请人修整院落。';
     if(earnings(s)<earningsGoal)return '等摆摊或铺面累计收到三十文货款，再筹院里的工钱。';
     if(s.coins-fee<(s.story2?.reserve||0))return '要留够已划出的家用，再付二十四文修葺钱。';

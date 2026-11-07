@@ -25,7 +25,7 @@
     M01:[['handover','交接文书与行李'],['keyTaken','接过院门钥匙'],['gateOpen','亲手打开院门']],
     M02:[['windowInspected','检查卧房（东厢房）窗格'],['leakInspected','检查卧房（东厢房）漏雨处'],['firstRepair','选择先修窗或先补漏'],['bedReady','搬入床褥，安顿卧房（东厢房）']],
     M03:[['farmTools','在仓房领取农具'],['toolsRepaired','修好旧农具'],['pathCleared','清理通路杂草 3 处'],['smallBed','整理一小块种植区']],
-    M04:[['stoveClean','清理灶边'],['bucketFilled','在院中水缸取水'],['drainClear','清理宅外水口'],['firstCooked','亲手做一锅热饭'],['firstShared','回正厅与家人分享']],
+    M04:[['stoveClean','清理灶边'],['bucketFilled','在院中水缸取水'],['drainClear','清理庭院水口'],['firstCooked','亲手做一锅热饭'],['firstShared','回正厅与家人分享']],
     M05:[['metChen','与陈伯打招呼'],['metDoctor','认识许青禾'],['letterRead','替乡邻读一封家信']],
     M06:[['metCen','在山脚认识阿岑'],['bambooIdentified','拾取一份可用落竹'],['bambooChoice','安排借竹或自家晾架'],['bridgeReady','铺通竹林小径']],
     M07:[['fullGarden','扩整自家药圃'],['dryRack','在仓房做好晾架'],['medicinalPlanted','种下首批药草'],['medicinalWatered','给药草浇水'],['medicinalHarvested','成熟后亲手采收']],
@@ -150,6 +150,14 @@
   function quantity(s,id) { return s.bag[id]||0; }
   function available(s,id) {
     return quantity(s,id)-rural.held(s,id)-(s.order && s.order.product===id ? s.order.reserved : 0);
+  }
+  // Sales protect outstanding promises even before the player explicitly reserves them.
+  function saleAvailable(s,id,extra=false) {
+    const order=s.order?.product===id?s.order:null;
+    let hold=order?Math.max(0,2-order.delivered-order.reserved):0;
+    if(!order&&current(s)==='M11'&&s.featured===id)hold=Math.max(hold,2);
+    if(extra&&current(s)==='M10'&&!s.flags.firstSale&&products.includes(id))hold=Math.max(hold,1);
+    return Math.max(0,available(s,id)-hold);
   }
   function spend(s,cost) {
     for(const [id,n] of Object.entries(cost)) requireThat(available(s,id)>=n,'还需要 '+(itemNames[id]||id)+' ×'+Math.max(0,n-available(s,id))+'。可在背包查看来源。');
@@ -371,7 +379,7 @@
         if(name==='clearDrain'){quest('M04');requireScene(s,'yard');f.drainClear=true;return;}
         if(name==='cookMeal'||name==='cookFeast'){
           requireScene(s,'yard');const feast=name==='cookFeast';if(feast)requireThat(reached(s,'M20'),'先办完京中来信。');else requireThat(reached(s,'M04'),'先整理后院。');
-          requireThat(f.stoveClean&&f.drainClear,'先清灶边和宅外水口。');requireThat(s.bucketWater>=1,'先到水缸取水。');
+          requireThat(f.stoveClean&&f.drainClear,'先清灶边和庭院水口。');requireThat(s.bucketWater>=1,'先到水缸取水。');
           const food=quantity(s,'vegetable')?'vegetable':'ingredient';
           spend(s,{rice:1,wood:1,[food]:1});s.bucketWater--;give(s,feast?{feast:1}:{hotMeal:1});f[feast?'feastCooked':'firstCooked']=true;log(s,'cook',0,feast?'准备家宴':'煮一锅热饭');return;}
         if(name==='shareFirst'){quest('M04');requireScene(s,'hall');return once(s,'shareFirst',()=>{requireThat(['family','chen'].includes(p.choice),'先选怎样分饭。');spend(s,{hotMeal:1});s.choices.firstMeal=p.choice;f.firstShared=true;f.stableLights=true;});}
@@ -439,9 +447,9 @@
         if(name==='bookStall'){requireScene(s,'market');requireThat(reached(s,'M10'),'先完成潮线教学。');requireThat(q==='M10'||(clock(s).minute>=540&&clock(s).minute<1020),'普通集市在 09:00—17:00 开放。可先做家中小事或休息，再来预约。');s.stallUntil=s.worldTick+360;f.stallBooked=true;return;}
         if(name==='displayProduct'){quest('M10');requireScene(s,'market');requireThat(s.stallUntil>s.worldTick,'试摊预约已结束，可重新预约，不收罚款。');requireThat(products.includes(p.product)&&available(s,p.product)>=1,'先在仓房做一件制品，再带来摆摊。');s.featured=p.product;f.productDisplayed=true;return;}
         if(name==='sell'){requireScene(s,'market');requireThat(f.productDisplayed,'先预约并摆好主打商品。');requireThat(s.stallUntil>s.worldTick,'摊布已收起，可重新预约。');
-          requireThat(Number.isInteger(p.sequence)&&p.sequence===s.transactions.length,'这笔买卖已结算，请查看更新后的余货。');spend(s,{[s.featured]:1});
+          requireThat(Number.isInteger(p.sequence)&&p.sequence===s.transactions.length,'这笔买卖已结算，请查看更新后的余货。');requireThat(saleAvailable(s,s.featured)>=1,'这件主打货需要留给小批单，请先交单或补做制品。');spend(s,{[s.featured]:1});
           s.coins+=prices[s.featured];log(s,'sale',prices[s.featured],'镇集售出 '+itemNames[s.featured],s.featured);give(s,{receipt:1});f.firstSale=true;return;}
-        if(name==='sellExtra'){requireScene(s,['village','market','generalStore']);requireThat(reached(s,'M05'),'先安顿家人，再到村里出售余货。');requireThat(Object.hasOwn(prices,p.item),'这件物品不可出售。');requireThat(Number.isInteger(p.sequence)&&p.sequence===s.transactions.length,'这笔买卖已结算。');if(s.scene==='market')requireThat(s.stallUntil>s.worldTick,'请先预约摊布。');spend(s,{[p.item]:1});s.coins+=prices[p.item];log(s,'sale',prices[p.item],'余货售出 '+itemNames[p.item],p.item);give(s,{receipt:1});return;}
+        if(name==='sellExtra'){requireScene(s,['village','market','generalStore']);requireThat(reached(s,'M05'),'先安顿家人，再到村里出售余货。');requireThat(Object.hasOwn(prices,p.item),'这件物品不可出售。');requireThat(Number.isInteger(p.sequence)&&p.sequence===s.transactions.length,'这笔买卖已结算。');if(s.scene==='market')requireThat(s.stallUntil>s.worldTick,'请先预约摊布。');requireThat(saleAvailable(s,p.item,true)>=1,'这些物品要留给首次试卖或未完成的小批单，暂不能作为余货出售。');spend(s,{[p.item]:1});s.coins+=prices[p.item];log(s,'sale',prices[p.item],'余货售出 '+itemNames[p.item],p.item);give(s,{receipt:1});return;}
         if(name==='acceptOrder'){quest('M11');requireScene(s,'market');return once(s,'acceptOrder',()=>{s.order={id:'O1',product:s.featured,total:2,delivered:0,reserved:0};f.orderAccepted=true;});}
         if(name==='reserveOrder'){quest('M11');requireScene(s,'market');requireThat(s.order,'先接小批单。');const needed=2-s.order.delivered-s.order.reserved;
           const n=Math.min(available(s,s.order.product),needed);requireThat(n>0,'先在仓房补做主打制品。已预留的货不会被试摊卖掉。');s.order.reserved+=n;f.orderReserved=true;return;}
@@ -485,7 +493,7 @@
       });
     }
   }
-  return {Engine,chapterEntries,voyage,V6_ORDER,season5,SEASON5_ORDER,v5,V5_ORDER,v4,V4_ORDER,children,scholar,v3,V3_ORDER,rural,initial,current,done,reached,sceneGate,clock,tide,crop,gardenPlot,quantity,available,normaliseLoaded,
+  return {Engine,chapterEntries,voyage,V6_ORDER,season5,SEASON5_ORDER,v5,V5_ORDER,v4,V4_ORDER,children,scholar,v3,V3_ORDER,rural,initial,current,done,reached,sceneGate,clock,tide,crop,gardenPlot,quantity,available,saleAvailable,normaliseLoaded,
     rareResources,resourceCooldown,resourceRequirement,daylight,SAVE_KEY,ORDER,V2_ORDER,shopPrice,shopCustomers,story2:storyV2,shopProducts:storyV2.products,titles,steps,rewards,itemNames,products,prices,supplyPrices,recipes};
 });
 

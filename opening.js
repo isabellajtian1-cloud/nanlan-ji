@@ -93,17 +93,18 @@ const openingShots=[
  }
 ];
 let shots=openingShots,filmTitle=['明代 · 从京城到南澜','Ming China · From the Capital to Nanlan'],skipLabel=['跳过并开始','Skip and Play'],lastLabel=['走近家人 · 空格','Join Your Family · Space'];
-let host=null,index=0,elapsed=0,playing=true,running=false,frame=0,last=0,lastAdvance=-Infinity,onFinish=null,focusBefore=null,wasActive=false,oldInert=false,imagePending=false,imageFailed=false,paintToken=0;
+let host=null,index=0,elapsed=0,playing=true,running=false,frame=0,last=0,lastAdvance=-Infinity,onFinish=null,focusBefore=null,wasActive=false,oldInert=false,imagePending=false,imageFailed=false,paintToken=0,artTimer=0,artCleanup=null,lastSeconds=-1;
 const en=()=>window.NanlanI18n?.language==='en',P=p=>p[en()?1:0];
 let total=shots.reduce((n,s)=>n+s.duration,0);
 function build(){
  if(host)return;
  host=document.createElement('section');host.id='openingFilm';host.hidden=true;host.setAttribute('role','dialog');host.setAttribute('aria-modal','true');host.setAttribute('aria-labelledby','openingTitle');host.dataset.noLocalize='';
- host.innerHTML='<div class="opening-shell"><div class="opening-top"><p id="openingKicker"></p><button type="button" id="openingSkip"></button></div><figure class="opening-landscape"><div class="opening-shade"></div></figure><div class="opening-caption"><div class="opening-portraits" aria-hidden="true"></div><div class="opening-copy"><h2 id="openingTitle"></h2><p id="openingLine" aria-live="polite"></p></div></div><div class="opening-controls"><small id="openingHint"></small><div><button type="button" id="openingAuto" aria-pressed="true"></button><button type="button" id="openingNext"></button></div></div><div class="opening-progress" aria-hidden="true"><span></span></div></div>';
+ host.innerHTML='<div class="opening-shell"><div class="opening-top"><p id="openingKicker"></p><button type="button" id="openingSkip"></button></div><figure class="opening-landscape"><div class="opening-shade"></div></figure><div class="opening-caption"><div class="opening-portraits" aria-hidden="true"></div><div class="opening-copy"><h2 id="openingTitle"></h2><p id="openingLine" aria-live="polite"></p></div></div><div class="opening-controls"><small id="openingHint"></small><div><button type="button" id="openingAuto" aria-pressed="true"></button><button type="button" id="openingRetry" hidden></button><button type="button" id="openingNext"></button></div></div><div class="opening-progress" aria-hidden="true"><span></span></div></div>';
  document.body.append(host);
 
  host.querySelector('#openingSkip').onclick=finish;
  host.querySelector('#openingNext').onclick=advance;
+ host.querySelector('#openingRetry').onclick=()=>paint(true);
  host.querySelector('#openingAuto').onclick=()=>{playing=!playing;last=0;labels();};
 }
 function labels(){
@@ -111,21 +112,29 @@ function labels(){
  host.querySelector('#openingSkip').textContent=P(skipLabel);
  host.querySelector('#openingAuto').textContent=playing?P(['自动播放 开','Autoplay On']):P(['自动播放 暂停','Autoplay Paused']);
  host.querySelector('#openingAuto').setAttribute('aria-pressed',String(playing));
- host.querySelector('#openingNext').disabled=imagePending&&!imageFailed;
- host.querySelector('#openingNext').textContent=imageFailed?P(['重试载入 · 空格','Retry Artwork · Space']):imagePending?P(['绘景载入中…','Loading Artwork…']):index===shots.length-1?P(lastLabel):P(['继续 · 空格','Continue · Space']);
- host.querySelector('#openingHint').textContent=P(['空格 / Enter 继续 · Esc 跳过','Space / Enter to continue · Esc to skip']);
+ host.querySelector('#openingNext').disabled=false;
+ host.querySelector('#openingRetry').hidden=!imageFailed;host.querySelector('#openingRetry').textContent=P(['重试本页绘景','Retry This Artwork']);
+ host.querySelector('#openingNext').textContent=index===shots.length-1?P(lastLabel):P(['继续 · 空格','Continue · Space']);
+ lastSeconds=-1;countdown();
 }
-function paint(){
+function countdown(){
+ const seconds=Math.max(0,Math.ceil((shots[index].duration-elapsed)/1000));if(seconds===lastSeconds)return;lastSeconds=seconds;
+ host.querySelector('#openingHint').textContent=(playing?P(['本页还剩 '+seconds+' 秒','Next page in '+seconds+'s']):P(['自动播放已暂停','Autoplay paused']))+' · '+P(['可随时点继续 / 按空格','Continue / Space at any time']);
+}
+function paint(retry=false){
+ if(artCleanup)artCleanup();clearTimeout(artTimer);
  const s=shots[index],A=window.NANLAN_DATA.assets,token=++paintToken;host.dataset.shot=String(index);
  host.classList.toggle('opening-detail',s.detail===true);
  imagePending=true;imageFailed=false;
  const img=document.createElement('img');img.alt=P(s.title);img.draggable=false;img.hidden=true;
  const shade=document.createElement('div');shade.className='opening-shade';
- const status=document.createElement('p');status.className='opening-loading';status.setAttribute('role','status');status.textContent=P(['正在载入本页绘景…','Loading this illustration…']);
+ const status=document.createElement('p');status.className='opening-loading';status.setAttribute('role','status');status.textContent=P(['绘景载入中，文字已就绪，可继续阅读。','Artwork is loading. The story is ready; you can continue.']);
  host.querySelector('.opening-landscape').replaceChildren(img,shade,status);
- img.onload=()=>{if(token!==paintToken||!running)return;imagePending=false;imageFailed=false;elapsed=0;last=0;img.hidden=false;status.hidden=true;labels();};
- img.onerror=()=>{if(token!==paintToken||!running)return;imageFailed=true;status.textContent=P(['本页绘景暂未载入，请点「重试载入」。','This illustration could not load. Choose “Retry Artwork”.']);labels();};
- img.src=(s.image||A[s.asset]||A.gate)+'?v=664';
+ img.onload=()=>{if(token!==paintToken||!running)return;clearTimeout(artTimer);imagePending=false;imageFailed=false;img.hidden=false;status.hidden=true;labels();};
+ const failed=()=>{if(token!==paintToken||!running)return;clearTimeout(artTimer);imagePending=false;imageFailed=true;status.textContent=P(['本页绘景暂未载入。可继续阅读，也可重试绘景。','The artwork is unavailable. Continue reading or retry the illustration.']);labels();};
+ img.onerror=failed;artTimer=setTimeout(failed,6000);artCleanup=()=>{img.onload=img.onerror=null;};
+ img.src=(s.image||A[s.asset]||A.gate)+'?v=6917'+(retry?'&retry='+Date.now():'');
+ const next=shots[index+1];if(next){const preload=new Image();preload.src=(next.image||A[next.asset]||A.gate)+'?v=6917';}
  const cast=host.querySelector('.opening-portraits');cast.replaceChildren();cast.style.animation='none';void cast.offsetWidth;cast.style.animation='';
  for(const role of s.roles){const portrait=document.createElement('img');portrait.src=A['npc_'+role];portrait.alt='';portrait.draggable=false;portrait.onerror=()=>{portrait.hidden=true;};cast.append(portrait);}
  host.querySelector('#openingTitle').textContent=P(s.title);host.querySelector('#openingLine').textContent=P(s.line);labels();
@@ -133,7 +142,7 @@ function paint(){
 function update(t){
  if(!running)return;
  const delta=last?Math.max(0,Math.min(100,t-last)):0;last=t;
- if(playing&&!imagePending&&!document.hidden)elapsed+=delta;
+ if(playing&&!document.hidden)elapsed+=delta;countdown();
  const prior=shots.slice(0,index).reduce((n,s)=>n+s.duration,0);
  host.querySelector('.opening-progress span').style.width=((prior+Math.min(elapsed,shots[index].duration))/total*100)+'%';
  if(elapsed>=shots[index].duration){if(index===shots.length-1){finish();return;}index++;elapsed=0;paint();}
@@ -142,11 +151,11 @@ function update(t){
 function advance(){
  if(!running||performance.now()-lastAdvance<250)return;
  lastAdvance=performance.now();
- if(imageFailed){paint();return;}if(imagePending)return;
+ // Artwork never blocks reading or advances a different page when its request completes.
  if(index===shots.length-1){finish();return;}index++;elapsed=0;last=0;paint();
 }
 function finish(){
- if(!running)return;running=false;cancelAnimationFrame(frame);
+ if(!running)return;running=false;paintToken++;clearTimeout(artTimer);if(artCleanup)artCleanup();cancelAnimationFrame(frame);
  host.hidden=true;const wrap=document.getElementById('wrap');if(wrap)wrap.inert=oldInert;
  window.NanlanAudio?.setDialogue(false);active=wasActive;keys={};path=[];moving=false;
  const done=onFinish;onFinish=null;
@@ -169,7 +178,7 @@ window.addEventListener('keydown',e=>{
  e.preventDefault();e.stopImmediatePropagation();if(e.repeat)return;
  if(e.key==='Escape')finish();else if(e.key===' '||e.key==='Enter'){
   if(document.activeElement?.id==='openingAuto')host.querySelector('#openingAuto').click();
-  else if(document.activeElement?.id==='openingSkip')finish();else advance();
+  else if(document.activeElement?.id==='openingSkip')finish();else if(document.activeElement?.id==='openingRetry')paint(true);else advance();
  }
 },true);
 window.addEventListener('keyup',e=>{if(running){e.preventDefault();e.stopImmediatePropagation();}},true);

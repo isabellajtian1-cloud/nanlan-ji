@@ -23,8 +23,8 @@ function card(item,ctx,chosen){
 }
 function refreshTitle(){
  const version=document.querySelector('.version-note'),release=version.textContent.match(/V[\d.]+/)?.[0]||'';
- document.title=L('南澜记 '+release+' · 卷页有路','Nanlan Chronicles '+release+' · A Path through the Pages');
- version.textContent=L(release+' · 卷页有路 · 六卷与番外开发试玩',release+' · A Path through the Pages · Six-volume development preview with epilogues');
+ document.title=L('南澜记 '+release+' · 步步有应','Nanlan Chronicles '+release+' · Every Step Answered');
+ version.textContent=L(release+' · 步步有应 · 六卷与番外开发试玩',release+' · Every Step Answered · Six-volume development preview with epilogues');
  const host=$('startChapterList');if(!host)return;const ctx=context();host.replaceChildren();
  for(const item of C.entries(ctx.s))host.append(card(item,ctx));
  $('startChapterNote').textContent=ctx.invalid?L('存档暂时无法读取；这里只展示篇章目录，原数据保留。','The save cannot be read. This is a chapter preview; your data is preserved.'):L('按旅程依次开启 · 点卷名查看条件与去处','Unlock in story order · Select a volume for its conditions and starting place');
@@ -87,7 +87,7 @@ $('chaptersOpen').onclick=()=>show();
 refreshTitle();
 document.addEventListener('nanlanlanguagechange',()=>{refreshTitle();if(!$('dialog').hidden&&dialogKind==='chapter-entry')show(selected);});
 const dictionary=window.NANLAN_EN||(window.NANLAN_EN={});
-Object.assign(dictionary,{'六卷与番外':'Six Volumes & Epilogues','篇章一览':'The Whole Journey','卷页有路':'A Path through the Pages','岁末家宴已完成，请到正厅读南街铺讯，开启第二卷后再进县城。':'The year-end feast is complete. Read the South Street notice in the hall to begin Volume II before visiting town.','请先完成第一卷并分享岁末家宴，再到正厅与家人读南街铺讯。':'Complete Volume I and share the year-end feast, then read the South Street notice with your family in the hall.'});
+Object.assign(dictionary,{'六卷与番外':'Six Volumes & Epilogues','篇章一览':'The Whole Journey','步步有应':'Every Step Answered','岁末家宴已完成，请到正厅读南街铺讯，开启第二卷后再进县城。':'The year-end feast is complete. Read the South Street notice in the hall to begin Volume II before visiting town.','请先完成第一卷并分享岁末家宴，再到正厅与家人读南街铺讯。':'Complete Volume I and share the year-end feast, then read the South Street notice with your family in the hall.'});
 Object.assign(dictionary,{'待开放':'Not yet open','等待开放':'Not yet open','已开放':'Open','查找地点或卷数':'Search places or volumes','搜索地点或卷数，如：新河埠、第三卷、灶台':'Search a place or volume: Wharf, Volume III, Stove','全部地点与卷数清单':'All places and opening volumes'});
 Object.assign(dictionary,{'家人与行李':'Family and Luggage','新春家议 · 第二卷':'New Year Family Discussion · Volume II','门侧的旧牌竹箱':'Bamboo Chest beside the Door','湾口望帆处':'Sail Lookout at the Bay','岁序簿 · 家人与伙伴':'Book of Seasons · Family and Companions','春潮来信与旅途册':'Spring-tide Letter and Travel Book','闲日邀约 · 六篇番外':'Days Together · Six Epilogues'});
 window.NanlanI18n?.configure(dictionary);

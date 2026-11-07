@@ -7,7 +7,7 @@
   Object.assign(DATA.assets,art);
   const words={
     '宅院修葺':'Home Improvements',
-    '先安顿卧房、清出院路和宅外水口。':'Settle the bedroom and clear the courtyard path and drain first.',
+    '先安顿卧房、清出院路和庭院水口。':'Settle the bedroom and clear the courtyard path and drain first.',
     '东厢房的漏点和窗格都补好后，再请人修整院落。':'Mend the East Wing window and roof leak before restoring the courtyard.',
     '等摆摊或铺面累计收到三十文货款，再筹院里的工钱。':'Take in thirty coins from stall or shop sales before setting aside money for the work.',
     '要留够已划出的家用，再付二十四文修葺钱。':'Keep your household reserve intact before spending twenty-four coins on improvements.',
@@ -55,7 +55,7 @@
       L('初来时院墙斑驳，屋瓦也旧。先把住处安顿下来。','The courtyard walls are weathered and the tiles are old. Start by making the house habitable.');
     activity('宅院修葺',intro,'town-shop');
     const list=document.createElement('div');list.className='time-cards';
-    card(list,L('安顿旧宅','Settle the House'),E.settled(s)?L('卧房已安顿，院路和水口都通了。','The bedroom is settled, and the path and drain are clear.'):'先安顿卧房、清出院路和宅外水口。');
+    card(list,L('安顿旧宅','Settle the House'),E.settled(s)?L('卧房已安顿，院路和水口都通了。','The bedroom is settled, and the path and drain are clear.'):'先安顿卧房、清出院路和庭院水口。');
     const reason=E.improvement(s);
     card(list,L('修整院落与正厅','Restore the Courtyard and Hall'),E.furnished(s)?
       L('院墙、屋瓦和正厅陈设都已修整。','The courtyard walls, roof tiles and hall furnishings are restored.'):

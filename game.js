@@ -14,6 +14,19 @@ world.village.objects.find(o=>o.id==='villagePantry').label='乡邻余粮 · 种
  const labels=window.NANLAN_EN||(window.NANLAN_EN={});
  labels['乡邻余粮 · 种子与补给']='Neighbor’s Pantry · Seeds and Supplies';
  labels['灶台 · 做饭']='Stove · Cook';labels['灶台']='Stove';
+ Object.assign(labels,{
+  '庭院水口':'Courtyard Drain','清理庭院水口':'Clear the Courtyard Drain','先清灶边和庭院水口。':'Clear the stove and courtyard drain first.',
+  '清理庭院水口。池塘只是背景，不用修。':'Clear the courtyard drain. The pond is scenery and does not need repair.',
+  '重试载入':'Retry Loading','零售主打':'Sell Featured Item','可售':'Available to sell','暂无可用库存':'No available stock','请先预约':'Book a stall first','先预约或续约摊布':'Book or Renew the Stall',
+  '首次试卖与未交小批单所需的货物自动留出。可出售数量已扣除这些物品。':'Items needed for the first sale and outstanding order are kept aside automatically. Sale quantities exclude them.',
+  '现有主打货需留给小批单。交付后或补做新货，才能继续零售。':'The featured stock is needed for the order. Complete delivery or craft extra stock before selling more.',
+  '主打制品库存为 0，请到仓房补做。':'No featured items remain. Craft more in the storeroom.',
+  '这件主打货需要留给小批单，请先交单或补做制品。':'This featured item is needed for the order. Deliver the order or craft more first.',
+  '这些物品要留给首次试卖或未完成的小批单，暂不能作为余货出售。':'These items are needed for the first sale or outstanding order and cannot be sold as surplus.',
+  '按件出售采集物、菜蔬和手作制品。首次试卖和未交小批单所需的货物会自动留出；制作材料请按需要保留。':'Sell gathered items, vegetables and crafts one at a time. Stock needed for the first sale and outstanding order is protected. Keep any materials you need for crafting.',
+  '工具说明':'Tool information','快捷键':'Keyboard shortcut'
+  ,'可用':'Available','确认后替换本页进度。原进度将保留一份备份，可在行囊下载。':'Confirm to replace progress on this page. A backup of the previous progress can be downloaded from your satchel.'
+ });
  window.NanlanI18n?.configure(labels);
 })();
 const canvas=$('game'),ctx=canvas.getContext('2d',{alpha:false}),W=1100,H=733;
@@ -287,6 +300,7 @@ async function perform(name,p={},rerender){
   const nightCopy=['sleep','prefSleep'].includes(name)&&!engine.memoryOnly?JSON.stringify(state()):null;
   const previous=state();
   const result=engine.act(name,p);
+  if(result.ok){clearSceneNotice();clearDialogNotice();}
   if(nightCopy&&result.ok&&!result.duplicate){try{localStorage.setItem('nanlan_last_night',nightCopy);}catch{notice(deskText('已过夜，设备空间不足，未能保留睡前副本。','Morning has come, but the device could not keep a bedtime copy.'),true);}}
   if(!result.ok){window.NanlanAudio?.play('blocked');notice(result.message,true);$('saveState').textContent=result.message.startsWith('保存失败')?'本次动作尚未保存':'当前目标尚待完成';return result;}
   if(!result.duplicate)window.NanlanAudio?.play(p.seal?(p.seal==='stone'?'sealStone':'sealWood'):name==='openGate'?'door':/water|Water/.test(name)?'water':/repair|Repair|patch|Patch|craft|Craft/.test(name)?'repair':/nap|sleep|townStay|townMeal/.test(name)?'rest':/collect|harvest|Harvest|gather/.test(name)?'gather':'success');
@@ -383,7 +397,7 @@ function nextHint(s=state(),q=N.current(s)){
     M01:!f.handover?deskText('先去门边帮家人一把。','Go to the gate and lend your family a hand.'):!f.keyTaken?'接过官兵递来的院门钥匙。':'靠近旧宅院门，亲手开门。',
     M02:!f.windowInspected||!f.leakInspected?'去卧房（东厢房），分别查看窗格和漏点。':!f.firstRepair?'在卧房（东厢房）先选一处最急的地方，花 1 份材料修补。':'到卧房（东厢房）床榻旁把床褥搬进去。',
     M03:!f.farmTools?'仓房里有一束旧农具。':!f.toolsRepaired?'到仓房工作台，用 1 份修补材料修农具。':!f.pathCleared?'选第 2 格镰刀，清掉庭院 3 处杂草。':'去庭院东侧整理一小块菜畦或香草畦。',
-    M04:!f.stoveClean?'先收拾庭院东北的灶边。':!f.bucketFilled?(s.tools.water?'水桶已经在手，到庭院水缸取水。':'在仓房领水桶，再到庭院水缸取水。'):!f.drainClear?'清理宅外水口。池塘只是背景，不用修。':!f.firstCooked?'灶边用米、食材、枯枝和一桶水做饭。':'端着热饭回正厅，在饭桌旁与家人分享。',
+    M04:!f.stoveClean?'先收拾庭院东北的灶边。':!f.bucketFilled?(s.tools.water?'水桶已经在手，到庭院水缸取水。':'在仓房领水桶，再到庭院水缸取水。'):!f.drainClear?'清理庭院水口。池塘只是背景，不用修。':!f.firstCooked?'灶边用米、食材、枯枝和一桶水做饭。':'端着热饭回正厅，在饭桌旁与家人分享。',
     M05:'到南澜村认识陈伯、许青禾，再替乡邻读信。',
     M06:!f.metCen?'去青岚山脚找阿岑。':!f.bambooIdentified?'山脚与山路各有一份落竹可拾。':!f.bambooChoice?'回山脚和阿岑安排竹料的用途。':'到山路木道铺通竹林小径。',
     M07:!f.fullGarden?'庭院东侧先扩整药圃。':!f.dryRack?'仓房做晾架：枯枝 ×1、竹材 ×1。':!f.medicinalPlanted?'在自家药圃播种药草。':!f.medicinalWatered?'水缸装水，再给药草浇水。':'药草需 4 分钟等效生长。可练字、整理仓房或回床榻休息。',
@@ -466,6 +480,7 @@ function refreshQuestBanner(s=state(),q=N.current(s)){
   const hint=nextHint(s,q);
   const questSignature=q+'|'+(q?N.steps[q].map(([flag])=>flag+':'+rowProgress(flag)).join('|'):'none');
   if(questSignature!==lastQuestSignature){
+    clearSceneNotice();
     renderQuestSteps($('quest'),false,s,q);lastQuestSignature=questSignature;
   }
   $('questAct').textContent=q?.startsWith('V6_')||s.flags.voyageComplete?'春潮有信':q?.startsWith('S5_')||s.flags.season5Complete&&!q?'岁序长青':s.flags.volume5Started?'清水归渠':s.flags.volume4Started?'海天帆影':s.flags.volume3Started?'山海成行':s.flags.volume2Started?'南街的新日子':q?(Number(q.slice(1))<=4?'先安顿一家人':'在南澜生活'):'这一季已经写完';
@@ -529,16 +544,23 @@ function refreshToolbar(){
   const s=state(),belt=$('bottom');
   if(!belt.children.length)toolDefs.forEach(([id,label,note],index)=>{
     const b=document.createElement('button');b.type='button';b.className='tool';b.dataset.slot=String(index+1);
-    b.innerHTML='<span class="slot-key">'+['1','2','3','4','5','6','7','8','9','0','−','='][index]+'</span><span class="tool-icon">'+toolbarArt(id)+'</span><span class="slot-count"></span><span class="slot-tip">'+label+'<br>'+note+'</span>';
+    b.innerHTML='<kbd class="slot-key" aria-hidden="true">'+['1','2','3','4','5','6','7','8','9','0','−','='][index]+'</kbd><span class="tool-icon">'+toolbarArt(id)+'</span><span class="slot-count"></span><span class="slot-tip">'+label+'<br>'+note+'</span>';
     b.onclick=()=>selectTool(index);belt.append(b);
   });
   toolDefs.forEach(([id,label],i)=>{
     const b=belt.children[i],locked=(i<5||id==='axe')?!s.tools[id]:false;
     b.className='tool'+(locked?' locked':'')+(s.selected===id?' active':'');
-    b.setAttribute('aria-label','第 '+(i+1)+' 格 '+label+(locked?' 尚未获得':''));b.setAttribute('aria-pressed',String(s.selected===id));
-    b.querySelector('.slot-count').textContent=id==='water'?(s.bucketWater?'满':'空'):['seed','repair','hotMeal'].includes(id)?N.quantity(s,id):'';
+    b.setAttribute('aria-label','第 '+(i+1)+' 格 '+label+(locked?' 尚未获得':'')+' · '+deskText('快捷键 ','Key ')+['1','2','3','4','5','6','7','8','9','0','-','='][i]);b.querySelector('.slot-key').title=deskText('快捷键','Keyboard shortcut');b.setAttribute('aria-pressed',String(s.selected===id));
+    b.querySelector('.slot-count').textContent=id==='water'?(s.bucketWater?'满':'空'):['seed','repair','hotMeal'].includes(id)?'×'+N.quantity(s,id):'';
   });
-  const current=toolDefs.find(d=>d[0]===s.selected)||toolDefs[0];$('toolInfo').textContent=current[1]+' · '+current[2];
+  const current=toolDefs.find(d=>d[0]===s.selected)||toolDefs[0];
+  let note=current[2];
+  if(s.selected==='sickle'){
+    const weeds=world[s.scene].objects.filter(o=>o.type==='weed');
+    note=weeds.length&&!weeds.some(o=>!s.collected[o.id])?deskText('此处杂草已清理。当前任务见左上角。','The weeds here are cleared. See the current quest at top left.'):
+      deskText('靠近未清理的杂草后使用。','Use near uncleared weeds.');
+  }
+  $('toolInfo').textContent=deskText('工具说明 · ','Tool · ')+current[1]+'：'+note;
 }
 function selectTool(index){
   if(!active)return;const [id,label]=toolDefs[index],s=state();
@@ -1009,19 +1031,34 @@ function showStall(){
   if(q==='M10'||s.flags.stallBooked)actButton('预约 / 重新约一张摊布','bookStall',{},showStall);
   if(!open&&q!=='M10')$('line').textContent+='\n普通集市已散，可休息到次日再来。';
 }
+function tradeStockNote(text){
+  const note=document.createElement('p');note.className='production-note';note.setAttribute('role','status');note.textContent=text;$('panelExtra').append(note);
+}
 function showTrade(){
-  const s=state(),q=N.current(s);
+  const s=state(),q=N.current(s),booked=s.stallUntil>s.worldTick;
   activity('你的摊布 · 实货与承诺','主打：'+(N.itemNames[s.featured]||'还未选定')+'\n现有制品：'+N.products.map(k=>N.itemNames[k]+' '+N.quantity(s,k)).join(' · ')+
-    (s.order?'\n小批单：'+N.itemNames[s.order.product]+' ×2，已交 '+s.order.delivered+'，预留 '+s.order.reserved:'')+'\n\n每次买卖和交付都会扣掉实货、记一张凭单。预留给小批单的货物不能散卖。');
+    (s.order?'\n小批单：'+N.itemNames[s.order.product]+' ×2，已交 '+s.order.delivered+'，预留 '+s.order.reserved:'')+'\n\n首次试卖与未交小批单所需的货物自动留出。可出售数量已扣除这些物品。');
   if(s.flags.stallBooked)globalThis.NanlanV3?.stallDisplay();
-  if(q==='M10'&&!s.flags.productDisplayed)N.products.forEach(product=>actButton('摆上 '+N.itemNames[product]+' · 行囊 '+N.quantity(s,product),'displayProduct',{product},showTrade,'display-'+product));
+  if(!booked)navButton('先预约或续约摊布',showStall,'trade-book');
+  if(q==='M10'&&!s.flags.productDisplayed)N.products.forEach(product=>{
+    const n=N.available(s,product),b=actButton('摆上 '+N.itemNames[product]+' · 行囊 '+N.quantity(s,product)+(n<1?' · 暂无可用库存':!booked?' · 请先预约':''),'displayProduct',{product},showTrade,'display-'+product);
+    b.disabled=n<1||!booked;
+  });
   if(s.flags.productDisplayed){
-    const stock=N.available(s,s.featured),sell=actButton(stock>0?'卖出 '+N.itemNames[s.featured]+' ×1 · '+N.prices[s.featured]+' 文':'主打制品库存 0 · 先回仓房制作','sell',{sequence:s.transactions.length},showTrade,'sell');
-    sell.disabled=stock<1;
+    const stock=N.saleAvailable(s,s.featured),sell=actButton('零售主打 '+N.itemNames[s.featured]+' ×1 · '+N.prices[s.featured]+' 文 · 可售 '+stock,'sell',{sequence:s.transactions.length},showTrade,'sell');
+    sell.disabled=stock<1||!booked;
+    if(stock<1)tradeStockNote(N.quantity(s,s.featured)>0?'现有主打货需留给小批单。交付后或补做新货，才能继续零售。':'主打制品库存为 0，请到仓房补做。');
   }
-  for(const item of Object.keys(N.prices))if(N.available(s,item)>0)actButton('出售余货 '+N.itemNames[item]+' ×1 · '+N.prices[item]+' 文','sellExtra',{item,sequence:s.transactions.length},showTrade,'extra-'+item);
+  for(const item of Object.keys(N.prices)){
+    if(s.flags.productDisplayed&&item===s.featured)continue;
+    const stock=N.saleAvailable(s,item,true);if(stock<1)continue;
+    const b=actButton('出售余货 '+N.itemNames[item]+' ×1 · '+N.prices[item]+' 文 · 可售 '+stock,'sellExtra',{item,sequence:s.transactions.length},showTrade,'extra-'+item);b.disabled=!booked;
+  }
   if(q==='M11'&&!s.order)actButton('接下两件主打制品的小批单','acceptOrder',{},showTrade);
-  if(q==='M11'&&s.order){actButton('为承诺预留现有库存','reserveOrder',{},showTrade);actButton('交付一件 · 当前已交 '+s.order.delivered+'/2','deliverOrder',{expected:s.order.delivered},showTrade);}
+  if(q==='M11'&&s.order){
+    const reserve=actButton('为承诺预留现有库存','reserveOrder',{},showTrade);reserve.disabled=N.available(s,s.order.product)<1||s.order.delivered+s.order.reserved>=s.order.total;
+    const deliver=actButton('交付一件 · 当前已交 '+s.order.delivered+'/2','deliverOrder',{expected:s.order.delivered},showTrade);deliver.disabled=s.order.reserved<1||N.quantity(s,s.order.product)<1;
+  }
 }
 function addConversation(o){
   const role=NanlanConversations.roles[o.id];if(!role||$('choices').querySelector('[data-action="chat-open"]'))return;
@@ -1284,7 +1321,7 @@ async function interactCore(o){
   else if(a==='craft')showCraft();
   else if(a==='cook')showCook();
   else if(a==='water'){activity('庭院 · 水缸','缸中的水可装入旧木桶。一次装满，够做一锅饭或浇一畦地。');if(N.reached(s,'M04'))actButton('把水桶装满','fillWater',{},()=>{closeDialog();refreshHud();notice(actionMessage('fillWater'));});}
-  else if(a==='drain'){activity('宅外水口',f.drainClear?'水口通了，灶边与通路不再被积水妨碍。':'落叶塞住了小水口。清掉这一处即可通水，不需要修复池塘。');if(q==='M04'&&!f.drainClear)actButton('清理落叶，疏通水口','clearDrain',{},()=>{closeDialog();notice('小水口已经通了。');});}
+  else if(a==='drain'){activity('庭院水口',f.drainClear?'水口通了，灶边与通路不再被积水妨碍。':'落叶塞住了小水口。清掉这一处即可通水，不需要修复池塘。');if(q==='M04'&&!f.drainClear)actButton('清理落叶，疏通水口','clearDrain',{},()=>{closeDialog();notice('小水口已经通了。');});}
   else if(a==='table'){
     activity('正厅 · 一家人的饭桌',q==='M04'?'第一锅饭已经端来。家人先吃上热饭，这处落脚的房子便开始像个家。':'饭桌旁可以商量家事，来信、座次和一顿饭都会留下记录。');
     if(q==='M04'){actButton('先给家人盛饭','shareFirst',{choice:'family'},()=>showFamilyMeal(false),'share-family');actButton('分一碗留给陈伯，再与家人同食','shareFirst',{choice:'chen'},()=>showFamilyMeal(false),'share-chen');}
@@ -1314,7 +1351,7 @@ async function interactCore(o){
   else if(a==='archive')showArchive();
   else if(a==='tide')showTide();
   else if(a==='stall')showStall();
-  else if(a==='sellSurplus'){activity('村中收购 · 出售余货','按件出售采集物、菜蔬和手作制品。订单预留货物不会售出，请自行保留制作材料。');for(const item of Object.keys(N.prices))if(N.available(s,item)>0)actButton('卖出 '+N.itemNames[item]+' ×1 · '+N.prices[item]+' 文','sellExtra',{item,sequence:s.transactions.length},()=>interact(o),'surplus-'+item);}
+  else if(a==='sellSurplus'){activity('村中收购 · 出售余货','按件出售采集物、菜蔬和手作制品。首次试卖和未交小批单所需的货物会自动留出；制作材料请按需要保留。');for(const item of Object.keys(N.prices))if(N.saleAvailable(s,item,true)>0)actButton('卖出 '+N.itemNames[item]+' ×1 · '+N.prices[item]+' 文','sellExtra',{item,sequence:s.transactions.length},()=>interact(o),'surplus-'+item);}
   else if(a==='trade')showTrade();
   else if(a==='gutter'){activity('宅院 · 屋檐与沟渠','先检查水能往哪儿走，再收好晾晒物，通知陈伯。风雨到来由剧情触发，不会因为日历换了一天就错过。');if(q==='M13')actButton('检查沟渠与屋檐，记下风雨准备','checkGutter',{},()=>{closeDialog();refreshHud();notice('沟渠与屋檐已经检查。');});}
   else if(a==='crates'){
@@ -1950,6 +1987,10 @@ async function restoreAutomaticBackup(){
   button('确认恢复这份自动备份',async()=>{if(!await loadSceneAssets(check.state.scene,check.state)){notice('备份场景图片未能载入，当前进度没有改变。',true);return;}try{const current=started?JSON.stringify(state()):localStorage.getItem(N.SAVE_KEY);if(current)localStorage.setItem('nanlan_before_import',current);storage.setItem(N.SAVE_KEY,raw);engine.load(raw);storedRaw=raw;started=true;active=true;$('start').hidden=true;$('hud').hidden=false;closeDialog();render();refreshHud();notice('自动备份已恢复。恢复前的进度仍可在行囊下载。');}catch(e){notice('恢复失败，当前进度没有改变。',true);}},'confirm-restore-auto');
   button('取消，保留当前进度',closeDialog,'cancel-restore-auto',true);
 }
+function startLoadError(text,retry){
+  $('loadWarning').hidden=false;$('loadWarning').textContent=text;
+  const b=$('startLoadRetry');b.hidden=false;b.onclick=()=>{b.hidden=true;retry();};b.focus({preventScroll:true});
+}
 async function beginGame(confirmed=false){
   if(transitioning)return;
   if(storedRaw&&confirmed!==true){
@@ -1958,10 +1999,11 @@ async function beginGame(confirmed=false){
     button('取消，保留当前存档',closeDialog,'cancel-new-journey',true);
     return;
   }
-  transitioning=true;$('begin').disabled=true;
+  transitioning=true;$('begin').disabled=true;$('startLoadRetry').hidden=true;
+  const startLabel=$('begin').textContent;$('begin').textContent=deskText('正在准备旅程…','Preparing the journey…');$('begin').setAttribute('aria-busy','true');
   try{
     $('loadWarning').hidden=true;
-    if(!await loadSceneAssets('gate',{gender})){$('loadWarning').hidden=false;$('loadWarning').textContent='旧宅门前图片未能载入，请稍后再试。';return;}
+    if(!await loadSceneAssets('gate',{gender})){startLoadError(deskText('门前画面暂未载入。请重试，原存档没有改变。','The gate artwork could not load. Retry; your save is unchanged.'),()=>beginGame(confirmed));return;}
     if(storedRaw&&!engine.memoryOnly){storage.setItem('nanlan_v20_previous',storedRaw);$('restoreAutoBackup').hidden=false;}
     engine.reset(gender);if(!engine.memoryOnly)localStorage.removeItem('nanlan_last_night');started=true;active=true;$('start').hidden=true;$('hud').hidden=false;storedRaw=null;
     refreshHud();playArrival();
@@ -1969,7 +2011,7 @@ async function beginGame(confirmed=false){
     activity('浏览器暂时无法保存','当前浏览器没有可用的本地存储。你可以检查浏览器设置后重试，或选择仅本次试玩；试玩模式关闭网页后不会保留进度。');
     button('仅本次试玩 · 我知道关闭后会丢失',()=>{engine.memoryOnly=true;storedRaw=null;closeDialog();beginGame();},'memory-only');
     button('返回，稍后重试',closeDialog,'retry-storage',true);
-  }finally{transitioning=false;$('begin').disabled=false;}
+  }finally{transitioning=false;$('begin').disabled=false;$('begin').textContent=startLabel;$('begin').removeAttribute('aria-busy');}
 }
 $('begin').onclick=()=>beginGame();
 $('startImport').onclick=importSave;
@@ -1977,11 +2019,12 @@ $('restoreAutoBackup').onclick=restoreAutomaticBackup;
 $('continueGame').onclick=async()=>{
   if(!storedRaw||transitioning)return;
   const check=new N.Engine(storage,world);try{check.load(storedRaw);}catch(e){$('loadWarning').hidden=false;$('loadWarning').textContent='存档暂时无法读取，原数据已保留。可以备份后重新开局。';return;}
-  transitioning=true;$('continueGame').disabled=true;$('loadWarning').hidden=true;
+  transitioning=true;$('continueGame').disabled=true;$('loadWarning').hidden=true;$('startLoadRetry').hidden=true;
+  const continueLabel=$('continueGame').textContent;$('continueGame').textContent=deskText('正在恢复旅程…','Restoring your journey…');$('continueGame').setAttribute('aria-busy','true');
   try{
-    if(!await loadSceneAssets(check.state.scene,check.state)){$('loadWarning').hidden=false;$('loadWarning').textContent='场景物资图片未加载完整。请重试继续游戏，原存档已保留。';return;}
+    if(!await loadSceneAssets(check.state.scene,check.state)){startLoadError(deskText('场景画面未能全部载入。请重试，原存档已保留。','Some scene artwork could not load. Retry; your save is safe.'),()=>$('continueGame').onclick());return;}
     engine.load(storedRaw);started=true;active=true;settlePointerInput();$('start').hidden=true;$('hud').hidden=false;render();refreshHud();notice(!state().flags.volume2Started&&N.done(state(),'M20')?(window.NanlanI18n?.language==='en'?'Progress restored. Volume II is available; open the South Street notice in your task panel.':'进度已恢复。第二卷已可开启，打开任务栏里的「南街铺讯」，到正厅与家人商议。'):deskText('进度已恢复。左上角查看当前任务，点「引路」前往目标。','Progress restored. View your current quest at the top left; use Guide to reach its destination.'));
-  }finally{transitioning=false;$('continueGame').disabled=false;}
+  }finally{transitioning=false;$('continueGame').disabled=false;$('continueGame').textContent=continueLabel;$('continueGame').removeAttribute('aria-busy');}
 };
 try{
   storedRaw=localStorage.getItem(N.SAVE_KEY);oldRaw=localStorage.getItem('nanlan_v16');

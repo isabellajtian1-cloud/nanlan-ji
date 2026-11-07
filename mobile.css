@@ -1,0 +1,34 @@
+.mobile-control{display:none}
+.mobile-tool-art{display:inline-block;width:34px;height:34px;vertical-align:middle;margin-right:10px;flex:none}.mobile-tool-art svg{width:100%;height:100%}
+@media(max-width:600px), (max-width:950px) and (max-height:520px){
+  #hud #status,#hud #chapterClock,#hud #location,#hud #toolbelt{display:none}
+  #hud .mobile-control{position:absolute;display:flex;align-items:center;justify-content:center;min-height:44px;border:1px solid #b49a6b70;border-radius:24px;background:#213c30dc;color:#f1e0bd;font:inherit;box-shadow:0 2px 8px #0d231d30;padding:8px}
+  #mobileStatus{top:max(8px,env(safe-area-inset-top));left:10px;right:10px;gap:12px;font-size:12px!important;line-height:1.3;justify-content:space-between!important;padding:8px 14px!important;min-width:0}
+  #mobileStatus span{white-space:nowrap}#mobileStatus span:first-child{margin-right:auto}
+  #hud #tasks{top:calc(max(8px,env(safe-area-inset-top)) + 50px);left:10px;right:10px;width:auto;max-height:46px;min-height:46px;overflow:hidden;padding:0 6px 0 12px;display:flex;align-items:center;border-radius:8px;background:#213c30b8;box-shadow:none}
+  #tasks .quest-panel-heading{order:2;border:0;margin:0;flex:none}#tasks .quest-panel-heading>span,#tasks #taskToggle small,#tasks #taskBody,#tasks #volume2Entry{display:none!important}
+  #tasks #taskToggle{order:1;flex:1;min-width:0;width:auto;min-height:44px;display:flex;align-items:center;text-align:left;padding:0 8px 0 0;gap:7px}
+  #tasks #taskToggle strong{font-size:13px;line-height:1.4;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}#taskToggle>span{font-size:12px}
+  #tasks #questGuide{min-width:44px;min-height:44px;font-size:11px}
+  #hud #actions{left:10px;bottom:max(10px,env(safe-area-inset-bottom));gap:4px;max-width:none}
+  #hud #actions button{width:44px;height:44px;min-height:44px;padding:10px}
+  #mobileTools,#mobileOverview{bottom:max(10px,env(safe-area-inset-bottom));width:44px;height:44px}
+  #mobileTools{right:60px}#mobileOverview{right:10px}
+  #mobileTools svg{width:32px;height:32px}#mobileOverview svg{width:23px;height:23px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+  #hud.mobile-overview #tasks,#hud.mobile-overview #mobileStatus,#hud.mobile-overview #mobileTools,#hud.mobile-overview #actions,#hud.mobile-overview #message,#hud.mobile-overview #chapterToast,#hud.mobile-overview #nightNote{display:none!important}
+  #hud.mobile-overview #mobileOverview{width:84px;gap:5px;border-radius:22px;font-size:12px}
+  #message{bottom:70px!important;left:50%!important;max-width:calc(100% - 30px);font-size:12px;padding:8px 12px;pointer-events:none}
+  #chapterToast{top:112px;left:50%;max-width:90%;padding:8px 12px;font-size:12px}
+  #nightNote{bottom:70px;right:10px;max-width:190px;min-height:44px}
+  #dialog.mobile-tools-sheet .sheet{max-height:80dvh}#dialog.mobile-tools-sheet #choices{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  #dialog.mobile-tools-sheet #choices button{min-height:64px;padding:8px;display:flex;align-items:center;font-size:13px}
+  #dialog.mobile-tools-sheet #choices button[aria-pressed=true]{border-color:#d0ac61;box-shadow:0 0 0 2px #d0ac6166}
+}
+@media(max-width:950px) and (max-height:520px){
+  #mobileStatus{right:auto;width:calc(50% - 20px);max-width:360px;font-size:11px!important;gap:7px}
+  #hud #tasks{top:max(8px,env(safe-area-inset-top));left:auto;right:10px;width:calc(50% - 20px);max-width:360px}
+  #chapterToast{top:65px}
+  #dialog.mobile-tools-sheet #choices{grid-template-columns:repeat(4,minmax(0,1fr))}
+}
+@media(max-width:350px){#mobileStatus{gap:6px;font-size:11px!important;padding:7px 10px!important}#hud #actions{left:6px;gap:3px}#mobileTools{right:55px}#mobileOverview{right:7px}}
+

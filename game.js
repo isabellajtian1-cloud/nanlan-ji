@@ -69,7 +69,7 @@ DATA.assets.workbench='workbench-v3912.webp';
 DATA.assets.waterJar='water-jar-v6914.png';
 DATA.assets.stove='stove-v6914.png';
 DATA.assets.villageLetter='village-letter-v3915.webp';
-let gaitBlend=0,lastPoseTime=0;
+
 function state(){return engine.state;}
 function clean(text){return String(text).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function loadImage(id){
@@ -504,7 +504,7 @@ function refreshHud(){
   refreshQuestBanner(s,q);$('nightNote').hidden=!(s.mode==='daily'&&N.clock(s).minute>=1320);
   $('nightNote').querySelector('strong').textContent=N.voyage.get(s)?.away?(window.NanlanI18n?.language==='en'?'Take me to the guest courtyard':'带我到宿院歇一夜'):(window.NanlanI18n?.language==='en'?'Take me to the bed in the East Wing':'带我回卧房（东厢房）床榻');
   if(globalThis.NanlanPrefecture.away(s))$('nightNote').querySelector('strong').textContent=deskText('去府城候船棚等天亮','Wait for morning at the landing shelter');
-  refreshToolbar();window.NanlanChapterMark?.refresh(s,started);window.NanlanEndings?.refresh(s,started);
+  refreshToolbar();window.NanlanMobile?.refresh();window.NanlanChapterMark?.refresh(s,started);window.NanlanEndings?.refresh(s,started);
 }
 const toolDefs=[
   ['hand','拾取','挽起布袖拾取落枝、草药与海湾物资。'],['sickle','月牙镰','清理杂草；须先在仓房修好农具。'],
@@ -1566,22 +1566,23 @@ canvas.addEventListener('pointerdown',e=>{
 canvas.addEventListener('pointermove',e=>{if(e.pointerType!=='touch')canvas.style.cursor=active&&!transitioning&&resolveHit(worldPoint(e))?'pointer':'default';});
 canvas.addEventListener('pointerleave',()=>{canvas.style.cursor='default';});
 function update(dt){
-  if(!active||!started||!$('start').hidden||transitioning||document.hidden||(document.hasFocus&&!document.hasFocus())||!$('dialog').hidden||!$('worldMap').hidden||!$('gallery').hidden)return;
+  if(window.NanlanMobile?.isOverview()||!active||!started||!$('start').hidden||transitioning||document.hidden||(document.hasFocus&&!document.hasFocus())||!$('dialog').hidden||!$('worldMap').hidden||!$('gallery').hidden)return;
   const destination=path[path.length-1]?.object;
   if(destination&&nearObject(destination)){path=[];moving=false;interact(destination);return;}
-  engine.tick(dt);let targetDistance=Infinity,dx=Number(!!(keys.d||keys.arrowright))-Number(!!(keys.a||keys.arrowleft)),dy=Number(!!(keys.s||keys.arrowdown))-Number(!!(keys.w||keys.arrowup));
+  const wasMoving=moving;engine.tick(dt);let targetDistance=Infinity,dx=Number(!!(keys.d||keys.arrowright))-Number(!!(keys.a||keys.arrowleft)),dy=Number(!!(keys.s||keys.arrowdown))-Number(!!(keys.w||keys.arrowup));
   const keyboardSteering=!!(dx||dy);if(keyboardSteering){path=[];cancelNavigation();}
-  else if(path.length){
+  else while(path.length){
     const p=path[0],distance=Math.hypot(p.x-state().player.x,p.y-state().player.y);
-    if(distance<(p.object?.type==='door'?2:7)){path.shift();if(p.object){moving=false;interact(p.object);return;}}
-    else{targetDistance=distance;dx=(p.x-state().player.x)/distance;dy=(p.y-state().player.y)/distance;}
+    if(distance<(p.object?.type==='door'?2:7)){path.shift();if(p.object){moving=false;interact(p.object);return;}continue;}
+    targetDistance=distance;dx=(p.x-state().player.x)/distance;dy=(p.y-state().player.y)/distance;break;
   }
   moving=!!(dx||dy);
   if(moving){
-    const s=state(),startX=s.player.x,startY=s.player.y,len=Math.hypot(dx,dy),step=Math.min(targetDistance,(keys.shift?255:205)*ACTOR_SCALE*dt),nx=startX+dx/len*step,ny=startY+dy/len*step;
-    direction=Math.abs(dx)>Math.abs(dy)?dx>0?'right':'left':dy>0?'down':'up';
+    const s=state(),startX=s.player.x,startY=s.player.y,len=Math.hypot(dx,dy),step=Math.min(targetDistance,(keys.shift?175:112)*ACTOR_SCALE*dt),nx=startX+dx/len*step,ny=startY+dy/len*step;
+
     if(!movementBlocked(nx,s.player.y,s.player.x,s.player.y))engine.move(nx,s.player.y);if(!movementBlocked(state().player.x,ny,state().player.x,s.player.y))engine.move(state().player.x,ny);
-    moving=Math.hypot(state().player.x-startX,state().player.y-startY)>.001;if(moving)walkFrame+=dt*10;
+    const travelledX=state().player.x-startX,travelledY=state().player.y-startY,travelled=Math.hypot(travelledX,travelledY);moving=travelled>.001;
+    if(moving){if(!wasMoving)walkFrame=0;walkFrame=(walkFrame+travelled/(40*ACTOR_SCALE)*Math.PI)%(Math.PI*2);const horizontal=['left','right'].includes(direction),preferX=horizontal?Math.abs(travelledX)*1.15>Math.abs(travelledY):Math.abs(travelledX)>Math.abs(travelledY)*1.15;direction=preferX?(travelledX>0?'right':'left'):(travelledY>0?'down':'up');}
     if(keyboardSteering&&tryKeyboardExit(dx/len,dy/len,dt))return;
   }
 }
@@ -1594,7 +1595,7 @@ function setupCamera(rect,now){
   const fullScale=Math.min(vw/W,vh/H);
   const portraitScale=vh>vw?Math.max(fullScale,Math.min(vw/650,vh/H)):fullScale;
   const whole=!started||overviewCamera||now<cameraOverviewUntil;
-  const targetScale=whole?fullScale:portraitScale*1.2*EXPLORATION_SCALE;
+  const targetScale=whole?fullScale:portraitScale*(window.NanlanMobile?.compact()?1.05:1.2)*EXPLORATION_SCALE;
   const targetX=whole?W/2:s.player.x;
   // Frame the character's body above its feet without hiding the path ahead.
   const targetY=whole?H/2:s.player.y-34;
@@ -1717,24 +1718,14 @@ function renderCharacter(t){
   const s=state(),p=s.player,oldKey=s.gender==='male'?'walkMale':'walkFemale',key=s.actorState?.outfit==='nanlanSilk'?oldKey+'Silk':oldKey;
   const walking=moving&&active&&!transitioning;
   if(!images[key])loadImage(key);if(!images.playerIdle)loadImage('playerIdle');
-  const idle=!walking&&images.playerIdle?.naturalWidth,im=idle?images.playerIdle:images[key]||images[oldKey];
-  const elapsed=Math.min(.1,(t-(lastPoseTime||t))/1000);lastPoseTime=t;
-  gaitBlend=walking?gaitBlend+(1-gaitBlend)*Math.min(1,elapsed*12):0;
+  let pose=NanlanLocomotion.pose(s.gender,s.actorState?.outfit==='nanlanSilk',direction,walkFrame,walking);
+  if(pose.idle&&!images.playerIdle?.naturalWidth)pose=NanlanLocomotion.pose(s.gender,s.actorState?.outfit==='nanlanSilk',direction,0,true);
+  const im=pose.idle?images.playerIdle:images[key]||images[oldKey];
   if(!im?.naturalWidth){drawPerson(s.gender==='male'?'playerMale':'playerFemale',p.x,p.y,84,direction==='left');return;}
-  const col=direction==='down'?0:direction==='up'?1:2,row=walking?Math.floor(walkFrame/Math.PI)%2:0;
-  const bob=-Math.abs(Math.sin(walkFrame))*1.7*gaitBlend;
-  ctx.save();const shadow=ctx.createRadialGradient(p.x,p.y,1,p.x,p.y,18);shadow.addColorStop(0,'#26332255');shadow.addColorStop(1,'#26332200');ctx.fillStyle=shadow;ctx.beginPath();ctx.ellipse(p.x,p.y,18,5,0,0,Math.PI*2);ctx.fill();
-  ctx.translate(p.x,p.y+bob*ACTOR_SCALE);ctx.scale(ACTOR_SCALE,ACTOR_SCALE);if(direction==='left')ctx.scale(-1,1);
-  ctx.rotate(Math.sin(walkFrame)*.012*gaitBlend);
-  ctx.filter='brightness('+(1-N.daylight(s).darkness*.28)+')';
-  if(idle){
-    // Each resting view has its own foot anchor, so changing direction never slides it.
-    const idleRow=(s.actorState?.outfit==='nanlanSilk'?2:0)+(s.gender==='male'?1:0),cellW=im.naturalWidth/3,cellH=im.naturalHeight/4;
-    const anchors=[[[198,18,350],[180,18,350],[154,18,350]],[[198,8,342],[179,10,342],[154,10,342]],[[198,14,346],[179,16,346],[152,16,346]],[[198,6,344],[180,10,344],[154,10,344]]];
-    const [center,top,foot]=anchors[idleRow][col],scale=(s.gender==='male'?88:84)/(foot-top);
-    ctx.drawImage(im,col*cellW,idleRow*cellH,cellW,cellH,-center*scale,-foot*scale,362*scale,362*scale);
-  }else ctx.drawImage(im,col*384,row*512,384,512,-34,-87,68,91);
-  ctx.restore();
+  ctx.save();ctx.translate(p.x,p.y);ctx.scale(ACTOR_SCALE,ACTOR_SCALE);
+  const shadow=ctx.createRadialGradient(0,0,1,0,0,15);shadow.addColorStop(0,'#26332288');shadow.addColorStop(1,'#26332200');ctx.fillStyle=shadow;ctx.beginPath();ctx.ellipse(0,0,15,3.8,0,0,Math.PI*2);ctx.fill();
+  if(pose.flip)ctx.scale(-1,1);
+  ctx.filter='brightness('+(1-N.daylight(s).darkness*.28)+')';ctx.drawImage(im,...pose.source,...pose.destination);ctx.restore();
 }
 function isGatherable(o){return resourceTypes.includes(o.type)||o.action==='garden';}
 function storePickup(o){return state().scene==='store'?({tools:0,bucket:1,axe:2}[o.action]):undefined;}
@@ -1757,7 +1748,7 @@ function drawGroundedProp(im,x,y,w,h){
   ctx.drawImage(im,...crop,x-w/2,y-h,w,h);ctx.restore();
 }
 function drawEntranceSigns(){
-  if(!sceneGuides||!started)return;
+  if(!sceneGuides||!started||window.NanlanMobile?.isOverview())return;
   const scale=camera.scale,left=-camera.ox/scale,right=(camera.vw-camera.ox)/scale,top=-camera.oy/scale,bottom=(camera.vh-camera.oy)/scale;
   for(const o of visibleObjects().filter(v=>v.type==='door'||v.id==='stove')){
     if(o.x<left+20||o.x>right-20||o.y<top+22||o.y>bottom-35)continue;
@@ -2078,14 +2069,14 @@ window.addEventListener('keydown',e=>{
 });
 window.addEventListener('keyup',e=>{const k=e.key.toLowerCase();keys[k]=false;if(['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright'].includes(k))edgeExitAttempt=null;});
 window.addEventListener('blur',()=>{keys={};path=[];moving=false;});
-document.addEventListener('visibilitychange',()=>{keys={};path=[];moving=false;if(document.hidden){active=false;if(started)engine.save();}else{active=started&&$('dialog').hidden&&$('gallery').hidden&&$('worldMap').hidden&&!transitioning&&!window.NanlanOpening?.running()&&!window.NanlanSettings?.isOpen();lastFrame=performance.now();}});
+document.addEventListener('visibilitychange',()=>{keys={};path=[];moving=false;if(document.hidden){active=false;if(started)engine.save();}else{active=started&&$('dialog').hidden&&$('gallery').hidden&&$('worldMap').hidden&&!transitioning&&!window.NanlanOpening?.running()&&!window.NanlanSettings?.isOpen()&&!window.NanlanMobile?.isOverview();lastFrame=performance.now();}});
 document.addEventListener('keydown',e=>{
   if(e.key!=='Tab')return;const root=!$('gallery').hidden?$('gallery'):!$('worldMap').hidden?$('worldMap'):!$('dialog').hidden?$('dialog'):null;if(!root)return;
   const buttons=[...root.querySelectorAll('button:not([hidden]):not(:disabled),input')];if(!buttons.length)return;
   if(e.shiftKey&&document.activeElement===buttons[0]){e.preventDefault();buttons[buttons.length-1].focus();}
   else if(!e.shiftKey&&document.activeElement===buttons[buttons.length-1]){e.preventDefault();buttons[0].focus();}
 });
-function resumeAfterFocus(){lastFrame=performance.now();active=started&&$('start').hidden&&$('dialog').hidden&&$('gallery').hidden&&$('worldMap').hidden&&!document.hidden&&!transitioning&&!window.NanlanSettings?.isOpen()&&!window.NanlanOpening?.running();}
+function resumeAfterFocus(){lastFrame=performance.now();active=started&&$('start').hidden&&$('dialog').hidden&&$('gallery').hidden&&$('worldMap').hidden&&!document.hidden&&!transitioning&&!window.NanlanSettings?.isOpen()&&!window.NanlanOpening?.running()&&!window.NanlanMobile?.isOverview();}
 window.addEventListener('blur',()=>{keys={};path=[];moving=false;active=false;if(started)engine.save();});
 window.addEventListener('focus',resumeAfterFocus);
 window.addEventListener('storage',e=>{

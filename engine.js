@@ -88,6 +88,7 @@
   const voyage=typeof module==='object'&&module.exports?require('./voyage-model.js'):globalThis.NanlanVoyage;
   const town=typeof module==='object'&&module.exports?require('./town-model.js'):globalThis.NanlanTown;
   const festival=typeof module==='object'&&module.exports?require('./festival-model.js'):globalThis.NanlanFestival;
+  const climate=typeof module==='object'&&module.exports?require('./climate.js'):globalThis.NanlanClimate;
   const prefecture=typeof module==='object'&&module.exports?require('./prefecture-model.js'):globalThis.NanlanPrefecture;
   const estate=typeof module==='object'&&module.exports?require('./estate-model.js'):globalThis.NanlanEstate;
   Object.assign(itemNames,town.itemNames);
@@ -116,6 +117,7 @@
       tideAnchor:null,tideTutorialUsed:false,stallUntil:null,featured:null,lastNotice:'先和家人完成门前交接。'
     };
     for(const id of Object.keys(titles).filter(id=>!V3_ORDER.includes(id)&&!V4_ORDER.includes(id)&&!V5_ORDER.includes(id)&&!SEASON5_ORDER.includes(id)&&!V6_ORDER.includes(id))) s.quests[id]={status:V2_ORDER.includes(id)?'DEFERRED_V2':id==='M01'?'ACTIVE':'LOCKED'};
+    s.calendar=climate.infer(s);
     return s;
   }
   function activeOrder(s){return s.flags.voyageStarted?V6_ORDER:s.flags.season5Started&&SEASON5_ORDER.some(id=>s.quests[id]?.status==='ACTIVE')?SEASON5_ORDER:s.flags.volume5Started?V5_ORDER:s.flags.season5Started?SEASON5_ORDER:s.flags.volume4Started?V4_ORDER:s.flags.volume3Started?V3_ORDER:s.flags.volume2Started?V2_ORDER:ORDER;}
@@ -123,7 +125,7 @@
     const f=s.flags,second=storyV2.entryStatus(s),last3=done(s,V3_ORDER.at(-1));
     return [
       {number:2,title:'南街灯起',en:'South Street Lights',started:!!f.volume2Started,complete:!!f.volume2Complete,ready:second.ready,scene:'hall',object:'v2Family',requirements:[[second.completed,'完成第一卷并分享岁末家宴','Complete Volume I and share the year-end feast']]},
-      {number:3,title:'山海成行',en:'Roads between Hills and Sea',started:!!f.volume3Started,complete:!!f.volume3Complete,ready:v3.canStart(s),scene:'generalStore',object:'v3Chest',requirements:[[!!f.volume2Complete,'完成南街三日真实闭账、履约与最后家议','Finish Volume II: three trading-day accounts, promises and the closing family discussion']],recordIssue:!!f.volume2Complete&&!f.volume3Started&&!v3.canStart(s)},
+      {number:3,title:'山海成行',en:'Roads between Hills and Sea',started:!!f.volume3Started,complete:!!f.volume3Complete,ready:v3.canStart(s),scene:'generalStore',object:'v3Chest',requirements:[[!!f.volume2Complete,'完成第二卷「一街灯火」与家议；其中须结清 3 个不同营业日（'+Math.min(3,s.story2?.closings?.length||0)+'/3 日）。开篇「南街三时」是早市、午间、午后三次观察，不是三天闭账。','Finish Volume II and its final family council, including accounts for 3 distinct trading days ('+Math.min(3,s.story2?.closings?.length||0)+'/3). The earlier Three Hours task means three observations, not three closing days.']],recordIssue:!!f.volume2Complete&&!f.volume3Started&&!v3.canStart(s)},
       {number:4,title:'海天帆影',en:'Sails beneath Open Skies',started:!!f.volume4Started,complete:!!f.volume4Complete,ready:v4.canStart(s),scene:'coast',object:'v4Bell',requirements:[[!!f.volume3Complete&&last3,'完成第三卷归来核账与家人团聚','Complete the return accounts and family gathering in Volume III']]},
       {number:5,title:'岁序长青',en:'Enduring Seasons',started:!!f.season5Started,complete:!!f.season5Complete,ready:season5.canStart(s),scene:'backHall',object:'seasonBook',requirements:[[!!f.volume4Complete,'完成第四卷分户结算、家书与后堂安排','Complete Volume IV: household settlements, letters and the back hall']]},
       {number:6,title:'春潮有信',en:'Letters on the Spring Tide',started:!!f.voyageStarted,complete:!!f.voyageComplete,ready:voyage.canStart(s),scene:'backHall',object:'voyageBook',requirements:[[!!f.season5Complete,'完成第五卷来季安排','Complete the next-season arrangements in Volume V'],[voyage.delegated(s),'至少有一项实际共事或有效交接记录','Have a recorded shared task or verified handover']]}
@@ -286,17 +288,18 @@
     estate.normalise(value,requireThat);
     // Finish only a fully recorded, active final feast; never invent missing steps.
     if(!value.flags.volume2Started&&value.quests.M20?.status==='ACTIVE'&&ORDER.slice(0,-1).every(id=>done(value,id))&&steps.M20.every(([flag])=>value.flags[flag]))reconcile(value);
+    climate.normalise(value,requireThat);
     return copy(value);
   }
   class Engine {
     constructor(storage,world) {this.storage=storage;this.world=world||{};this.state=initial();this.memoryOnly=false;}
-    write(next) {if(!this.memoryOnly)this.storage.setItem(SAVE_KEY,JSON.stringify(next));}
-    reset(gender) {const next=initial(gender);this.write(next);this.state=next;return next;}
-    save() {try{this.write(this.state);return {ok:true};}catch(e){return {ok:false,message:'保存失败。当前进度仍在，请检查浏览器存储后重试。'};}}
-    load(raw) {const next=normaliseLoaded(JSON.parse(raw));requireThat(this.world[next.scene],'存档场景不存在。');requireThat(!sceneGate(next,next.scene),'存档位置尚未开放。');
+    write(next) {if(!this.memoryOnly){if(this.storage.getItem&&this.loadedRaw!==undefined)requireThat(this.storage.getItem(SAVE_KEY)===this.loadedRaw,'另一页已更新存档，本页已停止覆盖。请先导出本页备份，再接续最新进度。');const raw=JSON.stringify(next);this.storage.setItem(SAVE_KEY,raw);this.loadedRaw=raw;}}
+    reset(gender) {const next=initial(gender);if(this.storage.getItem)this.loadedRaw=this.storage.getItem(SAVE_KEY);this.write(next);this.state=next;return next;}
+    save() {try{this.write(this.state);return {ok:true};}catch(e){return {ok:false,message:e.userMessage||'保存失败。当前进度仍在，请检查浏览器存储后重试。'};}}
+    load(raw) {const snapshot=JSON.parse(raw),savedTick=snapshot.worldTick,next=normaliseLoaded(snapshot);requireThat(next.worldTick===savedTick,'恢复时辰未能核对，原存档已保留。');requireThat(this.world[next.scene],'存档场景不存在。');requireThat(!sceneGate(next,next.scene),'存档位置尚未开放。');
       const b=this.world[next.scene].bounds;
       if(next.player.x<b[0]||next.player.x>b[2]||next.player.y<b[1]||next.player.y>b[3])next.player={x:this.world[next.scene].spawn[0],y:this.world[next.scene].spawn[1]};
-      this.state=next;return next;}
+      this.state=next;this.loadedRaw=raw;return next;}
     near(object) {return object&&Math.hypot(object.x-this.state.player.x,object.y-this.state.player.y)<=72;}
     move(x,y) {const b=this.world[this.state.scene].bounds;if(x>=b[0]&&x<=b[2]&&y>=b[1]&&y<=b[3]){this.state.player.x=x;this.state.player.y=y;}}
     tick(dt) {if(this.state.mode!=='daily')return;const s=this.state,c=clock(s);if(c.minute>=1320)return;
@@ -316,7 +319,7 @@
     commit(key,change) {
       const next=copy(this.state),previous=current(next);
       try{const changed=change(next);if(changed===false)return {ok:true,duplicate:true,message:'这件事已经办好了。'};
-        reconcile(next);next.revision++;this.write(next);this.state=next;
+        reconcile(next);climate.sync(this.state,next);next.revision++;this.write(next);this.state=next;
         return {ok:true,completed:previous!==current(next)?previous:null,message:next.lastNotice};}
       catch(e){return {ok:false,message:e.userMessage||'保存失败，本次动作未结算。原有进度与物品已保留，请重试。'};}
     }

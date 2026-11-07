@@ -1,17 +1,39 @@
-/* Shared, save-compatible seasonal presentation. No harvest or quest gates depend on it. */
+/* One persisted calendar for the clock and festivals. Story passages never age inventory or crops. */
 (function(root,make){const api=make();if(typeof module==='object'&&module.exports)module.exports=api;else root.NanlanClimate=api;})(globalThis,function(){
 'use strict';
 const seasons=[['春','Spring'],['夏','Summer'],['秋','Autumn'],['冬','Winter']];
 const length=28;
-function at(s){
- const day=Math.floor(s.worldTick/1440)+1;
- const phase=s.flags.voyageStarted?'spring':s.flags.season5Started?'autumn':s.flags.volume2Started?'spring':'summer';
- const baseline={autumn:2,spring:0,summer:1}[phase],pattern=phase==='autumn'?/^S5_/:phase==='spring'?(s.flags.voyageStarted?/^V6_/:/^V2_/):/^M0[1-4]$/;
- const ticks=(s.journal||[]).filter(r=>(pattern.test(r.id||'')||(!s.flags.voyageStarted&&phase==='spring'&&r.id==='卷二'))&&Number.isFinite(r.tick)).map(r=>r.tick);
- const anchor=phase==='summer'?1:ticks.length?Math.floor(Math.min(...ticks)/1440)+1:1;
- const elapsed=Math.max(0,day-anchor),index=(baseline+Math.floor(elapsed/length))%4;
- return {index,key:['spring','summer','autumn','winter'][index],zh:seasons[index][0],en:seasons[index][1],day:elapsed%length+1,length};
+const travelDay=s=>Math.floor(s.worldTick/1440)+1;
+const phase=s=>s.flags.voyageStarted?'voyage':s.flags.season5Started?'season5':s.flags.volume2Started?'volume2':'arrival';
+const phaseSeason={arrival:1,volume2:0,season5:2,voyage:0};
+function nextSeason(ordinal,index){let next=Math.floor(ordinal/(length*4))*length*4+index*length;if(next<=ordinal)next+=length*4;return next;}
+function date(ordinal){const index=Math.floor(ordinal/length)%4;return {ordinal,year:Math.floor(ordinal/(length*4))+1,index,key:['spring','summer','autumn','winter'][index],zh:seasons[index][0],en:seasons[index][1],day:ordinal%length+1,length};}
+function infer(s){
+ let c={version:1,phase:'arrival',anchorDay:1,ordinal:length};
+ for(const [key,enabled,pattern]of [['volume2',s.flags.volume2Started,/^(卷二$|V2_)/],['season5',s.flags.season5Started,/^S5_/],['voyage',s.flags.voyageStarted,/^V6_/]]){
+  if(!enabled)continue;
+  const ticks=(s.journal||[]).filter(r=>pattern.test(r.id||'')&&Number.isFinite(r.tick)&&r.tick<=s.worldTick).map(r=>r.tick);
+  const day=Math.max(c.anchorDay,ticks.length?Math.floor(Math.min(...ticks)/1440)+1:travelDay(s));
+  const from=date(c.ordinal+day-c.anchorDay);
+  c={version:1,phase:key,anchorDay:day,ordinal:nextSeason(from.ordinal,phaseSeason[key]),from:{year:from.year,index:from.index,day:from.day}};
+ }
+ return c;
 }
+function at(s){const c=s.calendar?.version===1&&s.calendar.phase===phase(s)?s.calendar:infer(s);return date(c.ordinal+Math.max(0,travelDay(s)-c.anchorDay));}
+function normalise(s,need){
+ if(s.calendar===undefined)s.calendar=infer(s);
+ const c=s.calendar;
+ need(c&&c.version===1&&Object.hasOwn(phaseSeason,c.phase)&&Number.isInteger(c.anchorDay)&&c.anchorDay>=1&&c.anchorDay<=travelDay(s)&&Number.isInteger(c.ordinal)&&c.ordinal>=0,'日历记录无效。');
+ if(c.from)need(Number.isInteger(c.from.year)&&c.from.year>0&&Number.isInteger(c.from.index)&&c.from.index>=0&&c.from.index<4&&Number.isInteger(c.from.day)&&c.from.day>=1&&c.from.day<=length,'换季记录无效。');
+ if(c.phase!==phase(s))s.calendar=infer(s);
+ return s;
+}
+function sync(before,after){
+ if(phase(before)===phase(after))return;
+ const from=at(before),key=phase(after);
+ after.calendar={version:1,phase:key,anchorDay:travelDay(after),ordinal:nextSeason(from.ordinal,phaseSeason[key]),from:{year:from.year,index:from.index,day:from.day}};
+}
+function label(s,english=false){const c=at(s);return english?'Year '+c.year+' · '+c.en+' day '+c.day:'第 '+c.year+' 年 · '+c.zh+'第 '+c.day+' 日';}
 const outdoor=new Set(['gate','yard','village','market','county','foothill','mountain','mountainside','summit','bambooGrove','coast','tidalflat','wharf','oldTrail','qingxi','anchorage','qPier','qFair','qSalt','qBamboo','qBeacon','prefDock','prefMarket']);
 const gardens=new Set(['yard','village','foothill','mountain','mountainside','summit','bambooGrove','oldTrail','qBamboo']);
 const cache=new Map();
@@ -72,6 +94,6 @@ function preview(img,scene,s){
  raw.src=src;
  img.dataset.season=at(s).key;
 }
-return {at,picture,atmosphere,preview,note,length};
+return {at,label,normalise,sync,infer,picture,atmosphere,preview,note,length};
 });
 

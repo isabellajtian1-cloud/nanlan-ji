@@ -64,13 +64,15 @@
   function festivalCalendar(){
     const s=state();
     panel('年节簿',L('节期按南澜的四季日历轮转，每节连办三日。错过了，可以等下一轮。','Festivals follow Nanlan’s four-season calendar. Each runs for three days and returns the next year.'));
+    const today=document.createElement('p');today.dataset.noLocalize='';today.textContent=L('今日：','Today: ')+NanlanClimate.label(s,window.NanlanI18n?.language==='en');$('panelExtra').append(today);
     const list=document.createElement('div');list.className='time-cards festival-cards';
     for(const event of F.events){
       const now=F.active(s,event),record=s.choices[F.eventKey(s,event)],season=seasonNames[event.season];
       const card=document.createElement('div'),title=document.createElement('b'),text=document.createElement('p');
       title.textContent=event.name[0];
       const date=L(season[0]+'第 '+event.day+'–'+(event.day+2)+' 日',season[1]+' days '+event.day+'–'+(event.day+2));
-      const when=now?L('正在过节','Happening now'):L('还有 '+F.next(s,event)+' 日','In '+F.next(s,event)+' days');
+      const dateNow=NanlanClimate.at(s),past=dateNow.index===event.season&&dateNow.day>=event.day+3;
+      const when=now?L('正在过节','Happening now'):past?L('本轮已过 · 下次还有 '+F.next(s,event)+' 日','This festival has ended · Returns in '+F.next(s,event)+' days'):L('尚未到节 · 还有 '+F.next(s,event)+' 日','Upcoming · In '+F.next(s,event)+' days');
       text.textContent=date+' · '+world[event.scene].name+' · '+when;
       card.append(title,text);
       if(now){

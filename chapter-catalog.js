@@ -10,11 +10,14 @@ const descriptions=[null,
  ['在后堂翻开岁序簿，与家人分担劳作，商量下一季的生活。沿用已经开放的家园与街巷。','Open the seasons book in the back hall and share plans for the coming year, using the home and streets you already know.'],
  ['在后堂拆开春潮来信，备妥交接、行囊与归程，再乘班船前往青屿。','Open the spring-tide letter, arrange cover and a return journey, then sail to Qingyu.']];
 function label(number,english=false){return number==='extras'?(english?'Six Epilogues':'六篇番外'):(english?'Volume '+roman[number]:'第'+cn[number]+'卷');}
+function heading(item,english=false){return label(item.number,english)+' · '+(item.status==='locked'?(english?'Sealed':'未解封'):(english?item.en:item.title));}
+function progress(s,number){const order=[null,N.ORDER,N.V2_ORDER,N.V3_ORDER,N.V4_ORDER,N.SEASON5_ORDER,N.V6_ORDER][number];if(number==='extras')return {done:Object.keys(N.voyage.get(s)?.extra?.done||{}).length,total:N.voyage.bonus.length};return {done:order.filter(id=>N.done(s,id)).length,total:order.length};}
 function entries(s){
  const first={number:1,title:'初抵南澜',en:'Arrival in Nanlan',started:true,complete:!!s.flags.volumeComplete||N.done(s,'M20'),ready:false,scene:'gate',object:'familyLuggage',requirements:[]};
- const chapters=[first,...N.chapterEntries(s)].map(item=>({...item,description:descriptions[item.number],status:item.complete?'complete':item.started?'current':item.ready?'ready':'locked'}));
+ const chapters=[first,...N.chapterEntries(s)].map(item=>({...item,progress:progress(s,item.number),description:descriptions[item.number],status:item.complete?'complete':item.started?'current':item.ready?'ready':'locked'}));
  const extra=N.voyage.get(s)?.extra,complete=N.voyage.bonus.every((_,i)=>!!extra?.done?.[i]);
  chapters.push({number:'extras',title:'闲日邀约',en:'Days Together',scene:'backHall',object:'voyageExtras',description:['六卷之后，与家人和伙伴相约六段闲日。已完成的番外可以重看回忆。','After the six volumes, share six days with family and friends. Completed epilogues can be recalled.'],started:!!extra?.active,complete,ready:!!s.flags.voyageComplete,requirements:[[!!s.flags.voyageComplete,'完成第六卷「春潮有信」主线','Complete Volume VI: Letters on the Spring Tide']],status:complete?'complete':extra?.active?'current':s.flags.voyageComplete?'ready':'locked'});
+ chapters.at(-1).progress=progress(s,'extras');
  return chapters;
 }
 const placeVolumes={county:2,pharmacy:2,generalStore:2,teahouse:2,clothShop:2,bookShop:2,countyInn:2,countyRoom:2,wharf:3,oldTrail:3,workshop:3,qingxi:3,prefDock:3,prefMarket:3,prefInn:3,prefRoom:3,prefTea:3,anchorage:4,guild:4,backHall:4,qPier:6,qFair:6,qSalt:6,qBamboo:6,qBeacon:6,qLodge:6};
@@ -26,7 +29,8 @@ function place(id){
  if(id.startsWith('pref'))requirement='第三卷完成「谁替你看一会儿店」的回柜台事项后，从新河埠按船期乘船前往府城。';
  if(number===6)requirement='第六卷完成行前安排，在避风泊岸核船期、天气和往返船脚，再乘班船前往青屿。';
  const requirementEn=id.startsWith('pref')?'In Volume III, return to the counter after the shop shift, then take the scheduled ferry from New River Wharf.':number===6?'Finish the Volume VI preparations, then check the weather, sailing time and return fare at the sheltered berth before sailing to Qingyu.':number===2?'Begin Volume II in the main hall to enter the county town and South Street.':'Opens gradually with Volume I’s story and path repairs.';
- return {number,flag,requirement,requirementEn,questTitle,stepLabel};
+ const shared5=['backHall','yard','hall','store','generalStore','market','guild','workshop','wharf'].includes(id);
+ return {number,volumes:shared5?[number,5]:[number],flag,requirement,requirementEn,questTitle,stepLabel};
 }
-return {entries,label,place};
+return {entries,label,heading,progress,place};
 });

@@ -415,18 +415,10 @@ function nextHint(s=state(),q=N.current(s)){
   };return q?(hints[q]||'跟随任务簿继续。'):'第一卷已完成。可以继续采集、种植、制作与镇集买卖，或回看人物与家中的变化。';
 }
 function timeText(){
-  const c=N.clock(state()),weather=window.NanlanWeather?.current(state());
-  if(c.story)return {short:'初夏 · 初抵南澜 · '+c.story,full:'初抵南澜\n'+c.story,extra:'序章随剧情推进时段'};
-  if(window.NanlanI18n?.language==='en'){
-    const calendar=NanlanClimate.at(state()),season=calendar.en+' · '+calendar.day+'/'+calendar.length;
-    const time=String(c.hour).padStart(2,'0')+':'+String(c.minute%60).padStart(2,'0');
-    return {short:season+' · Day '+c.day+' · '+time,full:season+' · Day '+c.day+'\n'+time,extra:(weather?.en||'Clear')+' · '+window.NanlanI18n.t(N.daylight(state()).label)+' · '+(N.tide(state()).low?'Low Tide':'Rising Tide')+' · Changes in '+Math.ceil(N.tide(state()).remaining)+' game min'};
-  }
-  const calendar=NanlanClimate.at(state()),season=calendar.zh+' · '+calendar.day+'/'+calendar.length;
-  const h=c.hour,minute=String(c.minute%60).padStart(2,'0');
-  return {short:season+' · 第 '+c.day+' 日 · '+(h>=12?'下午':'上午')+' '+(h%12||12)+':'+minute,
-    full:season+' · 第 '+c.day+' 日\n'+(h>=12?'下午':'上午')+' '+(h%12||12)+':'+minute,
-    extra:(weather?.zh||'晴朗')+' · '+N.daylight(state()).label+' · 海湾'+(N.tide(state()).low?'低潮':'涨潮')+' · '+Math.ceil(N.tide(state()).remaining)+' 游戏分钟后转换'};
+  const s=state(),c=N.clock(s),weather=window.NanlanWeather?.current(s),english=window.NanlanI18n?.language==='en';
+  if(c.story)return {short:deskText('初夏 · 初抵南澜 · ','Early Summer · Arrival · ')+c.story,full:c.story,extra:deskText('序章随剧情推进时段','Prologue time follows the story')};
+  const date=NanlanClimate.label(s,english),time=String(c.hour).padStart(2,'0')+':'+String(c.minute%60).padStart(2,'0');
+  return {short:date+' · '+time,full:date+'\n'+time,extra:english?(weather?.en||'Clear')+' · '+(N.tide(s).low?'Low Tide':'High Tide')+' · Changes in '+Math.ceil(N.tide(s).remaining)+' game min':(weather?.zh||'晴朗')+' · '+N.daylight(s).label+' · 海湾'+(N.tide(s).low?'低潮':'涨潮')+' · '+Math.ceil(N.tide(s).remaining)+' 游戏分钟后转换'};
 }
 function showTime(){
   const s=state(),c=N.clock(s),g=N.crop(s),t=N.tide(s),light=N.daylight(s),weather=window.NanlanWeather?.current(s),weatherAdvice=window.NanlanWeather?.advice(s,window.NanlanI18n?.language==='en');
@@ -442,6 +434,8 @@ function showTime(){
     ['村口集市',c.minute>=540&&c.minute<1020?'正在开集 · 17:00 收摊。':'日常 09:00—17:00 开集；M10 首摊可单独预约。']
   ];
   if(!c.story){
+    entries.unshift([deskText('旅程记日','Journey day'),deskText('自抵达起共第 ','Day ')+c.day+deskText(' 日；用于账簿追溯。上方年月日才是节庆所用的四季日期。',' since arrival, used to trace ledger entries. Festivals follow the seasonal date above.')]);
+    if(s.flags.volume2Started)entries.unshift([deskText('新岁记','A New Year'),deskText('秋去冬来，第二卷接续新春。日历与年节簿共用同一日期；铺讯与手记可随时回看。','Volume II follows the passage into a new spring. The clock and festival book share one calendar; the notice and notes remain available.')]);
     entries.unshift([window.NanlanI18n?.language==='en'?'Today’s weather':'今日天色',(window.NanlanWeather?.dayLine(s,window.NanlanI18n?.language==='en')||'')+'\n'+(weatherAdvice?.summary||'')+'\n'+(weather?.remaining?Math.ceil(weather.remaining)+(window.NanlanI18n?.language==='en'?' game minutes until the sky changes.':' 游戏分钟后天色可能转变。'):'')]);
     entries.unshift([window.NanlanI18n?.language==='en'?'Season':'时令',NanlanClimate.note(s,window.NanlanI18n?.language==='en')]);
   }
@@ -457,7 +451,7 @@ function rowProgress(flag){
   const s=state();if(flag==='pathCleared')return ['weed1','weed2','weed3'].filter(k=>s.collected[k]).length+'/3';
   if(flag==='orderDelivered')return (s.order?.delivered||0)+'/2';
   if(flag==='pagesDried')return [s.flags.driedPage0,s.flags.driedPage1].filter(Boolean).length+'/2';
-  if(flag==='letterFamily')return Object.values(s.familyTalks).filter(Boolean).length+'/3';if(flag==='v2ThreeDays')return Math.min(3,s.story2.closings.length)+'/3';return s.flags[flag]?'1/1':'0/1';
+  if(flag==='letterFamily')return Object.values(s.familyTalks).filter(Boolean).length+'/3';if(flag==='v2ThreeDays')return Math.min(3,s.story2.closings.length)+'/3 日';return s.flags[flag]?'1/1':'0/1';
 }
 function navigateTaskStep(flag,label,index){
   const s=state(),q=N.current(s),steps=q?N.steps[q]:[],first=steps.findIndex(([id])=>!s.flags[id]);
@@ -467,10 +461,14 @@ function navigateTaskStep(flag,label,index){
   const target=objectiveForStep(flag,label);if(!target){notice('这一件事就在当前场景，先看看附近可互动之处。');return;}
   if(!$('dialog').hidden)closeDialog(true);chooseTaskRoute(target);
 }
+function taskStepHint(s,flag){
+  const slot=Object.keys(N.story2.slots).find(k=>N.story2.slots[k].flag===flag);
+  return slot?window.NanlanContinuityModel.observationLine(s,slot,window.NanlanI18n?.language==='en'):deskText('点击前往这件事的所在','Go to this objective');
+}
 function renderQuestSteps(host,dialog=false,s=state(),q=N.current(s)){
   const steps=q?N.steps[q]:[],first=steps.findIndex(([flag])=>!s.flags[flag]);host.replaceChildren();
   steps.forEach(([flag,label],index)=>{const done=!!s.flags[flag],row=document.createElement('button');row.type='button';row.className='task-row'+(done?' done':index===first?' current':' waiting');row.disabled=done;
-    row.innerHTML='<span class="task-mark">'+(done?'✓':index===first?'○':'·')+'</span><span class="task-label">'+clean(label)+' <small>('+rowProgress(flag)+')</small>'+(done?'':index===first?'<span class="task-route">点击选择沿路行走或快行</span>':'<span class="task-route">办妥上一件后开放</span>')+'</span>';
+    row.innerHTML='<span class="task-mark">'+(done?'✓':index===first?'○':'·')+'</span><span class="task-label">'+clean(label)+' <small>('+rowProgress(flag)+')</small>'+(done?'':index===first?'<span class="task-route">'+clean(taskStepHint(s,flag))+'</span>':'<span class="task-route">办妥上一件后开放</span>')+'</span>';
     row.onclick=()=>navigateTaskStep(flag,label,index);host.append(row);
   });
   if(dialog)host.classList.add('task-step-list');
@@ -575,7 +573,8 @@ function showQuest(){
   const s=state(),q=N.current(s);
   activity(q?N.titles[q]:s.flags.voyageComplete?'春潮有信 · 日常与番外继续':s.flags.season5Complete?'岁序长青 · 来年有约':s.flags.volume5Complete?'清水满缸 · 日常继续':s.flags.volume4Complete?'海天帆影 · 家灯长明':s.flags.volume3Complete?'山海之间 · 日常继续':s.flags.volume2Complete?'南街灯起 · 日常继续':'岁末满庭 · 新春家议',q?'点一条眼前的具体事项，人物会沿已经走通的路前往。事情要按生活里的先后去办，不必另找“下一步”按钮。\n\n事情办妥后：'+N.rewards[q][1]:nextHint());
   $('dialogKicker').textContent='只记下已经发生与眼前要做的事';
-  if(q){const list=document.createElement('div');renderQuestSteps(list,true);$('panelExtra').append(list);}
+  if(q){const list=document.createElement('div');renderQuestSteps(list,true);$('panelExtra').append(list);navButton(deskText('查看本段回报','Read This Entry’s Outcome'),()=>window.NanlanContinuity.rewards(),'quest-rewards');}
+  if(s.flags.volume2Started||N.done(s,'M20'))navButton(deskText('铺讯与手记 · 随时回看','Shop Notice & Notes'),()=>window.NanlanContinuity.handbook(),'quest-papers');
   navButton(window.NanlanI18n?.language==='en'?'Chapter Entrances · Requirements':'篇章入口 · 查看开启条件与去向',()=>window.NanlanChapters.show(),'quest-chapter-entry');
   button('回看已经走过的路',showQuestCatalog,'catalog',true);
   window.NanlanMemoryBook?.link(showQuest);
@@ -595,6 +594,7 @@ function showQuestCatalog(){
 }
 function showJournal(){
   activity('家中的回响',state().journal.length?state().journal.map(r=>(r.id||'小事')+' · '+r.text).join('\n\n'):'刚到南澜，新的故事还未写下。');window.NanlanVillage?.journal();
+  if(state().flags.volume2Started||N.done(state(),'M20'))navButton(deskText('铺讯与手记 · 回看筹备','Shop Notice & Preparation Notes'),()=>window.NanlanContinuity.handbook(),'journal-papers');
 }
 function showTextMap(){
   const s=state();
@@ -682,8 +682,9 @@ function showBag(){
   for(const id of keys){
     const row=document.createElement('div');row.className='inventory-row';
     row.classList.toggle('required-missing',required[id]>N.available(s,id));
-    row.innerHTML=inventoryArt(id)+'<div><strong>'+N.itemNames[id]+' ×'+N.quantity(s,id)+(required[id]?'<em>任务需要 '+required[id]+'</em>':'')+(N.available(s,id)!==N.quantity(s,id)?'（预留 '+(N.quantity(s,id)-N.available(s,id))+'）':'')+'</strong><small>'+itemSource(id)+'</small></div>';grid.append(row);
+    row.innerHTML=inventoryArt(id)+'<div><strong>'+N.itemNames[id]+' ×'+N.quantity(s,id)+(required[id]?'<em>任务需要 '+required[id]+'</em>':'')+(N.available(s,id)!==N.quantity(s,id)?'（预留 '+(N.quantity(s,id)-N.available(s,id))+'）':'')+'</strong><small>'+itemSource(id)+'</small><small class="inventory-record-note">'+clean(window.NanlanContinuityModel.documentNote(s,id,window.NanlanI18n?.language==='en'))+'</small></div>';grid.append(row);
   }$('panelExtra').append(grid);
+  if(s.flags.volume2Started||N.done(s,'M20')){navButton(deskText('铺讯与手记','Shop Notice & Notes'),()=>window.NanlanContinuity.handbook(),'bag-papers');navButton(deskText('账房 · 租约与押金','Accounts · Lease & Deposit'),()=>window.NanlanContinuity.lease(),'bag-contract');}
   if(!keys.length){const empty=document.createElement('p');empty.textContent='行囊暂时没有物资，采集所得会显示在这里。';$('panelExtra').append(empty);}
   if(s.season5)navButton('岁序长青 · 查看共事与试样',()=>window.NanlanSeasons.ledger(),'bag-seasons');
   if(s.scholar?.recipe)globalThis.NanlanScholar?.bag();
@@ -1565,7 +1566,7 @@ canvas.addEventListener('pointerdown',e=>{
 canvas.addEventListener('pointermove',e=>{if(e.pointerType!=='touch')canvas.style.cursor=active&&!transitioning&&resolveHit(worldPoint(e))?'pointer':'default';});
 canvas.addEventListener('pointerleave',()=>{canvas.style.cursor='default';});
 function update(dt){
-  if(!active||transitioning||document.hidden)return;
+  if(!active||!started||!$('start').hidden||transitioning||document.hidden||(document.hasFocus&&!document.hasFocus())||!$('dialog').hidden||!$('worldMap').hidden||!$('gallery').hidden)return;
   const destination=path[path.length-1]?.object;
   if(destination&&nearObject(destination)){path=[];moving=false;interact(destination);return;}
   engine.tick(dt);let targetDistance=Infinity,dx=Number(!!(keys.d||keys.arrowright))-Number(!!(keys.a||keys.arrowleft)),dy=Number(!!(keys.s||keys.arrowdown))-Number(!!(keys.w||keys.arrowup));
@@ -1914,17 +1915,23 @@ function frame(t){
   }catch(e){console.error(e);active=false;notice('画面暂停了，请先保存进度，再刷新重试。',true);}
   requestAnimationFrame(frame);
 }
+function applyRestoredSnapshot(candidate,raw){
+  active=false;path=[];keys={};moving=false;cancelNavigation();
+  engine.state=candidate;engine.loadedRaw=raw;storedRaw=raw;started=true;
+  lastFrame=performance.now();lastAutosave=lastFrame;
+  $('start').hidden=true;$('hud').hidden=false;closeDialog(true);settlePointerInput();
+  render();refreshHud();active=!document.hidden&&(!document.hasFocus||document.hasFocus());
+}
 function reviewSave(check){
       const candidate=check.state,q=N.current(candidate);
-      activity('导入进度 · 确认内容','地点：'+world[candidate.scene].name+'\n任务：'+(q?q+' '+N.titles[q]:candidate.flags.volume4Complete?deskText('第四卷已完成','Volume IV complete'):candidate.flags.volume3Complete?deskText('第三卷已完成','Volume III complete'):candidate.flags.volume2Complete?'第二卷已完成':'第一卷已完成')+'\n家用：'+candidate.coins+' 文\n\n确认后替换本页进度。原进度将保留一份备份，可在行囊下载。');
+      activity('导入进度 · 确认内容','地点：'+world[candidate.scene].name+'\n任务：'+(q?q+' '+N.titles[q]:candidate.flags.volume4Complete?deskText('第四卷已完成','Volume IV complete'):candidate.flags.volume3Complete?deskText('第三卷已完成','Volume III complete'):candidate.flags.volume2Complete?'第二卷已完成':'第一卷已完成')+'\n家用：'+candidate.coins+' 文\n时辰：'+NanlanClimate.label(candidate,window.NanlanI18n?.language==='en')+' · '+String(N.clock(candidate).hour).padStart(2,'0')+':'+String(N.clock(candidate).minute%60).padStart(2,'0')+'\n\n确认后替换本页进度。原进度将保留一份备份，可在行囊下载。');
       button('确认导入这份进度',async()=>{
         if(!await loadSceneAssets(candidate.scene,candidate)){notice('场景图片加载失败，尚未修改进度。',true);return;}
         try{
           const previous=started?JSON.stringify(state()):localStorage.getItem(N.SAVE_KEY);
           if(previous)localStorage.setItem('nanlan_before_import',previous);
           storage.setItem(N.SAVE_KEY,JSON.stringify(candidate));engine.state=candidate;engine.memoryOnly=false;localStorage.removeItem("nanlan_last_night");
-          storedRaw=JSON.stringify(candidate);started=true;path=[];keys={};moving=false;$('start').hidden=true;$('hud').hidden=false;
-          closeDialog();refreshHud();render();notice('进度已导入。'+nextHint());
+          applyRestoredSnapshot(candidate,JSON.stringify(candidate));notice(deskText('进度已导入 · ','Save imported · ')+timeText().short);
         }catch(e){notice('保存失败，原有进度未被替换。可检查浏览器存储后重试。',true);}
       },'confirm-import');
       button('取消，保留当前进度',closeDialog,'cancel-import',true);
@@ -1984,7 +1991,7 @@ async function restoreAutomaticBackup(){
   const raw=localStorage.getItem('nanlan_v20_previous');if(!raw){notice('目前没有可恢复的自动备份。',true);return;}
   const check=new N.Engine(storage,world);try{check.load(raw);}catch(e){notice('自动备份无法读取，当前进度没有改变。',true);return;}
   const q=N.current(check.state);activity('恢复自动备份？','备份地点：'+world[check.state.scene].name+'\n备份进度：'+(q?N.titles[q]:'已完成的日常')+'\n家用：'+check.state.coins+' 文\n\n确认后会把当前进度另存一份，再恢复新旅程开始前的存档。','restore-backup');
-  button('确认恢复这份自动备份',async()=>{if(!await loadSceneAssets(check.state.scene,check.state)){notice('备份场景图片未能载入，当前进度没有改变。',true);return;}try{const current=started?JSON.stringify(state()):localStorage.getItem(N.SAVE_KEY);if(current)localStorage.setItem('nanlan_before_import',current);storage.setItem(N.SAVE_KEY,raw);engine.load(raw);storedRaw=raw;started=true;active=true;$('start').hidden=true;$('hud').hidden=false;closeDialog();render();refreshHud();notice('自动备份已恢复。恢复前的进度仍可在行囊下载。');}catch(e){notice('恢复失败，当前进度没有改变。',true);}},'confirm-restore-auto');
+  button('确认恢复这份自动备份',async()=>{if(!await loadSceneAssets(check.state.scene,check.state)){notice('备份场景图片未能载入，当前进度没有改变。',true);return;}try{const current=started?JSON.stringify(state()):localStorage.getItem(N.SAVE_KEY);if(current)localStorage.setItem('nanlan_before_import',current);storage.setItem(N.SAVE_KEY,raw);applyRestoredSnapshot(check.state,raw);notice('自动备份已恢复。恢复前的进度仍可在行囊下载。');}catch(e){notice('恢复失败，当前进度没有改变。',true);}},'confirm-restore-auto');
   button('取消，保留当前进度',closeDialog,'cancel-restore-auto',true);
 }
 function startLoadError(text,retry){
@@ -2018,12 +2025,13 @@ $('startImport').onclick=importSave;
 $('restoreAutoBackup').onclick=restoreAutomaticBackup;
 $('continueGame').onclick=async()=>{
   if(!storedRaw||transitioning)return;
-  const check=new N.Engine(storage,world);try{check.load(storedRaw);}catch(e){$('loadWarning').hidden=false;$('loadWarning').textContent='存档暂时无法读取，原数据已保留。可以备份后重新开局。';return;}
+  const resumeRaw=storedRaw,check=new N.Engine(storage,world);try{check.load(resumeRaw);}catch(e){$('loadWarning').hidden=false;$('loadWarning').textContent='存档暂时无法读取，原数据已保留。可以备份后重新开局。';return;}
   transitioning=true;$('continueGame').disabled=true;$('loadWarning').hidden=true;$('startLoadRetry').hidden=true;
   const continueLabel=$('continueGame').textContent;$('continueGame').textContent=deskText('正在恢复旅程…','Restoring your journey…');$('continueGame').setAttribute('aria-busy','true');
   try{
     if(!await loadSceneAssets(check.state.scene,check.state)){startLoadError(deskText('场景画面未能全部载入。请重试，原存档已保留。','Some scene artwork could not load. Retry; your save is safe.'),()=>$('continueGame').onclick());return;}
-    engine.load(storedRaw);started=true;active=true;settlePointerInput();$('start').hidden=true;$('hud').hidden=false;render();refreshHud();notice(!state().flags.volume2Started&&N.done(state(),'M20')?(window.NanlanI18n?.language==='en'?'Progress restored. Volume II is available; open the South Street notice in your task panel.':'进度已恢复。第二卷已可开启，打开任务栏里的「南街铺讯」，到正厅与家人商议。'):deskText('进度已恢复。左上角查看当前任务，点「引路」前往目标。','Progress restored. View your current quest at the top left; use Guide to reach its destination.'));
+    if(localStorage.getItem(N.SAVE_KEY)!==resumeRaw){storedRaw=localStorage.getItem(N.SAVE_KEY);window.NanlanChapterMark?.refresh();startLoadError(deskText('另一页更新了进度，请核对时辰后再次继续。','Another page updated the save. Review the time and continue again.'),()=>$('continueGame').onclick());return;}
+    applyRestoredSnapshot(check.state,resumeRaw);notice(!state().flags.volume2Started&&N.done(state(),'M20')?(window.NanlanI18n?.language==='en'?'Progress restored. Volume II is available; open the South Street notice in your task panel.':'进度已恢复。第二卷已可开启，打开任务栏里的「南街铺讯」，到正厅与家人商议。'):deskText('进度已恢复 · '+timeText().short+'。左上角可查看当前任务。','Progress restored · '+timeText().short+'. Your current quest is at the top left.'));
   }finally{transitioning=false;$('continueGame').disabled=false;$('continueGame').textContent=continueLabel;$('continueGame').removeAttribute('aria-busy');}
 };
 try{
@@ -2076,6 +2084,18 @@ document.addEventListener('keydown',e=>{
   const buttons=[...root.querySelectorAll('button:not([hidden]):not(:disabled),input')];if(!buttons.length)return;
   if(e.shiftKey&&document.activeElement===buttons[0]){e.preventDefault();buttons[buttons.length-1].focus();}
   else if(!e.shiftKey&&document.activeElement===buttons[buttons.length-1]){e.preventDefault();buttons[0].focus();}
+});
+function resumeAfterFocus(){lastFrame=performance.now();active=started&&$('start').hidden&&$('dialog').hidden&&$('gallery').hidden&&$('worldMap').hidden&&!document.hidden&&!transitioning&&!window.NanlanSettings?.isOpen()&&!window.NanlanOpening?.running();}
+window.addEventListener('blur',()=>{keys={};path=[];moving=false;active=false;if(started)engine.save();});
+window.addEventListener('focus',resumeAfterFocus);
+window.addEventListener('storage',e=>{
+ if(e.key!==N.SAVE_KEY||e.newValue===engine.loadedRaw)return;
+ storedRaw=e.newValue;
+ if(!started){$('continueGame').hidden=!storedRaw;window.NanlanChapterMark?.refresh();window.NanlanChapters?.refreshTitle();return;}
+ active=false;path=[];keys={};moving=false;
+ activity(deskText('另一页已记下新进度','Progress Updated in Another Page'),deskText('本页已暂停，避免旧进度覆盖新的时辰。可先导出本页备份，再接续最新存档。','This page is paused so its older time cannot overwrite the newer save. Export this page as a backup, then resume the latest save.'),'save-conflict');
+ button(deskText('导出本页备份','Export This Page'),()=>download('Nanlan_Local_Backup.json',JSON.stringify(state(),null,2)),'conflict-export',true);
+ button(deskText('接续最新存档','Resume Latest Save'),async()=>{const raw=localStorage.getItem(N.SAVE_KEY),check=new N.Engine(storage,world);try{check.load(raw);if(!await loadSceneAssets(check.state.scene,check.state))return;if(localStorage.getItem(N.SAVE_KEY)!==raw){notice(deskText('进度又有更新，请再次核对。','Progress changed again; review once more.'),true);return;}applyRestoredSnapshot(check.state,raw);notice(deskText('已接续 · ','Resumed · ')+timeText().short);}catch(e){notice(e.userMessage||deskText('暂时无法读取，原存档保留。','The save could not be read; it is preserved.'),true);}},'conflict-resume');
 });
 window.addEventListener('beforeunload',()=>{if(started)engine.save();});
 // Keep first-load bandwidth for the entrance and actors; room props load when that room is needed.

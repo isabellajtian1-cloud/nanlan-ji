@@ -10,6 +10,7 @@ const mapGroups=[['宅院与房间',['gate','yard','hall','study','bed','store']
   ['青岚山',['foothill','mountain','bambooGrove','mountainside','summit']],['南澜海湾',['coast','tidalflat']],['山海之间',['wharf','oldTrail','workshop','qingxi']],['海天帆影',['anchorage','guild','backHall']],['青屿远行',['qPier','qFair','qSalt','qBamboo','qBeacon','qLodge']]];
 const deferredPlaces=['county','pharmacy','generalStore','teahouse'];
 let selectedMapPlace='yard',selectedMapObject=null,navigationTarget=null,navigationObject=null,mapReturnFocus=null,mapZoom=1;
+function mapChapterLabels(id,english=window.NanlanI18n?.language==='en'){return window.NanlanChapterCatalog.place(id).volumes.map(n=>window.NanlanChapterCatalog.label(n,english)).join(' / ');}
 function mapChapterRequirement(info){
  if(window.NanlanI18n?.language!=='en')return info.requirement;
  return info.questTitle?'Opens after “'+window.NanlanI18n.t(info.questTitle)+'”: '+window.NanlanI18n.t(info.stepLabel)+'.':info.requirementEn;
@@ -22,8 +23,8 @@ function mapAccess(id){
 }
 function mapVisitStatus(id){
   const s=state(),visited=id===s.scene||!!s.visits[id];
-  if(id===s.scene)return deskText('当前位置 · 你在这里','Current location');
-  if(N.sceneGate(s,id))return visited?deskText('已探索 · 暂不可进入','Explored · Temporarily unavailable'):deskText('未解锁','Locked');
+  if(id===s.scene)return id==='tidalflat'&&!N.tide(s).low?deskText('当前位置 · 涨潮，可返回海边','Current location · High tide; return to shore is allowed'):deskText('当前位置 · 你在这里','Current location');
+  if(N.sceneGate(s,id))return visited?deskText('已探索 · 暂不可进入','Explored · Temporarily unavailable'):deskText('尚未开放','Not yet open');
   if(id==='tidalflat'&&!N.tide(s).low)return visited?deskText('已探索 · 涨潮暂歇','Explored · High tide'):deskText('已开放 · 等待退潮','Open · Wait for low tide');
   if(mapAccess(id))return visited?deskText('已探索 · 通路待修','Explored · Route needs repair'):deskText('通路待修','Route needs repair');
   return visited?deskText('已探索 · 可以前往','Explored · Accessible'):deskText('已开放 · 尚未到访','Open · Not yet visited');
@@ -109,7 +110,7 @@ function drawMap(){
     b.className='map-node'+(!why?' open':'')+(s.scene===id?' current':'')+(objective.scene===id?' objective':'');
     b.dataset.mapPlace=id;b.style.left=(x/12)+'%';b.style.top=(y/8.2)+'%';
     const label=world[id].name.replace('旧宅 · ','').replace('青岚山 · ','').replace('南澜海湾 · ','').replace('南澜县城 · ','');
-    const chapter=window.NanlanChapterCatalog.label(window.NanlanChapterCatalog.place(id).number,window.NanlanI18n?.language==='en');
+    const chapter=mapChapterLabels(id);
     b.innerHTML=clean(label)+'<small>'+clean(chapter+' · '+mapVisitStatus(id))+'</small>';
     b.setAttribute('aria-label',world[id].name+'，'+chapter+'，'+mapVisitStatus(id));
     b.onclick=()=>inspectMapPlace(id);$('mapNodes').append(b);
@@ -158,10 +159,12 @@ function inspectMapPlace(id,objectId=null){
 }
 function drawPlaceLists(){
   $('allPlaceList').replaceChildren();
+  const fifth=window.NanlanChapterCatalog.entries(state()).find(e=>e.number===5),card=document.createElement('section');card.className='map-volume-note';card.dataset.noLocalize='';
+  const title=document.createElement('b'),text=document.createElement('p'),open=document.createElement('button');title.textContent=window.NanlanChapterCatalog.heading(fifth,window.NanlanI18n?.language==='en');text.textContent=deskText('本卷沿用家宅、南街、工棚与河埠。入口在后堂的岁序簿，不另添一块新地图。搜索「第五卷」可找出沿用地点。','This volume uses your home, South Street, workshop and wharf. Begin at the seasons book in the back hall; it adds no separate region. Search Volume V to find its shared places.');open.textContent=deskText('查看第五卷入口与条件','View Volume V Entrance & Conditions');open.onclick=()=>window.NanlanChapters.show(5);card.append(title,text,open);$('allPlaceList').append(card);
   mapGroups.forEach(([title,ids])=>{
     const box=document.createElement('section');box.className='place-list-card';const heading=document.createElement('b');heading.textContent=title;box.append(heading);
     for(const id of ids){
-      const known=mapKnown(id),b=document.createElement('button');b.className='directory-scene';b.textContent=world[id].name+' · '+window.NanlanChapterCatalog.label(window.NanlanChapterCatalog.place(id).number,window.NanlanI18n?.language==='en')+' · '+mapVisitStatus(id);
+      const known=mapKnown(id),b=document.createElement('button');b.className='directory-scene';b.textContent=world[id].name+' · '+mapChapterLabels(id)+' · '+mapVisitStatus(id);
       b.onclick=()=>{inspectMapPlace(id);centerMap(id);};box.append(b);
       if(!known)continue;
       const shown=new Set(visibleObjects(id,true).map(o=>o.id));
@@ -175,10 +178,10 @@ function drawPlaceLists(){
 }
 function filterMap(){
   const query=$('mapSearch').value.trim(),results=$('mapSearchResults');results.replaceChildren();results.hidden=!query;
-  for(const node of $('mapNodes').children){const id=node.dataset.mapPlace,w=world[id],searchable=w.name+window.NanlanChapterCatalog.label(window.NanlanChapterCatalog.place(id).number)+(mapKnown(id)?w.objects.map(o=>o.label).join(''):'');node.classList.toggle('dimmed',!!query&&!window.NanlanI18n.matches(searchable,query));}
+  for(const node of $('mapNodes').children){const id=node.dataset.mapPlace,w=world[id],searchable=w.name+mapChapterLabels(id,false)+(mapKnown(id)?w.objects.map(o=>o.label).join(''):'');node.classList.toggle('dimmed',!!query&&!window.NanlanI18n.matches(searchable,query));}
   if(!query)return;
   const matches=[];for(const [id,w] of Object.entries(world)){
-    const chapter=window.NanlanChapterCatalog.label(window.NanlanChapterCatalog.place(id).number);
+    const chapter=mapChapterLabels(id,false);
     if(window.NanlanI18n.matches(w.name+' '+chapter,query))matches.push({id,label:w.name+' · '+chapter+(' · '+mapVisitStatus(id))});
     if(!mapKnown(id))continue;
     for(const o of w.objects)if(window.NanlanI18n.matches(o.label,query))matches.push({id,object:o.id,label:w.name+' · '+o.label});

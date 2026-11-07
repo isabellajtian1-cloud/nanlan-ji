@@ -30,7 +30,8 @@ function saveLabel(){
  if(rawBefore===storedRaw&&languageBefore===language)return;
  rawBefore=storedRaw;languageBefore=language;if(!storedRaw)return;
  try{const s=JSON.parse(storedRaw),info=describe(s),day=N.clock(s).day,button=$('continueGame');
- button.dataset.noLocalize='';button.textContent=L('继续旅程 · 第'+cn[info.number]+'卷 · 第'+day+'日','Continue · Volume '+roman[info.number]+' · Day '+day);
+ const summary=$('saveSummary');if(summary){summary.hidden=false;const c=N.clock(s);summary.textContent=L('存档时辰：','Saved time: ')+NanlanClimate.label(s,en())+' · '+String(c.hour).padStart(2,'0')+':'+String(c.minute%60).padStart(2,'0');}
+ button.dataset.noLocalize='';button.textContent=L('继续旅程 · 第'+cn[info.number]+'卷','Continue · Volume '+roman[info.number]);
  }catch{/* The existing title screen handles unreadable saves. */}
 }
 function refresh(s=state(),live=started){
@@ -47,13 +48,14 @@ function show(){
  const s=state(),info=describe(s),q=N.current(s);
  activity(L('篇章行记','The Chapter Journal'),L('此刻行至：','Your place in the story: ')+label(info),'chapter-journal');dialogObject=null;
  const list=document.createElement('div');list.className='chapter-leaves';list.dataset.noLocalize='';
- for(let i=1;i<=info.number;i++){
-  const row=document.createElement('article'),head=document.createElement('h3'),tag=document.createElement('small'),text=document.createElement('p');
-  head.textContent=label(i===info.number?info:{number:i,title:titles[i]});
-  tag.textContent=i<info.number?L('已行过','A chapter lived'):info.complete?L('卷已毕 · 日常仍在继续','Chapter complete · Life continues'):L('正在经历','Your present chapter');
-  text.textContent=summaries[i][en()?1:0];row.append(head,tag,text);list.append(row);
+ for(const item of window.NanlanChapterCatalog.entries(s)){
+  const row=document.createElement('article'),head=document.createElement('h3'),tag=document.createElement('small'),text=document.createElement('p'),link=document.createElement('button');
+  head.textContent=window.NanlanChapterCatalog.heading(item,en());
+  tag.textContent=({locked:L('未解封','Sealed'),ready:L('可开启','Available'),current:L('正在经历','In progress'),complete:L('已完成','Complete')})[item.status];
+  text.textContent=L('已完成 ','Completed ')+item.progress.done+' / '+item.progress.total+L(item.number==='extras'?' 篇番外':' 段主线',item.number==='extras'?' epilogues':' story entries');
+  link.textContent=L('查看条件与去处','View Conditions & Starting Place');link.onclick=()=>window.NanlanChapters.show(item.number);
+  row.append(head,tag,text,link);list.append(row);
  }
- if(info.number<6){const future=document.createElement('p');future.className='chapter-unwritten';future.textContent=L('后面的纸页，尚未题名。','The pages ahead have yet to be named.');list.append(future);}
  $('panelExtra').append(list);
  navButton(L('查看全部六卷与番外入口','View All Volumes and Epilogues'),()=>window.NanlanChapters.show(),'journal-all-chapters');
  window.NanlanMemoryBook?.link(show);

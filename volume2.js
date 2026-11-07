@@ -19,12 +19,13 @@ window.NanlanV2={
       const funds=document.createElement('p');funds.textContent=L('钱不够也可以先调查。租金、押金、修缮、首货与运费会在付款前列明；可先继续制作、试摊，再回来筹备。','You may investigate before you can afford a lease. Rent, deposit, repairs, stock and transport are listed before payment. Craft and trade at your stall, then return when ready.');list.append(funds);
     }
     $('panelExtra').append(list);
+    if(u.started||u.ready)navButton(L('铺讯与筹备手记 · 永久留存','Shop Notice & Preparation Notes'),()=>window.NanlanContinuity.handbook(),'volume2-papers');
     const target=world.hall.objects.find(o=>o.id==='v2Family');
     if(u.ready){
       if(s.scene==='hall'&&nearObject(target)){
         dialogObject=target;
         button(L('读铺讯，和家人开启第二卷','Read the Notice · Begin Volume II'),()=>perform('v2Start',{},()=>{
-          window.NanlanV2.show('v2Family',target);refreshHud();
+          window.NanlanContinuity.yearTransition(()=>window.NanlanV2.show('v2Family',target));refreshHud();
           notice(L('第二卷已开启。先与家人商议生活保留和筹备预算，再去南街观察客流。','Volume II has begun. Agree a household reserve and budget, then observe South Street.'));
         }),'volume2-begin');
       }else navButton(L('前往正厅，与家人读铺讯','Go to the Hall and Read the Notice'),()=>{closeDialog(true);startNavigation('hall','v2Family');},'volume2-entry-route');
@@ -61,7 +62,7 @@ window.NanlanV2={
     if(!s.flags.volume2Started)return N.done(s,'M20')?'第一卷已完成。回正厅读铺讯，开启第二卷；银钱、物资、日期与选择保留。':null;
     if(!q)return '第二卷已完成。可继续装货、转运、接待、按原价交付订单，并逐日盘点。';
     const step=N.steps[q].find(([flag])=>!s.flags[flag]);
-    return (step?step[1]+'。':'')+({V2_02:'三个时段都有预约观察入口，会同步推进时间。',V2_03:'两间铺面都在县城南街；亲自比较后选定。',V2_07:'仓房货箱装货发车 → 铺内货架验收。',V2_10:'先听旧客问窄篮，再在柜台成交。',V2_14:'缺可售货时先补货，或解除自己设置的时段留货。',V2_15:'仓房制作 → 装货转运 → 铺内交单。',V2_18:'三次闭账要在不同游戏日期发生；今日已闭店就回东厢房睡一夜。'}[q]||'点击「在地图中找目标」，可查看实际地点。');
+    return (step?step[1]+'。':'')+({V2_02:window.NanlanContinuityModel.observationLine(s,Object.keys(N.story2.slots).find(k=>!s.flags[N.story2.slots[k].flag])||'morning',window.NanlanI18n?.language==='en'),V2_03:'两间铺面都在县城南街；亲自比较后选定。',V2_07:'仓房货箱装货发车 → 铺内货架验收。',V2_10:'先听旧客问窄篮，再在柜台成交。',V2_14:'缺可售货时先补货，或解除自己设置的时段留货。',V2_15:'仓房制作 → 装货转运 → 铺内交单。',V2_18:'三次闭账要在不同游戏日期发生；今日已闭店就回东厢房睡一夜。'}[q]||'点击「在地图中找目标」，可查看实际地点。');
   },
   show(kind,o=null,selected=null){
     const s=state(),f=s.flags,t=s.story2,shop=s.shop,q=s.flags.volume3Started?null:N.current(s),M=N.story2,again=()=>window.NanlanV2.show(kind,o,selected);
@@ -75,7 +76,7 @@ window.NanlanV2={
     function note(text){const p=document.createElement('p');p.className='v2-note';p.textContent=text;$('panelExtra').append(p);}
     function nav(label,scene,id){button(label,()=>{closeDialog();startNavigation(scene,id);},'v2-nav-'+scene+'-'+id,true);}
     function table(headers,rows){const table=document.createElement('table');table.className='shop-story-table';const head=document.createElement('thead'),tr=document.createElement('tr');headers.forEach(label=>{const th=document.createElement('th');th.textContent=label;tr.append(th);});head.append(tr);table.append(head);const body=document.createElement('tbody');rows.forEach(row=>{const tr=document.createElement('tr');row.forEach(value=>{const td=document.createElement('td');td.textContent=value;tr.append(td);});body.append(tr);});table.append(body);$('panelExtra').append(table);}
-    function title(name,text){activity(name,text,'volume2');$('dialogKicker').textContent='第二卷 · 南街灯起'+(q?' · '+(N.V2_ORDER.indexOf(q)+1)+'/18':' · 日常经营');if(q){const story=document.createElement('p');story.className='shop-story-copy';story.textContent=window.NanlanV2.scenes[q];$('panelExtra').append(story);}button('读当前任务与回报',showQuest,'v2-task-read',true);navButton('前往当前剧情目标',()=>{
+    function title(name,text){activity(name,text,'volume2');$('dialogKicker').textContent='第二卷 · 南街灯起'+(q?' · 当前第 '+(N.V2_ORDER.indexOf(q)+1)+' 段 / 共 '+N.V2_ORDER.length+' 段主线':' · 日常经营');if(q){const story=document.createElement('p');story.className='shop-story-copy';story.textContent=window.NanlanV2.scenes[q];$('panelExtra').append(story);}button(deskText('查看任务详情与回报','Quest Details & Outcome'),()=>window.NanlanContinuity.rewards(),'v2-task-read',true);navButton('前往当前剧情目标',()=>{
       const current=state(),target=nextObjective();
       if(kind==='v2Observe'&&target.scene===current.scene&&target.object===o?.id){
         const slot=M.slots[o.slot];
@@ -89,10 +90,11 @@ window.NanlanV2={
       closeDialog();startNavigation(target.scene,target.object);
     },'v2-next-place');}
     function pricesPanel(){const ids=Object.keys(shop.stock).filter(id=>shop.stock[id]>0);table(['商品','到店参考成本','当前售价','可售'],ids.map(id=>[itemName(id),num(shop.cost[id]??M.baseCost(id))+' 文',N.shopPrice(s,id)+' 文',M.stockAvailable(s,id)]));if(!ids.length)return;const id=ids.includes(selected)?selected:ids.includes(shop.featured)?shop.featured:ids[0];for(const item of ids)button('选 '+itemName(item)+' 调价',()=>window.NanlanV2.show('v2Pricing',o,item),'v2-price-item-'+item,true);for(const tier of [0,1,2])action(itemName(id)+' · '+['让利价','常价','较高价'][tier],'v2Price',{item:id,tier});}
-    function ledger(){const v=M.summary(s),d=v.day;table(['账目','当前记录'],[['现金余额',s.coins+' 文'],['家用保留目标',t.reserve+' 文'],['实收存货参考价值',v.stockValue+' 文'],['已完成闭账',v.closedDays+' 个不同营业日'],['当日成交收入',(d?.sales||0)+' 文'],['当日已售成本',num(d?.cost||0)+' 文'],['当日租金与设施分摊',num(v.rent+v.wear)+' 文'],['当日经营结果',v.profit+' 文'],['今日状态',d?.closed?'已打烊并保存':'尚未闭账']]);const note=document.createElement('p');note.className='v2-note';note.textContent='成本采用材料参考价与实际运费；旧版历史销售不回算新日账。预付租金与可退押金不在闭店时重复扣款。';$('panelExtra').append(note);}
+    function ledger(){const v=M.summary(s),d=v.day;table(['账目','当前记录'],[['现金余额',s.coins+' 文'],['家用保留目标',t.reserve+' 文'],['实收存货参考价值',v.stockValue+' 文'],['已完成闭账',v.closedDays+' 个不同营业日'],['当日成交收入',(d?.sales||0)+' 文'],['当日已售成本',num(d?.cost||0)+' 文'],['当日租金分摊',!t.contract?'尚未签约':t.contract.legacy&&t.contract.dailyRent===0?'旧约已付，不另计日租':num(v.rent)+' 文（已预付，不另扣）'],['当日设施分摊',num(v.wear)+' 文'],['当日经营结果',v.profit+' 文'],['今日状态',d?.closed?'已打烊并保存':'尚未闭账']]);const note=document.createElement('p');note.className='v2-note';note.textContent='成本依材料价与实付运钱核算。往期流水另册存放，不重记今日收支。租金已预付，押金另列保管，闭店不重复扣款。';$('panelExtra').append(note);}
     if(!f.volume2Started){window.NanlanV2.entry();return;}
     if(kind==='v2Family'){
-      title('家议 · 铺讯与分工','母亲：「东西做出来，总得有人用。」\n父亲：「每一笔写清，剩下多少，再决定用多少。」\n祖父把纸留在桌上，等你拿主意。'+(t.legacy?'\n\n旧版租金、货物和完成记录已保留；新增剧情接续，不重付旧租金。':''));
+      title('家议 · 铺讯与分工','母亲：「东西做出来，总得有人用。」\n父亲：「每一笔写清，剩下多少，再决定用多少。」\n祖父把纸留在桌上，等你拿主意。'+(t.legacy?'\n\n旧约、存货与往期流水已收妥；从这里接续家议，已付租金不再收取。':''));
+      button(deskText('回看铺讯与筹备手记','Read the Notice & Preparation Notes'),()=>window.NanlanContinuity.handbook(),'family-papers',true);
       if(s.scene!=='hall'){nav('回正厅共同商议家计与分工','hall','v2Family');return;}
       if(q==='V2_01'&&!f.v2Entry)action('读母亲留好的铺讯','v2ReadNotice');
       action('保留现有家用的四分之一，再安排筹备','v2Reserve',{choice:'cautious'});action('本轮灵活调配，家用暂不另作预留','v2Reserve',{choice:'flexible'});
@@ -104,8 +106,10 @@ window.NanlanV2={
     if(kind==='v2Observe'){
       // The last observation completes this quest; replace its old detail panel.
       if(q!=='V2_02'){showQuest();notice(nextHint());return;}
-      const slot=o?.slot||'morning',a=M.slots[slot];title('南街 · '+a.label+'客流札记',a.text+'\n\n当前游戏时间：第'+N.clock(s).day+'日。按约观察会推进到对应时段；菜畦与其他事务同步经过这段时间。');
-      if(q==='V2_02')action((f[a.flag]?'已记下 · ':'赴约观察 · ')+a.label,'v2Observe',{slot},!f[a.flag],'这一时段已真实记录，可前往下一个观察点。');
+      const slot=o?.slot||'morning',a=M.observationStatus(s,slot);title('南街 · '+a.label+'客流札记',a.text+'\n\n'+window.NanlanContinuityModel.observationLine(s,slot,window.NanlanI18n?.language==='en'));
+      if(!a.done&&a.state!=='open')note(deskText('错过不会失败或倒回时间。可明日再来，也可明确选择等到下一次观察；等候会让作物与其他事务同步经过这段时间。','Missing the window never fails the quest or rewinds time. Return tomorrow, or explicitly wait for the next window; crops and other activities advance during the wait.'));
+      if(q==='V2_02')action(a.done?deskText('这一时段已记下','Already Recorded'):a.state==='open'?deskText('现在观察 · ','Observe Now · ')+a.label:deskText('等到','Wait Until ')+(a.state==='missed'?deskText('明日','Tomorrow '):deskText('今日','Today '))+String(Math.floor(a.minute/60)).padStart(2,'0')+':'+String(a.minute%60).padStart(2,'0')+deskText('再观察 · 经过 ',' · Advance ')+a.wait+deskText(' 分钟',' minutes'),'v2Observe',{slot,confirmWait:a.state!=='open'},!a.done,deskText('这一时段已记录，可前往下一处。','Recorded; continue to the next observation.'));
+      if(!a.done&&a.state!=='open')button(deskText('先不等候，回去做别的事','Do Something Else First'),()=>closeDialog(true),'observation-later',true);
       if(slot==='noon'&&f[a.flag]){
         sceneClue(deskText('顺着脚夫的目光看','Follow the porter’s gaze'),deskText('脚夫把宽篓横过来试了试。桥口有人提货，他只好侧身退回街上。','The porter turns the broad basket sideways. Someone is collecting a parcel in the doorway. He backs out into the street.'),'watch-porter');
         sceneClue(deskText('留下看柜边那双手','Watch the hands at the counter'),deskText('一位妇人把窄篓套上臂弯，另一只手还牵着孩子。她没问大篓的价。','A woman slips the narrow basket over one arm. Her other hand holds a child’s. She never asks the price of the broad basket.'),'watch-counter');
@@ -116,7 +120,8 @@ window.NanlanV2={
       const site=o?.site||t.site||'east',a=M.shops[site];title(a.name+' · 看铺与条款',a.text+'\n\n榕荫铺：租金30文、押金20文。桥口铺：租金45文、押金30文。房东修补需加租；自修需实际备料。'+(t.contract?'\n\n已确认：'+t.contract.name+'；已付租金'+t.contract.rent+'文，押金'+t.contract.deposit+'文。':''));
       if(q==='V2_03')window.NanlanThreads.offer('door');
       if(q==='V2_03'){action('亲查'+a.name+'的窗墙、门面和通道','v2Inspect',{site},!f[site==='east'?'v2InspectEast':'v2InspectWest'],'这间铺面的缺陷已记下。');if(f.v2InspectEast&&f.v2InspectWest)for(const key of ['east','west'])action('选定'+M.shops[key].name,'v2SelectShop',{site:key},!f.v2Leased||t.site===key,'旧租约继续有效，保留原铺面。');}
-      if(q==='M12')for(const [choice,label]of [['self','自修换低租'],['owner','房东负责修补'],['trial','短期试租']]){const c=M.leaseQuote(s,choice);action(label+' · 租金'+c.rent+'＋押金'+c.deposit+'文','v2Lease',{choice},s.coins-c.total>=t.reserve,'支付后需保留家用 '+t.reserve+' 文；可回正厅调整，或继续试摊筹钱。');}
+      button(deskText('查看完整租约与已付凭据','Read Terms & Payment Records'),()=>window.NanlanContinuity.lease(),'lease-records',true);
+      if(q==='M12')for(const [choice,label]of [['self','自修换低租'],['owner','房东负责修补'],['trial','短期试租']]){const c=M.leaseQuote(s,choice);action(label+' · '+c.period+'日租金'+c.rent+'＋押金'+c.deposit+'文（日摊'+num(c.dailyRent)+'文）','v2Lease',{choice},s.coins-c.total>=t.reserve,'支付后需保留家用 '+t.reserve+' 文；可回正厅调整，或继续试摊筹钱。');}
       if(q==='V2_04')nav('回正厅逐笔核算','hall','v2Family');return;
     }
     if(kind==='v2Repair'){
@@ -145,7 +150,7 @@ window.NanlanV2={
     if(kind==='v2Shop'){
       const d=M.summary(s).day;title((s.production.shopName||M.shops[t.site]?.name||'南街铺面')+' · 柜台与账目','主打：'+itemName(shop.featured)+'\n货架：'+stockText()+'\n今日尚可接待 '+N.shopCustomers(s)+' 位普通来客。'+(d?.closed?'\n今日已经打烊，回东厢房睡一夜，明日继续。':'\n街坊、匠工与行商关心的东西不同；谈妥后才付钱拿货。'));
       if(!s.production.shopName)nav('去书房补题自家字号','study','books');
-      ledger();if(s.scholar?.pots&&f.v2Opened)globalThis.NanlanScholar?.counter();window.NanlanV3?.shelves();if(s.story3)button('查看山海交接手记',window.NanlanV3.journal,'v3-orders',true);if(f.v2Opened)window.NanlanVillage?.counter();button('打开铺号印匣与采料路线',()=>window.NanlanSeals.show(),'v2-seal-box',true);
+      window.NanlanContinuity.tabs('shop');ledger();if(s.scholar?.pots&&f.v2Opened)globalThis.NanlanScholar?.counter();window.NanlanV3?.shelves();if(s.story3)button('查看山海交接手记',window.NanlanV3.journal,'v3-orders',true);if(f.v2Opened)window.NanlanVillage?.counter();button('打开铺号印匣与采料路线',()=>window.NanlanSeals.show(),'v2-seal-box',true);
       if(q==='V2_09'){button('查看并调整逐件价签',()=>window.NanlanV2.show('v2Pricing'),'v2-pricing');if(!f.v2PriceConfirmed)action('核对到店成本，确认开门报价','v2ConfirmPrices');else action('亲手开门迎客','v2Open',{},!!s.production.shopName,'先回书房请祖父题字号。');}
       if(q==='V2_10'&&!f.v2CustomerHeard)action('听旧客问：改过的窄篮还在么？','v2HearCustomer');
       if(f.v2Opened&&!d?.closed){for(const id of Object.keys(shop.stock))if(M.stockAvailable(s,id)>0)action('成交 '+itemName(id)+' ×1 · '+N.shopPrice(s,id)+'文','v2Sell',{item:id,quote:N.shopPrice(s,id)},N.shopCustomers(s)>0,'今日普通来客已散；可交已约订单或回家过夜。');action('这一位先不买，接待下一位','v2NextCustomer',{},N.shopCustomers(s)>0,'今日普通来客已散。');button('调整未成交货物价签',()=>window.NanlanV2.show('v2Pricing'),'v2-retail-pricing',true);}

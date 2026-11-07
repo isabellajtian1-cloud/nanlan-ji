@@ -31,7 +31,8 @@
     east:{name:'榕荫铺',rent:30,deposit:20,repair:{wood:3,bamboo:2,stone:2},text:'街坊多、租金较低；窗脚返潮，柜架要检修。'},
     west:{name:'桥口铺',rent:45,deposit:30,repair:{wood:2,bamboo:1,stone:1},text:'路过客人多、租金较高；门面显眼，通道与取货更要留意。'}
   };
-  const slots={morning:{minute:570,flag:'v2ObserveMorning',label:'早市',text:'街坊提着菜篮来往，问的是价钱和装菜是否顺手。'},noon:{minute:780,flag:'v2ObserveNoon',label:'午间',text:'匠工停下来挑耐用的物件；架上拿取是否方便，也会左右选择。'},afternoon:{minute:930,flag:'v2ObserveAfternoon',label:'午后',text:'行商喜欢轻便、能按期带走的货；人多的时候，未必人人都会买。'}};
+  const slots={morning:{minute:570,end:660,flag:'v2ObserveMorning',label:'早市',text:'街坊提着菜篮来往，问的是价钱和装菜是否顺手。'},noon:{minute:780,end:840,flag:'v2ObserveNoon',label:'午间',text:'匠工停下来挑耐用的物件；架上拿取是否方便，也会左右选择。'},afternoon:{minute:930,end:1020,flag:'v2ObserveAfternoon',label:'午后',text:'行商喜欢轻便、能按期带走的货；人多的时候，未必人人都会买。'}};
+  function observationStatus(s,slot){const a=slots[slot];if(!a)return null;const c=clock(s),start=(c.day-1)*1440+a.minute,end=(c.day-1)*1440+a.end,done=!!s.flags[a.flag],state=done?'done':s.worldTick<start?'upcoming':s.worldTick>=end?'missed':'open',target=state==='missed'?start+1440:state==='upcoming'?start:s.worldTick;return {slot,...a,state,done,target,wait:Math.max(0,Math.ceil(target-s.worldTick)),day:Math.floor(target/1440)+1};}
   const round=n=>Math.round((n+Number.EPSILON)*100)/100;
   const validCount=n=>Number.isInteger(n)&&n>=0&&n<1000000;
   const record=o=>o&&typeof o==='object'&&!Array.isArray(o);
@@ -55,9 +56,9 @@
       s.story2=emptyStory();
       if(legacy){s.story2.legacy={complete:!!s.flags.volume2Complete,quests:copy(Object.fromEntries(['M12','V21','M18','V22','V23','V24'].map(id=>[id,s.quests[id]||null])))};s.flags.volume2Complete=false;
         order.forEach(id=>{s.quests[id]={status:'LOCKED'};});s.quests.V2_01.status='ACTIVE';
-        if(s.flags.v2Leased){s.story2.site='east';s.story2.contract={name:'旧版首季租约',rent:40,deposit:0,dailyRent:0,legacy:true,repair:'self'};s.flags.v2LeaseSigned=true;s.flags.v2ShopSelected=true;s.quests.M12.status='COMPLETED';}
-        s.journal.push({id:'卷二续篇',text:'旧版租约、库存、营业记录和完成纪念已保留。新增剧情从家议接续，旧租金不重复收取。'});
-        s.lastNotice='已接续新版第二卷：旧租金、库存和销售记录保留，新增故事从正厅家议开始。';
+        if(s.flags.v2Leased){s.story2.site='east';s.story2.contract={name:'沿用首期租约',rent:40,deposit:0,dailyRent:0,legacy:true,repair:'self'};s.flags.v2LeaseSigned=true;s.flags.v2ShopSelected=true;s.quests.M12.status='COMPLETED';}
+        s.journal.push({id:'卷二续篇',text:'旧约、存货与往期流水已收妥。正厅家议接续新事，已付租金不再收取。'});
+        s.lastNotice='旧约与往期流水仍在，回正厅与家人商议接下来的日子。';
       }
     }
     need(s.story2.version===1,'第二卷剧情版本无效。');
@@ -70,6 +71,8 @@
     t.cargoCosts??={};validateMap(t.cargoCosts,Object.keys(h.prices),false);validateMap(t.cargo,Object.keys(h.prices));need(record(t.days)&&record(t.orders)&&Array.isArray(t.closings)&&Array.isArray(t.shipments)&&Array.isArray(t.observations),'第二卷账册无效。');
     need(t.site===null||Object.hasOwn(shops,t.site),'铺面选择无效。');
     if(t.contract)need(record(t.contract)&&Number.isFinite(t.contract.rent)&&t.contract.rent>=0&&Number.isFinite(t.contract.deposit)&&t.contract.deposit>=0&&Number.isFinite(t.contract.dailyRent)&&t.contract.dailyRent>=0&&['self','owner'].includes(t.contract.repair),'租约无效。');
+    if(t.contract?.period!==undefined)need(Number.isInteger(t.contract.period)&&t.contract.period>0,'租约期限无效。');
+    if(t.contract?.signedAt!==undefined)need(Number.isFinite(t.contract.signedAt)&&t.contract.signedAt>=0&&t.contract.signedAt<=s.worldTick,'签约时辰无效。');
     if(t.shipment){need(record(t.shipment)&&Number.isFinite(t.shipment.eta)&&Number.isFinite(t.shipment.fee)&&t.shipment.fee>=0,'转运凭单无效。');validateMap(t.shipment.items,Object.keys(h.prices));if(t.shipment.costs)validateMap(t.shipment.costs,Object.keys(h.prices),false);}
     for(const d of Object.values(t.days)){need(record(d)&&validCount(d.day)&&Number.isFinite(d.sales)&&d.sales>=0&&Number.isFinite(d.cost)&&d.cost>=0&&validCount(d.quantity)&&Number.isFinite(d.expenses)&&d.expenses>=0&&Number.isFinite(d.cashAtOpen)&&typeof d.closed==='boolean','营业日记录无效。');d.rentAtOpen??=t.contract?.dailyRent||0;d.wearAtOpen??=t.capital/30;need(Number.isFinite(d.rentAtOpen)&&d.rentAtOpen>=0&&Number.isFinite(d.wearAtOpen)&&d.wearAtOpen>=0,'营业日分摊记录无效。');}
     need(t.closings.every(n=>validCount(n)&&t.days[n]?.closed)&&new Set(t.closings).size===t.closings.length,'闭店记录无效。');
@@ -146,12 +149,12 @@
     }
     if(name==='v2ReadNotice'){quest(s,'V2_01');at(s,'hall');f.v2Entry=true;return;}
     if(name==='v2Reserve'){at(s,'hall');need(['cautious','flexible'].includes(p.choice),'请选择家计安排。');t.reserve=p.choice==='cautious'?Math.floor(s.coins*.25):0;f.v2ReserveSet=true;s.choices.shopReserve=p.choice;return;}
-    if(name==='v2Observe'){quest(s,'V2_02');at(s,'county');const a=slots[p.slot];need(a,'请选择实际观察时段。');return once(s,a.flag,()=>{let tick=(clock(s).day-1)*1440+a.minute;if(tick<s.worldTick)tick+=1440;advance(s,tick);t.observations.push({slot:p.slot,tick:s.worldTick,text:a.text});f[a.flag]=true;});}
+    if(name==='v2Observe'){quest(s,'V2_02');at(s,'county');const a=observationStatus(s,p.slot);need(a,'请选择实际观察时段。');if(a.done)return false;need(a.state==='open'||p.confirmWait===true,'时辰尚未合适，请先确认是否等候；错过今日可在明日再来。');return once(s,a.flag,()=>{advance(s,a.target);t.observations.push({slot:p.slot,tick:s.worldTick,text:a.text});f[a.flag]=true;});}
     if(name==='v2Inspect'){quest(s,'V2_03');at(s,'county');need(Object.hasOwn(shops,p.site),'请选择铺面。');f[p.site==='east'?'v2InspectEast':'v2InspectWest']=true;return;}
     if(name==='v2SelectShop'){quest(s,'V2_03');at(s,'county');need(f.v2InspectEast&&f.v2InspectWest,'先亲自查验两间铺子。');need(Object.hasOwn(shops,p.site),'请选择铺面。');need(!f.v2Leased||t.site===p.site,'旧租约继续有效，本次保留已经租用的铺面。');t.site=p.site;f.v2ShopSelected=true;s.choices.shopSite=p.site;return;}
     if(name==='v2Plan'){quest(s,'V2_04');at(s,'hall');need(products.includes(p.product),'请选择熟悉的制品。');shop.featured=p.product;f.v2PlanRecorded=true;return;}
     if(name==='v2Budget'){quest(s,'V2_04');at(s,'hall');need(f.v2PlanRecorded,'先商议主打制品。');f.v2BudgetPlan=true;return;}
-    if(name==='v2Lease'){quest(s,'M12');at(s,'county');const c=leaseQuote(s,p.choice);need(s.coins-c.total>=t.reserve,'本次需 '+c.total+' 文，另保留家用 '+t.reserve+' 文；可回家调整预算或先试摊筹钱。');return once(s,'story2Lease',()=>{s.coins-=c.total;t.contract=c;f.v2Leased=true;f.v2LeaseSigned=true;log(s,'lease',-c.rent,c.name+'：首期预付租金');log(s,'deposit',-c.deposit,'可退铺面押金，另列保管');});}
+    if(name==='v2Lease'){quest(s,'M12');at(s,'county');const c=leaseQuote(s,p.choice);need(s.coins-c.total>=t.reserve,'本次需 '+c.total+' 文，另保留家用 '+t.reserve+' 文；可回家调整预算或先试摊筹钱。');return once(s,'story2Lease',()=>{s.coins-=c.total;t.contract={...c,signedAt:s.worldTick};f.v2Leased=true;f.v2LeaseSigned=true;log(s,'lease',-c.rent,c.name+'：首期预付租金');log(s,'deposit',-c.deposit,'可退铺面押金，另列保管');});}
     if(name==='v2Repair'){quest(s,'V2_06');at(s,'generalStore');if(f.v2Repaired)return false;need(f.v2LeaseSigned,'先签租约。');return once(s,'story2Repair',()=>{if(t.contract.repair==='self'){const cost=shops[t.site].repair;spend(s,cost);t.capital+=Object.entries(cost).reduce((n,[id,q])=>n+baseCost(id)*q,0);}f.v2Repaired=true;});}
     if(name==='v2Decorate'){quest(s,'V2_06');at(s,'generalStore');need(f.v2Repaired,'先检修柜架。');need(['practical','herbal'].includes(p.style),'请选择布局。');s.choices.shopStyle=p.style;f.v2Decorated=true;return;}
     if(name==='v2Sign'){quest(s,'V2_06');at(s,'generalStore');if(f.v2Sign)return false;need(f.v2Decorated,'先试走通道并确定布局。');need(s.production?.shopName,'请先回书房，在祖父书案前选定字号。');return once(s,'story2Sign',()=>{spend(s,{wood:1,rope:1});t.capital+=baseCost('wood')+baseCost('rope');f.v2Sign=true;});}
@@ -185,5 +188,5 @@
     if(name==='v2FamilyEnd'){quest(s,'V2_18');at(s,'hall');need(f.v2ThreeDays&&f.v2Cooperated,'先兑现邻铺协作，并完成三个不同营业日的闭账。');need(!Object.entries(t.orders).some(([k,o])=>k!=='silkSample'&&o.delivered<o.quantity),'还有已接受订单未交清；先按原报价交付，再结卷。');need(['steady','neighbors','travel'].includes(p.choice),'请选择下一步方向。');s.choices.nextSeason=p.choice;f.v2FamilyEnd=true;return;}
     need(false,'这项南街事务尚未开放。');
   }
-  return {entryStatus,sale,bookSale,cabinetPlan,order,titles,steps,rewards,products,shops,slots,emptyShop,emptyStory,normalise,reconcile,act,price,basePrice,baseCost,stockAvailable,customers,summary,leaseQuote,familyAtShop};
+  return {entryStatus,observationStatus,sale,bookSale,cabinetPlan,order,titles,steps,rewards,products,shops,slots,emptyShop,emptyStory,normalise,reconcile,act,price,basePrice,baseCost,stockAvailable,customers,summary,leaseQuote,familyAtShop};
 });

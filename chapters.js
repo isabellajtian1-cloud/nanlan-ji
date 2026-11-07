@@ -9,22 +9,22 @@ function context(){
  }
  return {s:cachedState,saved:!!storedRaw&&!invalidSave,invalid:invalidSave};
 }
-function title(item){return C.label(item.number,en())+' · '+(en()?item.en:item.title);}
+function title(item){return C.heading(item,en());}
 function status(item,ctx){
  if(item.number===1&&!ctx.saved)return L('可启程','Begin here');
- return ({complete:L('已完成','Complete'),current:L('正在经历','In progress'),ready:L('可开启','Available'),locked:L('未解锁','Locked')})[item.status];
+ return ({complete:L('已完成','Complete'),current:L('正在经历','In progress'),ready:L('可开启','Available'),locked:L('未解封','Sealed')})[item.status];
 }
 function card(item,ctx,chosen){
  const b=document.createElement('button');b.type='button';b.className='chapter-card';b.dataset.chapter=String(item.number);b.dataset.status=item.status;
- b.setAttribute('aria-label',title(item)+' · '+status(item,ctx));
+ b.setAttribute('aria-label',title(item)+(item.status==='locked'?'':' · '+status(item,ctx)));
  if(chosen!==undefined)b.setAttribute('aria-pressed',String(item.number===chosen));
- const name=document.createElement('strong'),tag=document.createElement('span');name.textContent=title(item);tag.textContent=status(item,ctx);b.append(name,tag);
+ const name=document.createElement('strong'),tag=document.createElement('span');name.textContent=title(item);tag.textContent=status(item,ctx);b.append(name);if(item.status!=='locked')b.append(tag);const progress=document.createElement('small');progress.className='chapter-progress';progress.textContent=L('已完成 ','Completed ')+item.progress.done+' / '+item.progress.total+L(item.number==='extras'?' 篇番外':' 段主线',item.number==='extras'?' epilogues':' story entries');b.append(progress);
  b.onclick=()=>show(item.number);return b;
 }
 function refreshTitle(){
  const version=document.querySelector('.version-note'),release=version.textContent.match(/V[\d.]+/)?.[0]||'';
- document.title=L('南澜记 '+release+' · 步步有应','Nanlan Chronicles '+release+' · Every Step Answered');
- version.textContent=L(release+' · 步步有应 · 六卷与番外开发试玩',release+' · Every Step Answered · Six-volume development preview with epilogues');
+ document.title=L('南澜记 '+release+' · 新岁有凭','Nanlan Chronicles '+release+' · A New Year, a Clear Record');
+ version.textContent=L(release+' · 新岁有凭 · 六卷与番外开发试玩',release+' · A New Year, a Clear Record · Six-volume development preview with epilogues');
  const host=$('startChapterList');if(!host)return;const ctx=context();host.replaceChildren();
  for(const item of C.entries(ctx.s))host.append(card(item,ctx));
  $('startChapterNote').textContent=ctx.invalid?L('存档暂时无法读取；这里只展示篇章目录，原数据保留。','The save cannot be read. This is a chapter preview; your data is preserved.'):L('按旅程依次开启 · 点卷名查看条件与去处','Unlock in story order · Select a volume for its conditions and starting place');
@@ -54,7 +54,7 @@ function show(number){
  for(const item of all)list.append(card(item,ctx,chosen.number));
  const detail=document.createElement('section');detail.className='chapter-detail';detail.setAttribute('aria-label',L('篇章详情','Chapter details'));
  const head=document.createElement('h3'),tag=document.createElement('span'),summary=document.createElement('p');
- head.textContent=title(chosen);tag.className='chapter-status';tag.textContent=status(chosen,ctx);summary.textContent=chosen.description[en()?1:0];detail.append(tag,head,summary);
+ head.textContent=title(chosen);tag.className='chapter-status';tag.textContent=status(chosen,ctx);summary.textContent=chosen.status==='locked'?L('这一卷尚未解封，卷名与经历将在开启后写入。下方保留开启条件和入口。','This volume is sealed. Its title and story will be written in when it opens; its conditions and entrance remain below.'):chosen.description[en()?1:0];detail.append(tag,head,summary);
  const place=world[chosen.scene],obj=place.objects.find(o=>o.id===chosen.object),where=document.createElement('p');where.className='chapter-start-place';
  where.textContent=L('开篇地点：','Starting place: ')+(en()?window.NanlanI18n.t(place.name):place.name)+(obj?' · '+(en()?window.NanlanI18n.t(obj.label):obj.label):'');detail.append(where);
  const requirements=document.createElement('ul');requirements.className='chapter-requirements';
@@ -63,7 +63,7 @@ function show(number){
  detail.append(requirements);
  if(chosen.number==='extras'){
   const extra=N.voyage.get(ctx.s)?.extra,grid=document.createElement('div');grid.className='epilogue-directory';
-  N.voyage.bonus.forEach((b,id)=>{const row=document.createElement('p'),name=document.createElement('strong'),stateLabel=document.createElement('small');name.textContent=b.title[en()?1:0];stateLabel.textContent=extra?.done?.[id]?L('已完成 · 可重看','Complete · Recall available'):extra?.active?.id===id?(extra.active.paused?L('已暂缓 · 可续上','Paused · Resume available'):L('邀约进行中','Invitation in progress')):chosen.ready?L('可邀约','Available'):L('第六卷主线完成后开启','After Volume VI');row.append(name,stateLabel);grid.append(row);});detail.append(grid);
+  N.voyage.bonus.forEach((b,id)=>{const row=document.createElement('p'),name=document.createElement('strong'),stateLabel=document.createElement('small');name.textContent=chosen.status==='locked'?L('番外 '+(id+1)+' · 未解封','Epilogue '+(id+1)+' · Sealed'):b.title[en()?1:0];stateLabel.textContent=extra?.done?.[id]?L('已完成 · 可重看','Complete · Recall available'):extra?.active?.id===id?(extra.active.paused?L('已暂缓 · 可续上','Paused · Resume available'):L('邀约进行中','Invitation in progress')):chosen.ready?L('可邀约','Available'):L('第六卷主线完成后开启','After Volume VI');row.append(name,stateLabel);grid.append(row);});detail.append(grid);
  }
  if(chosen.recordIssue||ctx.invalid){const note=document.createElement('p');note.className='chapter-warning';note.textContent=L('存档中有需要核对的记录。原进度已保留，请先从行囊备份进度；这里不会重置任务或物资。','Some save records need review. Your progress is preserved; back it up from the satchel. No tasks or belongings are reset here.');detail.append(note);}
  browser.append(list,detail);$('panelExtra').append(browser);
@@ -87,7 +87,7 @@ $('chaptersOpen').onclick=()=>show();
 refreshTitle();
 document.addEventListener('nanlanlanguagechange',()=>{refreshTitle();if(!$('dialog').hidden&&dialogKind==='chapter-entry')show(selected);});
 const dictionary=window.NANLAN_EN||(window.NANLAN_EN={});
-Object.assign(dictionary,{'六卷与番外':'Six Volumes & Epilogues','篇章一览':'The Whole Journey','步步有应':'Every Step Answered','岁末家宴已完成，请到正厅读南街铺讯，开启第二卷后再进县城。':'The year-end feast is complete. Read the South Street notice in the hall to begin Volume II before visiting town.','请先完成第一卷并分享岁末家宴，再到正厅与家人读南街铺讯。':'Complete Volume I and share the year-end feast, then read the South Street notice with your family in the hall.'});
+Object.assign(dictionary,{'六卷与番外':'Six Volumes & Epilogues','篇章一览':'The Whole Journey','新岁有凭':'A New Year, a Clear Record','岁末家宴已完成，请到正厅读南街铺讯，开启第二卷后再进县城。':'The year-end feast is complete. Read the South Street notice in the hall to begin Volume II before visiting town.','请先完成第一卷并分享岁末家宴，再到正厅与家人读南街铺讯。':'Complete Volume I and share the year-end feast, then read the South Street notice with your family in the hall.'});
 Object.assign(dictionary,{'待开放':'Not yet open','等待开放':'Not yet open','已开放':'Open','查找地点或卷数':'Search places or volumes','搜索地点或卷数，如：新河埠、第三卷、灶台':'Search a place or volume: Wharf, Volume III, Stove','全部地点与卷数清单':'All places and opening volumes'});
 Object.assign(dictionary,{'家人与行李':'Family and Luggage','新春家议 · 第二卷':'New Year Family Discussion · Volume II','门侧的旧牌竹箱':'Bamboo Chest beside the Door','湾口望帆处':'Sail Lookout at the Bay','岁序簿 · 家人与伙伴':'Book of Seasons · Family and Companions','春潮来信与旅途册':'Spring-tide Letter and Travel Book','闲日邀约 · 六篇番外':'Days Together · Six Epilogues'});
 window.NanlanI18n?.configure(dictionary);

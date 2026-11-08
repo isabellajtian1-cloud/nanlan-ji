@@ -6,6 +6,7 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
   const SAVE_KEY = 'nanlan_v20';
+  const chronicle=typeof module==='object'&&module.exports?require('./chronicle-model.js'):globalThis.NanlanChronicle;
   const bonds=typeof module==='object'&&module.exports?require('./bonds-model.js'):globalThis.NanlanBonds;
   const conversations=typeof module==='object'&&module.exports?require('./conversations.js'):globalThis.NanlanConversations;
   const rural=typeof module==='object'&&module.exports?require('./rural-model.js'):globalThis.NanlanRural;
@@ -117,7 +118,7 @@
       tideAnchor:null,tideTutorialUsed:false,stallUntil:null,featured:null,lastNotice:'先和家人完成门前交接。'
     };
     for(const id of Object.keys(titles).filter(id=>!V3_ORDER.includes(id)&&!V4_ORDER.includes(id)&&!V5_ORDER.includes(id)&&!SEASON5_ORDER.includes(id)&&!V6_ORDER.includes(id))) s.quests[id]={status:V2_ORDER.includes(id)?'DEFERRED_V2':id==='M01'?'ACTIVE':'LOCKED'};
-    s.calendar=climate.infer(s);
+    s.calendar=climate.infer(s);s.chronicle=chronicle.fresh(s);
     return s;
   }
   function activeOrder(s){return s.flags.voyageStarted?V6_ORDER:s.flags.season5Started&&SEASON5_ORDER.some(id=>s.quests[id]?.status==='ACTIVE')?SEASON5_ORDER:s.flags.volume5Started?V5_ORDER:s.flags.season5Started?SEASON5_ORDER:s.flags.volume4Started?V4_ORDER:s.flags.volume3Started?V3_ORDER:s.flags.volume2Started?V2_ORDER:ORDER;}
@@ -288,7 +289,7 @@
     estate.normalise(value,requireThat);
     // Finish only a fully recorded, active final feast; never invent missing steps.
     if(!value.flags.volume2Started&&value.quests.M20?.status==='ACTIVE'&&ORDER.slice(0,-1).every(id=>done(value,id))&&steps.M20.every(([flag])=>value.flags[flag]))reconcile(value);
-    climate.normalise(value,requireThat);
+    climate.normalise(value,requireThat);chronicle.normalise(value,requireThat);
     return copy(value);
   }
   class Engine {
@@ -319,7 +320,7 @@
     commit(key,change) {
       const next=copy(this.state),previous=current(next);
       try{const changed=change(next);if(changed===false)return {ok:true,duplicate:true,message:'这件事已经办好了。'};
-        reconcile(next);climate.sync(this.state,next);next.revision++;this.write(next);this.state=next;
+        reconcile(next);climate.sync(this.state,next);chronicle.record(this.state,next,key);next.revision++;this.write(next);this.state=next;
         return {ok:true,completed:previous!==current(next)?previous:null,message:next.lastNotice};}
       catch(e){return {ok:false,message:e.userMessage||'保存失败，本次动作未结算。原有进度与物品已保留，请重试。'};}
     }

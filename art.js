@@ -17,4 +17,4 @@ return `<svg viewBox="0 0 64 64" aria-hidden="true" focusable="false" xmlns="htt
 function ellipse(x,y,rx,ry,color){ctx.fillStyle=color;ctx.beginPath();ctx.ellipse(x,y,rx,ry,0,0,Math.PI*2);ctx.fill()}
 function resourceSource(type){if(fruitTypes.includes(type))return window.NANLAN_DATA.assets.fruitTrees;return type==='weed'?window.NANLAN_DATA.assets.weedPatch:window.NANLAN_DATA.assets['resource_'+type];}
 function resourceArt(type){if(fruitTypes.includes(type))return `<svg width="58" height="58" viewBox="${fruitTypes.indexOf(type)*512} 560 512 464" aria-hidden="true"><image href="${resourceSource(type)}" width="1536" height="1024"/></svg>`;return '<img width="38" height="38" style="object-fit:contain;flex:none" alt="" src="'+resourceSource(type)+'">';}
-const resourceImages={};for(const type of resourceTypes){const im=new Image();im.src=resourceSource(type);resourceImages[type]=im;}
+function resourceImage(type){const key=fruitTypes.includes(type)?'fruitTrees':type==='weed'?'weedPatch':'resource_'+type;if(!images[key])loadImage(key);return images[key];}

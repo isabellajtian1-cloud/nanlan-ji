@@ -21,9 +21,8 @@
     globalThis.NanlanI18n.configure(globalThis.NANLAN_EN);
   }
   const L=(zh,en)=>deskText(zh,en);
-  const attempted=new Set();
   function preload(key){
-    if(!attempted.has(key)){attempted.add(key);void loadImage(key);}
+    if(!images[key])void loadImage(key);
   }
   function backdrop(s,scene,fallback){
     const key=E.asset(s,scene);
@@ -75,6 +74,5 @@
     }
   }
   $('estateOpen').onclick=show;
-  preload('estateOld');
   globalThis.NanlanEstateUI={backdrop,preview,drawGift};
 })();

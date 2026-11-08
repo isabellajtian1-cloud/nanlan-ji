@@ -41,7 +41,7 @@ function refresh(s=state(),live=started){
 }
 function frames(v,s=state()){
  const rows=window.NANLAN_ENDING_SCENES[v.key]||window.NANLAN_ENDING_SCENES[v.number];
- return rows.map(r=>({duration:9000,asset:r[0]==='$meal'?(s.gender==='male'?'familyMealMale':'familyMealFemale'):r[0],environment:r[0]==='$meal'?'hall':r[0]==='backHallReady'?'backHall':r[0],roles:r[5]?[r[5]]:[],title:[r[1],r[2]],line:[r[3],r[4]]}));
+ return rows.map(r=>({duration:9000,asset:r[0]==='$meal'?(s.gender==='male'?'familyMealMale':'familyMealFemale'):r[0],environment:r[0]==='$meal'?'hall':r[0]==='backHallReady'?'backHall':r[0],roles:r[5]?[r[5]]:[],title:[r[1],r[2]],line:[r[3],r[4]]})).concat(window.NanlanRecords?[window.NanlanRecords.summaryFrame(v,s)]:[]);
 }
 function play(key){
  const v=specs.find(x=>x.key===String(key));if(!v||!completed().some(x=>x.key===v.key))return false;
@@ -87,6 +87,7 @@ function choices(key){
    navButton(L('查看开启条件与去处','View the Conditions and Starting Place'),()=>window.NanlanChapters.show(e.number),'ending-next-conditions');
   }
  }
+ navButton(L('我的这一卷 · 成绩与选择','My Chapter · Results & Choices'),()=>window.NanlanRecords.chapterSummary(v.key),'ending-personal-record');
  navButton(L('回看这一卷的收卷绘景','Replay This Chapter’s Closing'),()=>play(v.key),'ending-replay');
  const note=document.createElement('p');note.className='ending-note';note.textContent=L('收卷绘景与回看不会推进时辰、扣除物资或再次结算奖励。','Watching or replaying the closing does not advance time, spend materials or grant rewards again.');$('panelExtra').append(note);
 }

@@ -125,6 +125,7 @@ function paint(retry=false){
  if(artCleanup)artCleanup();clearTimeout(artTimer);
  const s=shots[index],A=window.NANLAN_DATA.assets,token=++paintToken;host.dataset.shot=String(index);
  host.classList.toggle('opening-detail',s.detail===true);
+ host.classList.toggle('opening-summary',s.summary===true);
  imagePending=true;imageFailed=false;
  const img=document.createElement('img');img.alt=P(s.title);img.draggable=false;img.hidden=true;
  const shade=document.createElement('div');shade.className='opening-shade';

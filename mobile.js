@@ -1,6 +1,6 @@
 /* On phones, keep the view clear and open information only when requested. */
 (()=>{'use strict';
-const media=matchMedia('(max-width:600px), (max-width:950px) and (max-height:520px)'),L=(zh,en)=>window.NanlanI18n?.language==='en'?en:zh;
+const media=matchMedia('(max-width:700px), (max-width:1200px) and (max-height:600px)'),L=(zh,en)=>window.NanlanI18n?.language==='en'?en:zh;
 let looking=false,resume=false;
 const status=document.createElement('button'),tools=document.createElement('button'),view=document.createElement('button');
 status.id='mobileStatus';tools.id='mobileTools';view.id='mobileOverview';
@@ -19,6 +19,10 @@ view.onclick=()=>{if(looking){closeOverview();return;}if(!active||transitioning)
 const taskClick=$('taskToggle').onclick;$('taskToggle').onclick=()=>{if(media.matches){if(active)showQuest();}else taskClick();};
 media.addEventListener('change',()=>{closeOverview();refresh();});
 window.addEventListener('keydown',e=>{if(!looking)return;if(e.key==='Tab'||e.target===view&&['Enter',' '].includes(e.key))return;e.preventDefault();e.stopImmediatePropagation();if(e.key==='Escape')closeOverview();},true);
-window.NanlanMobile={refresh,compact:()=>media.matches,isOverview:()=>looking};refresh();
+let safe=null;
+function measure(){if(!media.matches){safe=null;return;}const a=$('actions').getBoundingClientRect(),t=$('tasks').getBoundingClientRect(),r=$('hud').getBoundingClientRect(),left=Math.max(10,status.getBoundingClientRect().left-r.left),right=Math.max(10,r.right-view.getBoundingClientRect().right);safe={left,top:Math.max(54,t.bottom-r.top+8),width:Math.max(1,r.width-left-right),bottom:Math.min(r.height-58,a.top-r.top-8)};}
+window.addEventListener('resize',()=>{keys={};path=[];moving=false;measure();});
+const oldRefresh=refresh;function measuredRefresh(){oldRefresh();measure();}
+window.NanlanMobile={refresh:measuredRefresh,compact:()=>media.matches,isOverview:()=>looking,safeFrame:()=>safe};measuredRefresh();
 })();
 

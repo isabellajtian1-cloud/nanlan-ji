@@ -53,7 +53,7 @@ let lastQuestSignature='';
 let completionFx=null;
 let gardenWorkFx=null;
 const pantryDraft={rice:0,ingredient:0,seed:0,repair:0,rope:0};
-const images={},imagePromises={};
+const images={};
 DATA.assets.bedDamage='bed-damage-v39.png';
 DATA.assets.storePickups='store-pickups-v39.png';
 DATA.assets.walkFemale='player-female-walk-v39.png';
@@ -72,26 +72,8 @@ DATA.assets.villageLetter='village-letter-v3915.webp';
 
 function state(){return engine.state;}
 function clean(text){return String(text).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
-function loadImage(id){
-  const key=world[id]?.asset||id;if(imagePromises[key])return imagePromises[key];
-  const source=DATA.assets[key];if(!source)return Promise.resolve(false);
-  imagePromises[key]=new Promise(resolve=>{
-    const sources=[source,DATA.assets[key+'_fallback']].filter((item,index,list)=>item&&list.indexOf(item)===index);
-    function attempt(index){
-      const candidate=sources[Math.floor(index/2)];
-      if(!candidate){delete imagePromises[key];resolve(false);return;}
-      const im=new Image();let finished=false;
-      const timer=setTimeout(()=>finish(false),15000);
-      function finish(ok){if(finished)return;finished=true;clearTimeout(timer);im.onload=im.onerror=null;
-        if(ok){images[key]=im;resolve(true);}else attempt(index+1);
-      }
-      im.onload=()=>finish(im.naturalWidth>0);im.onerror=()=>finish(false);
-      im.src=candidate+(candidate.includes('?')?'&':'?')+'build=396'+(index%2?'&retry='+Date.now():'');
-    }
-    attempt(0);
-  });
-  return imagePromises[key];
-}
+const artwork=window.NanlanAssetLoader({images,assets:DATA.assets,resolveKey:id=>world[id]?.asset||id});
+function loadImage(id,options){return artwork.load(id,options);}
 async function loadSceneAssets(scene,sceneState=state()){
   const required=[scene,'playerIdle',sceneState.gender==='male'?'walkMale':'walkFemale'];
   if(scene==='prefTea')required.push('teaServings','teaExtras');
@@ -107,26 +89,28 @@ async function loadSceneAssets(scene,sceneState=state()){
   if(scene==='hall')required.push('diningTable','familyMealFemale','familyMealMale');
   if(scene==='village')required.push('villageLetter');
   const unique=[...new Set(required.map(id=>world[id]?.asset||id))];
-  const overlay=$('sceneLoading'),previous=document.activeElement;
-  let ready=0,finished=0;
+  const overlay=$('sceneLoading'),previous=document.activeElement,retry=$('sceneLoadRetry'),cancel=$('sceneLoadCancel');
+  let generation=0,closed=false,slow;
   $('loadingTitle').textContent=deskText('正在走进 · '+world[scene].name,'Entering · '+world[scene].name);
-  $('loadingHint').textContent=deskText('正在备好场景与人物。','Preparing the scene and characters.');
-  const progress=()=>{
-    $('loadingProgress').max=unique.length;$('loadingProgress').value=ready;
-    $('loadingCount').textContent=deskText('已备好 '+ready+' / '+unique.length,'Ready '+ready+' / '+unique.length);
-  };
-  progress();overlay.hidden=false;overlay.focus({preventScroll:true});
-  const slow=setTimeout(()=>{$('loadingHint').textContent=deskText('首次载入稍久，请稍候。原有进度已保留。','The first visit can take a little longer. Your saved progress is safe.');},5000);
-  try{
-    const results=await Promise.all(unique.map(async id=>{const ok=await loadImage(id);finished++;if(ok)ready++;progress();if(!ok)$('loadingHint').textContent=deskText('部分画面尚未备好，正在完成其余加载。','Some artwork is unavailable; finishing the remaining items.');return ok;}));
-    return finished===unique.length&&results.every(Boolean);
-  }finally{
-    clearTimeout(slow);overlay.hidden=true;settlePointerInput();
-    if(previous?.isConnected)previous.focus({preventScroll:true});
-  }
+  retry.textContent=deskText('重新连接并载入','Reconnect & Retry');cancel.textContent=deskText('暂不进入 · 保留进度','Cancel · Keep Progress');
+  overlay.hidden=false;overlay.focus({preventScroll:true});
+  return await new Promise(resolve=>{
+    function finish(ok){if(closed)return;closed=true;generation++;clearTimeout(slow);if(!ok)unique.forEach(id=>artwork.cancel(id));retry.onclick=cancel.onclick=null;overlay.hidden=true;settlePointerInput();if(previous?.isConnected)previous.focus({preventScroll:true});resolve(ok);}
+    async function run(restart=false){
+      artwork.cancelOther(unique);
+      const mine=++generation;clearTimeout(slow);let ready=unique.filter(id=>images[id]?.naturalWidth>0).length;
+      const progress=()=>{if(closed||mine!==generation)return;$('loadingProgress').max=unique.length;$('loadingProgress').value=ready;$('loadingCount').textContent=deskText('已备好 '+ready+' / '+unique.length,'Ready '+ready+' / '+unique.length);};
+      progress();$('loadingHint').textContent=deskText('正在备好场景与人物。可随时重新连接或返回。','Preparing artwork. You can reconnect or return at any time.');
+      slow=setTimeout(()=>{if(!closed&&mine===generation)$('loadingHint').textContent=deskText('连接较慢；本轮最多等候 16 秒。已载好的画面会保留。','The connection is slow. This attempt lasts at most 16 seconds; completed artwork is kept.');},5000);
+      const results=await Promise.all(unique.map(async id=>{const cached=!!images[id]?.naturalWidth,ok=await loadImage(id,{restart});if(ok&&!cached)ready++;progress();return ok;}));
+      if(closed||mine!==generation)return;clearTimeout(slow);
+      if(results.every(Boolean))finish(true);else $('loadingHint').textContent=deskText('连接未完成，请重新连接，或暂不进入。原存档没有改变。','Artwork could not finish loading. Reconnect or return; your save is unchanged.');
+    }
+    retry.onclick=()=>run(true);cancel.onclick=()=>finish(false);run();
+  });
 }
 // Loading is a temporary modal: keyboard shortcuts cannot change the save or open another panel underneath it.
-window.addEventListener('keydown',e=>{if(!$('sceneLoading').hidden&&!e.ctrlKey&&!e.metaKey&&!e.altKey){e.preventDefault();e.stopImmediatePropagation();}},true);
+window.addEventListener('keydown',e=>{if(!$('sceneLoading').hidden&&!e.ctrlKey&&!e.metaKey&&!e.altKey){if(e.key==='Tab'||['Enter',' '].includes(e.key)&&e.target?.closest('#sceneLoading button'))return;e.preventDefault();e.stopImmediatePropagation();if(e.key==='Escape')$('sceneLoadCancel').click();}},true);
 function clearSceneNotice(){
   clearTimeout(messageTimer);messageTimer=0;$('message').replaceChildren();$('message').classList.add('fade');
 }
@@ -228,12 +212,13 @@ function activity(title,text,kind='general'){
   settlePointerInput();
   previousFocus=document.activeElement;active=false;path=[];keys={};moving=false;dialogKind=kind;
   showDialoguePortraits(title);$('speaker').textContent=title;$('line').textContent=text;$('panelExtra').replaceChildren();$('choices').replaceChildren();
-  $('dialog').classList.remove('arrival-mode','travel-confirm');
+  $('dialogNotice').after($('choices'));
+  $('dialog').classList.remove('arrival-mode','travel-confirm','mobile-tools-sheet');
   $('dialogKicker').textContent=kind==='quest'?'南澜记 · 眼前的事':'南澜小事';
   $('dialogQuestNavigate').hidden=true;
-  $('choices').hidden=false;$('next').hidden=true;$('dialog').hidden=false;$('skip').textContent=started?'返回游戏 ×':'返回启程页 ×';
+  $('choices').hidden=false;$('next').hidden=true;$('next').onclick=null;$('dialog').hidden=false;$('skip').textContent=started?'返回游戏 ×':'返回启程页 ×';
   $('dialog').scrollTop=0;
-  $('skip').onclick=closeDialog;$('skip').focus();if(!['arrival','pantry','town-shop','dialogue-scene','voyage-extra-story','voyage-memory'].includes(kind))window.NanlanDesktop?.dialogue(title,text);
+  $('skip').onclick=closeDialog;$('skip').focus();if(!['arrival','pantry','town-shop','dialogue-scene','voyage-extra-story','voyage-memory','volume2','decision-preview','player-records','seal-draft','seal-receipt','contract-record','paper-records'].includes(kind))window.NanlanDesktop?.dialogue(title,text);
 }
 function button(label,fn,id,secondary=false,showOutcome=true){
   const b=document.createElement('button');b.textContent=label;b.dataset.action=id||label;
@@ -685,6 +670,7 @@ function showBag(){
     row.innerHTML=inventoryArt(id)+'<div><strong>'+N.itemNames[id]+' ×'+N.quantity(s,id)+(required[id]?'<em>任务需要 '+required[id]+'</em>':'')+(N.available(s,id)!==N.quantity(s,id)?'（预留 '+(N.quantity(s,id)-N.available(s,id))+'）':'')+'</strong><small>'+itemSource(id)+'</small><small class="inventory-record-note">'+clean(window.NanlanContinuityModel.documentNote(s,id,window.NanlanI18n?.language==='en'))+'</small></div>';grid.append(row);
   }$('panelExtra').append(grid);
   if(s.flags.volume2Started||N.done(s,'M20')){navButton(deskText('铺讯与手记','Shop Notice & Notes'),()=>window.NanlanContinuity.handbook(),'bag-papers');navButton(deskText('账房 · 租约与押金','Accounts · Lease & Deposit'),()=>window.NanlanContinuity.lease(),'bag-contract');}
+  window.NanlanRecords?.links();
   if(!keys.length){const empty=document.createElement('p');empty.textContent='行囊暂时没有物资，采集所得会显示在这里。';$('panelExtra').append(empty);}
   if(s.season5)navButton('岁序长青 · 查看共事与试样',()=>window.NanlanSeasons.ledger(),'bag-seasons');
   if(s.scholar?.recipe)globalThis.NanlanScholar?.bag();
@@ -1573,7 +1559,7 @@ function update(dt){
   const keyboardSteering=!!(dx||dy);if(keyboardSteering){path=[];cancelNavigation();}
   else while(path.length){
     const p=path[0],distance=Math.hypot(p.x-state().player.x,p.y-state().player.y);
-    if(distance<(p.object?.type==='door'?2:7)){path.shift();if(p.object){moving=false;interact(p.object);return;}continue;}
+    if(distance<(p.object?.type==='door'?2:path.length===1?.75:7)){path.shift();if(p.object){moving=false;interact(p.object);return;}continue;}
     targetDistance=distance;dx=(p.x-state().player.x)/distance;dy=(p.y-state().player.y)/distance;break;
   }
   moving=!!(dx||dy);
@@ -1596,9 +1582,18 @@ function setupCamera(rect,now){
   const portraitScale=vh>vw?Math.max(fullScale,Math.min(vw/650,vh/H)):fullScale;
   const whole=!started||overviewCamera||now<cameraOverviewUntil;
   const targetScale=whole?fullScale:portraitScale*(window.NanlanMobile?.compact()?1.05:1.2)*EXPLORATION_SCALE;
-  const targetX=whole?W/2:s.player.x;
+  const mobile=window.NanlanMobile?.compact(),safe=!whole&&mobile?window.NanlanMobile.safeFrame?.():null;
+  const resized=camera.vw!==vw||camera.vh!==vh||camera.scene!==s.scene||camera.whole!==whole;
+  let targetX=whole?W/2:s.player.x;
   // Frame the character's body above its feet without hiding the path ahead.
-  const targetY=whole?H/2:s.player.y-34;
+  let targetY=whole?H/2:s.player.y-34;
+  // A small walking window lets feet travel across the road before the camera follows.
+  // Stop following immediately at rest; scenery must not slide under a planted actor.
+  if(mobile&&!whole&&!resized&&camera.focusX!==undefined){
+    const follow=(current,target,radius)=>current+Math.sign(target-current)*Math.max(0,Math.abs(target-current)-radius);
+    targetX=moving?follow(camera.focusX,targetX,Math.min(90,vw/targetScale*.16)):camera.focusX;
+    targetY=moving?follow(camera.focusY,targetY,Math.min(55,vh/targetScale*.09)):camera.focusY;
+  }
   const resize=camera.vw!==vw||camera.vh!==vh||camera.dpr!==dpr;
   const snap=resize||camera.scene!==s.scene||camera.started!==started||reduceCameraMotion.matches;
   const dt=Math.max(0,Math.min(.05,(now-(camera.time??now))/1000));
@@ -1606,12 +1601,12 @@ function setupCamera(rect,now){
   const move=(current,target)=>current===undefined||Math.abs(current-target)<.02?target:current+(target-current)*blend;
   const scale=move(camera.scale,targetScale);
   const focusX=move(camera.focusX,targetX),focusY=move(camera.focusY,targetY);
-  const offset=(viewport,worldSize,focus)=>{
+  const offset=(viewport,worldSize,focus,center=viewport/2)=>{
     const extent=worldSize*scale;
     if(extent<=viewport)return (viewport-extent)/2;
-    return Math.max(viewport-extent,Math.min(0,viewport/2-focus*scale));
+    return Math.max(viewport-extent,Math.min(0,center-focus*scale));
   };
-  camera={scale,ox:offset(vw,W,focusX),oy:offset(vh,H,focusY),focusX,focusY,dpr,vw,vh,scene:s.scene,started,time:now};
+  camera={scale,ox:offset(vw,W,focusX,safe?safe.left+safe.width/2:vw/2),oy:offset(vh,H,focusY,safe?(safe.top+safe.bottom)/2:vh/2),focusX,focusY,dpr,vw,vh,scene:s.scene,started,whole,time:now};
 }
 function polygon(points,fill,stroke){
   ctx.beginPath();points.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));ctx.closePath();ctx.fillStyle=fill;ctx.fill();if(stroke){ctx.strokeStyle=stroke;ctx.stroke();}
@@ -1727,6 +1722,11 @@ function renderCharacter(t){
   if(pose.flip)ctx.scale(-1,1);
   ctx.filter='brightness('+(1-N.daylight(s).darkness*.28)+')';ctx.drawImage(im,...pose.source,...pose.destination);ctx.restore();
 }
+function drawGatheredResource(im,o,size){
+  const height=size*im.naturalHeight/im.naturalWidth,flat=['wood','stone','shell','clam','seaweed'].includes(o.type),ground=o.y+2;
+  ctx.save();const shadow=ctx.createRadialGradient(o.x,ground,0,o.x,ground,size*.48);shadow.addColorStop(0,'#25302262');shadow.addColorStop(1,'#25302200');ctx.fillStyle=shadow;ctx.beginPath();ctx.ellipse(o.x,ground,size*.46,flat?size*.09:size*.12,0,0,Math.PI*2);ctx.fill();
+  ctx.filter='brightness('+(1-N.daylight(state()).darkness*.42)+') saturate(.86)';ctx.drawImage(im,o.x-size/2,ground-height,size,height);ctx.restore();
+}
 function isGatherable(o){return resourceTypes.includes(o.type)||o.action==='garden';}
 function storePickup(o){return state().scene==='store'?({tools:0,bucket:1,axe:2}[o.action]):undefined;}
 function personBounds(role,x,y){
@@ -1749,19 +1749,21 @@ function drawGroundedProp(im,x,y,w,h){
 }
 function drawEntranceSigns(){
   if(!sceneGuides||!started||window.NanlanMobile?.isOverview())return;
-  const scale=camera.scale,left=-camera.ox/scale,right=(camera.vw-camera.ox)/scale,top=-camera.oy/scale,bottom=(camera.vh-camera.oy)/scale;
+  const scale=camera.scale,mobile=window.NanlanMobile?.compact(),safe=mobile?window.NanlanMobile.safeFrame?.():null,left=((safe?.left||0)-camera.ox)/scale,right=((safe?safe.left+safe.width:camera.vw)-camera.ox)/scale,top=((safe?.top||0)-camera.oy)/scale,bottom=((safe?.bottom||camera.vh)-camera.oy)/scale,p=state().player;
   for(const o of visibleObjects().filter(v=>v.type==='door'||v.id==='stove')){
-    if(o.x<left+20||o.x>right-20||o.y<top+22||o.y>bottom-35)continue;
-    const locked=!!objectGate(o),name=window.NanlanI18n?.t(o.id==='stove'?'灶台':o.label)||(o.id==='stove'?'灶台':o.label);
+    if(o.x<left+20||o.x>right-20||o.y<top+22||o.y>bottom-44/scale)continue;
+    const locked=!!objectGate(o),name=window.NanlanI18n?.t(o.id==='stove'?'灶台':o.label)||(o.id==='stove'?'灶台':o.label),named=!mobile||o.id===focusedObjectId||Math.hypot(o.x-p.x,o.y-p.y)<140;
     ctx.save();ctx.font='14px NanlanSerif,serif';
-    const width=Math.min(230,ctx.measureText(name).width+36),x=Math.max(left+4,Math.min(right-width/scale-4,o.x-width/scale/2)),y=o.y+10/scale;
-    ctx.translate(x,y);ctx.scale(1/scale,1/scale);ctx.fillStyle=locked?'#554b3bea':'#263f32ed';ctx.strokeStyle=locked?'#ae9970':'#e3c381';ctx.lineWidth=1;
-    ctx.beginPath();ctx.roundRect(0,0,width,28,5);ctx.fill();ctx.stroke();
-    ctx.strokeStyle='#e8d4a7';
+    const width=named?Math.min(230,ctx.measureText(name).width+36):30,height=30;
+    let x=Math.max(left+4,Math.min(right-width/scale-4,o.x-width/scale/2)),y=o.y+8/scale;
+    // Move a nearby nameplate aside if it would cover the player's body or feet.
+    if(mobile&&x<p.x+18&&x+width/scale>p.x-18&&y<p.y+8&&y+height/scale>p.y-70){x=p.x+25;if(x+width/scale>right)x=p.x-25-width/scale;}
+    ctx.translate(x,y);ctx.scale(1/scale,1/scale);ctx.fillStyle=locked?'#554b3bc0':'#263f32bf';ctx.strokeStyle=locked?'#ae9970':'#e3c381';ctx.lineWidth=1;
+    ctx.beginPath();ctx.roundRect(0,0,width,height,named?5:15);ctx.fill();ctx.stroke();ctx.strokeStyle='#e8d4a7';
     if(o.id==='stove'){ctx.beginPath();ctx.ellipse(14,11,6,2,0,0,Math.PI*2);ctx.moveTo(8,11);ctx.quadraticCurveTo(8,20,14,20);ctx.quadraticCurveTo(20,20,20,11);ctx.stroke();}
     else{ctx.strokeRect(9,7,10,14);ctx.beginPath();ctx.moveTo(12,10);ctx.lineTo(16,14);ctx.lineTo(12,18);ctx.stroke();}
-    ctx.fillStyle=locked?'#cfbf9f':'#f7e8c6';ctx.textBaseline='middle';ctx.fillText(name,27,14,width-33);ctx.restore();
-    hitTargets.push({o,rect:{x,y,w:width/scale,h:28/scale},anchor:null});
+    if(named){ctx.fillStyle=locked?'#cfbf9f':'#f7e8c6';ctx.textBaseline='middle';ctx.fillText(name,27,15,width-33);}ctx.restore();
+    const pad=mobile?7/scale:0;hitTargets.push({o,rect:{x:x-pad,y:y-pad,w:width/scale+pad*2,h:height/scale+pad*2},anchor:null});
   }
 }
 function render(){
@@ -1812,7 +1814,7 @@ function render(){
       continue;
     }
     if(o.action?.startsWith('sealGather')){
-      const wood=o.action==='sealGatherWood',im=resourceImages[wood?'wood':'stone'],w=wood?44:32,h=im?.naturalWidth?w*im.naturalHeight/im.naturalWidth:35;
+      const wood=o.action==='sealGatherWood',im=resourceImage(wood?'wood':'stone'),w=wood?44:32,h=im?.naturalWidth?w*im.naturalHeight/im.naturalWidth:35;
       if(im?.naturalWidth)ctx.drawImage(im,o.x-w/2,o.y-h,w,h);
       hitTargets.push({o,rect:null,anchor:{x:o.x-24,y:o.y-55,w:48,h:60}});
       if(selected||nearObject(o)){ctx.save();ctx.strokeStyle='#e8d8a7';ctx.lineWidth=1.2;ctx.beginPath();ctx.ellipse(o.x,o.y-3,18,6,0,0,Math.PI*2);ctx.stroke();ctx.restore();}
@@ -1869,8 +1871,8 @@ function render(){
     if(selected||isObjective)ellipse(o.x,o.y,selected?18:13,selected?8:5,locked?'#80674988':selected?'#f4cb6faa':'#f4e1a066');
     if(selected||isObjective){ctx.save();ctx.strokeStyle=isObjective?'#9bc6b3':'#ebc66f';ctx.lineWidth=selected?2.4:1.5;ctx.globalAlpha=.72+.22*Math.sin(time/240);ctx.beginPath();ctx.ellipse(o.x,o.y,selected?25:20,selected?11:9,0,0,Math.PI*2);ctx.stroke();ctx.restore();}
     if(resourceTypes.includes(o.type)&&!(o.type==='weed'&&s.scene==='yard')){
-      const im=resourceImages[o.type],size={herb:38,wood:48,stone:38,bamboo:49,mushroom:33,shoot:35,shell:28,seaweed:39,clam:27,weed:58,ginseng:43,agarwood:64,huali:68}[o.type];
-      if(im?.naturalWidth){const height=size*im.naturalHeight/im.naturalWidth;ctx.drawImage(im,o.x-size/2,o.y-height+3,size,height);}
+      const im=resourceImage(o.type),size={herb:38,wood:48,stone:38,bamboo:49,mushroom:33,shoot:35,shell:28,seaweed:39,clam:27,weed:58,ginseng:43,agarwood:64,huali:68}[o.type];
+      if(im?.naturalWidth)drawGatheredResource(im,o,size);
     }
     // Resources have only physical hit areas; no floating nameplate or leader line.
     if(isGatherable(o)){
@@ -1880,7 +1882,7 @@ function render(){
       const harvestable=o.action!=='garden'||N.crop(s).ready;
       if(harvestable){
         const phase=(time/1000+(o.x+o.y)/97)%4.8;
-        const glow=(selected||nearObject(o)) ? .55 : Math.max(0,1-Math.abs(phase-1)/.65)*.45;
+        const glow=(selected||nearObject(o)) ? .22 : 0;
         if(glow>0){ctx.save();ctx.globalAlpha=glow;const g=ctx.createRadialGradient(o.x+4,o.y-18,0,o.x+4,o.y-18,6);g.addColorStop(0,'#fff2c6');g.addColorStop(1,'#fff2c600');ctx.fillStyle=g;ctx.fillRect(o.x-2,o.y-24,12,12);ctx.restore();}
       }
       continue;
@@ -1899,7 +1901,7 @@ function render(){
 }
 function frame(t){
   const dt=Math.min(.1,(t-(lastFrame||t))/1000);lastFrame=t;
-  try{update(dt);render();if(t-lastHud>300){refreshHud();lastHud=t;}
+  try{update(dt);if($('sceneLoading').hidden)render();if(t-lastHud>300){refreshHud();lastHud=t;}
     if(!window.NanlanSettings?.isOpen())void window.NanlanProduction?.maybeMorning();
     window.NanlanAudio?.setEnvironment(window.NanlanOpening?.environment()||world[state().scene].soundScene||state().scene,window.NanlanOpening?.running()?false:N.daylight(state()).darkness>.25,started&&active&&moving);
     if(started&&active&&t-lastAutosave>20000){const r=engine.save();$('saveState').textContent=r.ok?(engine.memoryOnly?'仅本次试玩':'已保存'):'自动保存失败 · 请手动保存';lastAutosave=t;}
@@ -2071,7 +2073,7 @@ window.addEventListener('keyup',e=>{const k=e.key.toLowerCase();keys[k]=false;if
 window.addEventListener('blur',()=>{keys={};path=[];moving=false;});
 document.addEventListener('visibilitychange',()=>{keys={};path=[];moving=false;if(document.hidden){active=false;if(started)engine.save();}else{active=started&&$('dialog').hidden&&$('gallery').hidden&&$('worldMap').hidden&&!transitioning&&!window.NanlanOpening?.running()&&!window.NanlanSettings?.isOpen()&&!window.NanlanMobile?.isOverview();lastFrame=performance.now();}});
 document.addEventListener('keydown',e=>{
-  if(e.key!=='Tab')return;const root=!$('gallery').hidden?$('gallery'):!$('worldMap').hidden?$('worldMap'):!$('dialog').hidden?$('dialog'):null;if(!root)return;
+  if(e.key!=='Tab')return;const root=!$('sceneLoading').hidden?$('sceneLoading'):!$('gallery').hidden?$('gallery'):!$('worldMap').hidden?$('worldMap'):!$('dialog').hidden?$('dialog'):null;if(!root)return;
   const buttons=[...root.querySelectorAll('button:not([hidden]):not(:disabled),input')];if(!buttons.length)return;
   if(e.shiftKey&&document.activeElement===buttons[0]){e.preventDefault();buttons[buttons.length-1].focus();}
   else if(!e.shiftKey&&document.activeElement===buttons[buttons.length-1]){e.preventDefault();buttons[0].focus();}
@@ -2080,7 +2082,7 @@ function resumeAfterFocus(){lastFrame=performance.now();active=started&&$('start
 window.addEventListener('blur',()=>{keys={};path=[];moving=false;active=false;if(started)engine.save();});
 window.addEventListener('focus',resumeAfterFocus);
 window.addEventListener('storage',e=>{
- if(e.key!==N.SAVE_KEY||e.newValue===engine.loadedRaw)return;
+ if(e.key!==N.SAVE_KEY||e.newValue===engine.loadedRaw||localStorage.getItem(N.SAVE_KEY)===engine.loadedRaw)return;
  storedRaw=e.newValue;
  if(!started){$('continueGame').hidden=!storedRaw;window.NanlanChapterMark?.refresh();window.NanlanChapters?.refreshTitle();return;}
  active=false;path=[];keys={};moving=false;

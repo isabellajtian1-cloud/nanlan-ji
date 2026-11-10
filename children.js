@@ -43,7 +43,7 @@ function home(refresh){
 }
 function draw(scene){const a=state().children;if(!a)return;const placed=M.keepsakes.filter(k=>a.places[k]===scene);if(!placed.length)return;
  const img=images.kidsGifts;if(!img){loadImage('kidsGifts');return;}const half=img.naturalWidth/2;
- placed.forEach((k,j)=>{const w=k==='duckStone'?14:20,h=w*img.naturalHeight/half,x=(scene==='hall'?596:464)+20*j,y=scene==='hall'?406:329;ctx.drawImage(img,k==='duckStone'?0:half,0,half,img.naturalHeight,x,y-h,w,h);});
+ placed.forEach((k,j)=>{const w=k==='duckStone'?14:20,h=w*img.naturalHeight/half,x=(scene==='hall'?540:464)+20*j,y=scene==='hall'?238:329;ctx.drawImage(img,k==='duckStone'?0:half,0,half,img.naturalHeight,x,y-h,w,h);});
 }
 window.NanlanKids={play,home,art,desc,draw};
 })();

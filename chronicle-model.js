@@ -4,7 +4,7 @@
 const flags={'1':'volumeComplete','2':'volume2Complete','3':'volume3Complete','4':'volume4Complete','5':'season5Complete','5-old':'volume5Complete','6':'voyageComplete'};
 const round=n=>Math.round((n+Number.EPSILON)*100)/100;
 function volume(s){const f=s.flags;return f.voyageStarted?'6':f.season5Started?'5':f.volume5Started?'5-old':f.volume4Started?'4':f.volume3Started?'3':f.volume2Started?'2':'1';}
-function entry(s,partial){return {partial,startedAt:s.worldTick,finishedAt:null,income:0,expense:0,sales:0,crafted:0,people:[],decisions:[],closedProfit:0,closedDays:0};}
+function entry(s,partial){return {partial,extendedSales:true,startedAt:s.worldTick,finishedAt:null,income:0,expense:0,sales:0,crafted:0,people:[],decisions:[],closedProfit:0,closedDays:0};}
 function fresh(s){return {version:1,volumes:{[volume(s)]:entry(s,false)}};}
 function normalise(s,need){
  if(!s.chronicle){s.chronicle={version:1,volumes:{}};const k=volume(s);if(!s.flags[flags[k]])s.chronicle.volumes[k]=entry(s,true);return;}
@@ -17,10 +17,12 @@ function record(before,s,key){
  normalise(s,(ok,msg)=>{if(!ok)throw Error(msg);});const k=volume(s),from=volume(before);if(!s.chronicle.volumes[k]&&!s.flags[flags[k]])s.chronicle.volumes[k]=entry(s,k===from);
  const v=s.chronicle.volumes[k];if(!v||v.finishedAt!==null)return;
  const cash=s.coins-before.coins;if(cash>0)v.income=round(v.income+cash);else v.expense=round(v.expense-cash);
- const tx=s.transactions.slice(before.transactions.length);for(const t of tx)if(['sale','shopSale','bulk','order','neighborSale'].includes(t.type))v.sales=round(v.sales+t.amount);
+ const tx=s.transactions.slice(before.transactions.length);for(const t of tx)if(['sale','shopSale','bulk','order','neighborSale','seaSample','autumnFair','familyTrip','voyageSale','voyageShop'].includes(t.type))v.sales=round(v.sales+t.amount);
  if(key==='craft')v.crafted+=Object.entries(s.bag).reduce((n,[id,q])=>n+Math.max(0,q-(before.bag[id]||0)),0);
  const prior=new Set(people(before));for(const r of people(s))if(!prior.has(r)&&!v.people.includes(r))v.people.push(r);
  for(const [ck,value]of Object.entries(s.choices))if(before.choices[ck]!==value&&['string','number','boolean'].includes(typeof value)&&!/^chat|^bond:/.test(ck))v.decisions.push({key:ck,value,tick:s.worldTick});
+ for(const group of ['story3','story4','season5'])for(const [ck,value]of Object.entries(s[group]?.choices||{}))if(before[group]?.choices?.[ck]!==value&&['string','number','boolean'].includes(typeof value))v.decisions.push({key:group+'.'+ck,value,tick:s.worldTick});
+ for(const ck of ['companion','loadout','focus']){const value=s.choices?.voyage6?.[ck];if(value!==undefined&&value!==before.choices?.voyage6?.[ck])v.decisions.push({key:'voyage6.'+ck,value,tick:s.worldTick});}
  for(const [day,d]of Object.entries(s.story2.days))if(d.closed&&!before.story2.days[day]?.closed){v.closedDays++;v.closedProfit=round(v.closedProfit+d.profit);}
  if(s.flags[flags[k]])v.finishedAt=s.worldTick;
 }

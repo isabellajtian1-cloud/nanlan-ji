@@ -30,7 +30,7 @@ window.addEventListener('keydown',e=>{
  if(!$('dialog').hidden&&(k===' '||k==='arrowdown'||k==='arrowup')){
   stop();if(e.repeat)return;
   if(k===' '&&dialogKind==='kitchen'&&e.target?.closest('summary')){e.target.closest('summary').click();return;}
-  if(k===' '&&['paper-reading','kitchen'].includes(dialogKind)&&e.target?.closest('#dialog button')){e.target.closest('button').click();return;}
+  if(k===' '&&['paper-reading','paper-work','market-work','hall-work','lantern-work','family-letter','kitchen'].includes(dialogKind)&&e.target?.closest('#dialog button')){e.target.closest('button').click();return;}
   if(k===' '&&dialogKind==='arrival'){$('choices').querySelector('button:not(:disabled)')?.click();return;}
   if(k===' '){if(!$('next').hidden)$('next').click();else{const choices=[...$('choices').querySelectorAll('button:not(:disabled)')];if(!choices.length)closeDialog();else {choices[0].focus();notice('方向键选择，Enter 确认，Esc 返回。');}}return;}
   const options=dialogKind==='kitchen'

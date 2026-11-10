@@ -16,7 +16,7 @@
    im=new ImageType();const current=im;let ended=false;
    const end=ok=>{if(ended||settled||current!==im)return;ended=true;timers.clearTimeout(timer);current.onload=current.onerror=null;if(ok){finish(true);return;}current.src='';attempt(index+1);};
    current.onload=()=>end(current.naturalWidth>0);current.onerror=()=>end(false);timer=timers.setTimeout(()=>end(false),timeout);
-   const url=candidates[index];current.src=url+(url.includes('?')?'&':'?')+'build=6921'+(restart||index?'&retry='+Date.now()+'-'+nonce+'-'+index:'');
+   const url=candidates[index];current.src=url+(url.includes('?')?'&':'?')+'build=6922'+(restart||index?'&retry='+Date.now()+'-'+nonce+'-'+index:'');
   }
   jobs.set(key,job);attempt(0);return job.promise;
  }

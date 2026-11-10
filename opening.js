@@ -96,6 +96,7 @@ let shots=openingShots,filmTitle=['明代 · 从京城到南澜','Ming China · 
 let host=null,index=0,elapsed=0,playing=true,running=false,frame=0,last=0,lastAdvance=-Infinity,onFinish=null,focusBefore=null,wasActive=false,oldInert=false,imagePending=false,imageFailed=false,paintToken=0,artTimer=0,artCleanup=null,lastSeconds=-1;
 const en=()=>window.NanlanI18n?.language==='en',P=p=>p[en()?1:0];
 let total=shots.reduce((n,s)=>n+s.duration,0);
+let nextReadyTimer=0,firstReadyAt=0;
 function build(){
  if(host)return;
  host=document.createElement('section');host.id='openingFilm';host.hidden=true;host.setAttribute('role','dialog');host.setAttribute('aria-modal','true');host.setAttribute('aria-labelledby','openingTitle');host.dataset.noLocalize='';
@@ -112,7 +113,7 @@ function labels(){
  host.querySelector('#openingSkip').textContent=P(skipLabel);
  host.querySelector('#openingAuto').textContent=playing?P(['自动播放 开','Autoplay On']):P(['自动播放 暂停','Autoplay Paused']);
  host.querySelector('#openingAuto').setAttribute('aria-pressed',String(playing));
- host.querySelector('#openingNext').disabled=false;
+ const readyIn=Math.max(firstReadyAt,lastAdvance+260)-performance.now();host.querySelector('#openingNext').disabled=readyIn>0;clearTimeout(nextReadyTimer);if(readyIn>0)nextReadyTimer=setTimeout(()=>{if(running)labels();},readyIn+5);
  host.querySelector('#openingRetry').hidden=!imageFailed;host.querySelector('#openingRetry').textContent=P(['重试本页绘景','Retry This Artwork']);
  host.querySelector('#openingNext').textContent=index===shots.length-1?P(lastLabel):P(['继续 · 空格','Continue · Space']);
  lastSeconds=-1;countdown();
@@ -134,11 +135,13 @@ function paint(retry=false){
  img.onload=()=>{if(token!==paintToken||!running)return;clearTimeout(artTimer);imagePending=false;imageFailed=false;img.hidden=false;status.hidden=true;labels();};
  const failed=()=>{if(token!==paintToken||!running)return;clearTimeout(artTimer);imagePending=false;imageFailed=true;status.textContent=P(['本页绘景暂未载入。可继续阅读，也可重试绘景。','The artwork is unavailable. Continue reading or retry the illustration.']);labels();};
  img.onerror=failed;artTimer=setTimeout(failed,6000);artCleanup=()=>{img.onload=img.onerror=null;};
- img.src=(s.image||A[s.asset]||A.gate)+'?v=6917'+(retry?'&retry='+Date.now():'');
- const next=shots[index+1];if(next){const preload=new Image();preload.src=(next.image||A[next.asset]||A.gate)+'?v=6917';}
+ img.src=(s.image||A[s.asset]||A.gate)+'?v=6922'+(retry?'&retry='+Date.now():'');
+ const next=shots[index+1];if(next){const preload=new Image();preload.src=(next.image||A[next.asset]||A.gate)+'?v=6922';}
  const cast=host.querySelector('.opening-portraits');cast.replaceChildren();cast.style.animation='none';void cast.offsetWidth;cast.style.animation='';
  for(const role of s.roles){const portrait=document.createElement('img');portrait.src=A['npc_'+role];portrait.alt='';portrait.draggable=false;portrait.onerror=()=>{portrait.hidden=true;};cast.append(portrait);}
- host.querySelector('#openingTitle').textContent=P(s.title);host.querySelector('#openingLine').textContent=P(s.line);labels();
+ host.querySelector('#openingTitle').textContent=P(s.title);const copy=host.querySelector('#openingLine');copy.textContent=P(s.line);
+ if(s.summary){copy.replaceChildren();for(const paragraph of P(s.line).split('\n\n')){const parts=paragraph.split(/ · (?=新添往来：|Newly recorded connections:)/);for(const text of parts){const span=document.createElement('span');span.className=/^(钱囊|做买卖|亲手制成|新添往来|Change in your purse|Shop and stall|Workshop goods|Newly recorded)/.test(text)?'summary-fact':'summary-note';span.textContent=text;copy.append(span);}}}
+ labels();
 }
 function update(t){
  if(!running)return;
@@ -165,6 +168,7 @@ function finish(){
 }
 function start(done,options={}){
  if(running)return false;
+ firstReadyAt=performance.now()+460;
  shots=options.shots||openingShots;total=shots.reduce((n,s)=>n+s.duration,0);
  filmTitle=options.title||['明代 · 从京城到南澜','Ming China · From the Capital to Nanlan'];skipLabel=options.skip||['跳过并开始','Skip and Play'];lastLabel=options.last||['走近家人 · 空格','Join Your Family · Space'];build();
  index=0;elapsed=0;last=0;lastAdvance=-Infinity;playing=true;onFinish=done||null;focusBefore=document.activeElement;wasActive=active;

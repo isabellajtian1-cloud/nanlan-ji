@@ -50,3 +50,9 @@
 
 
 #openingRetry{font-size:12px;background:#e0ceaa;color:#42553c}.opening-loading{background:radial-gradient(ellipse at 50% 75%,#45614d,#253e32);font-size:16px;line-height:1.8}.opening-controls small{max-width:44%;line-height:1.6}@media(max-width:650px){.opening-controls small{max-width:42%}.opening-controls>div{gap:4px}}
+
+#openingFilm.opening-summary #openingLine{font-family:inherit;font-size:clamp(15px,1.45vw,20px);line-height:1.65;letter-spacing:.02em;white-space:pre-line}#openingFilm.opening-summary .opening-copy h2{font-size:clamp(21px,2.3vw,30px);letter-spacing:.04em}#openingFilm button{font-family:inherit}
+#openingFilm.opening-summary #openingLine{display:grid;grid-template-columns:1fr 1fr;gap:10px 24px;white-space:normal;font-size:16px;line-height:1.65}
+#openingFilm .summary-fact{padding:6px 0;border-bottom:1px solid #9f875633;overflow-wrap:anywhere}
+#openingFilm .summary-note{grid-column:1/-1;overflow-wrap:anywhere}
+@media(max-width:500px){#openingFilm.opening-summary #openingLine{font-size:14px;gap:8px 12px}}

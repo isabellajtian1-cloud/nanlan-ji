@@ -1,6 +1,7 @@
 'use strict';
 const $=id=>document.getElementById(id);
 const N=NanlanEngine, DATA=window.NANLAN_DATA, world=DATA.world;
+NanlanPhysical.configure(world);
 // The painted garden extends slightly beyond the old walking limit; this lets the actor reach its edge without stepping on crops.
 world.yard.bounds[2]=970;
 // Extend the walkable approach onto the painted hall steps, not the surrounding roofs.
@@ -80,13 +81,13 @@ async function loadSceneAssets(scene,sceneState=state()){
   if(globalThis.NanlanTown.rooms.includes(scene))required.push(...world[scene].objects.filter(o=>o.role).map(o=>'npc_'+o.role));
   if(scene==='backHall')required.push('backHallReady');
   if(world[scene]?.objects?.some(o=>o.v3Art!=null))required.push('v3Props');
-  if(scene==='yard')required.push('gardenStages','productionStages','productionItems','waterJar','stove','weedPatch');
+  if(scene==='yard')required.push('yearLamp','gardenStages','productionStages','productionItems','waterJar','stove','weedPatch');
   if(sceneState.actorState?.outfit==='nanlanSilk')required.push('familySilk',sceneState.gender==='male'?'walkMaleSilk':'walkFemaleSilk');
   if(['mountain','coast'].includes(scene))required.push('seals');
   if(['foothill','mountain'].includes(scene))required.push('fruitTrees','fruitTreesPicked');
-  if(scene==='store')required.push('storePickups','inventoryHousehold','inventoryCrafts','workbench');
+  if(scene==='store'){required.push('storePickups','inventoryHousehold','inventoryCrafts','workbench');if(N.current(sceneState)==='M14'||sceneState.flags.cratesRaised)required.push('storeBefore','storeAfter');}
   if(scene==='bed')required.push('bed','bedDamage','bedPatched');
-  if(scene==='hall')required.push('diningTable','familyMealFemale','familyMealMale');
+  if(scene==='hall'){required.push('diningTable','familyMealFemale','familyMealMale');if(N.current(sceneState)==='M14'||sceneState.flags.hallwayCleared)required.push('hallBefore','hallAfter');}
   if(scene==='village')required.push('villageLetter');
   const unique=[...new Set(required.map(id=>world[id]?.asset||id))];
   const overlay=$('sceneLoading'),previous=document.activeElement,retry=$('sceneLoadRetry'),cancel=$('sceneLoadCancel');
@@ -218,7 +219,8 @@ function activity(title,text,kind='general'){
   $('dialogQuestNavigate').hidden=true;
   $('choices').hidden=false;$('next').hidden=true;$('next').onclick=null;$('dialog').hidden=false;$('skip').textContent=started?'返回游戏 ×':'返回启程页 ×';
   $('dialog').scrollTop=0;
-  $('skip').onclick=closeDialog;$('skip').focus();if(!['arrival','pantry','town-shop','dialogue-scene','voyage-extra-story','voyage-memory','volume2','decision-preview','player-records','seal-draft','seal-receipt','contract-record','paper-records'].includes(kind))window.NanlanDesktop?.dialogue(title,text);
+  window.NanlanHomeMemories?.vignette(kind);
+  $('skip').onclick=closeDialog;$('skip').focus();if(!/^(v[345]-|season-|voyage-|paper-work|market-work|hall-work|lantern-work|family-letter)/.test(kind)&&!['arrival','pantry','town-shop','dialogue-scene','voyage-extra-story','voyage-memory','volume2','decision-preview','player-records','seal-draft','seal-receipt','contract-record','paper-records'].includes(kind))window.NanlanDesktop?.dialogue(title,text);
 }
 function button(label,fn,id,secondary=false,showOutcome=true){
   const b=document.createElement('button');b.textContent=label;b.dataset.action=id||label;
@@ -264,7 +266,8 @@ function closeDialog(force=false){
 }
 $('skip').onclick=closeDialog;
 const DOOR_REACH=18;
-function nearObject(o){return !o||(o.type==='door'?Math.hypot(o.x-state().player.x,o.y-state().player.y)<=DOOR_REACH:engine.near(o));}
+function interactionPoint(o){const points=NanlanPhysical.anchors(o,state());return points?.find(p=>!blocked(p.x,p.y,10))||o;}
+function nearObject(o){if(!o)return true;const p=state().player,target=interactionPoint(o);return o.type==='door'?Math.hypot(o.x-p.x,o.y-p.y)<=DOOR_REACH:target!==o?Math.hypot(target.x-p.x,target.y-p.y)<=24&&!blocked(p.x,p.y):engine.near(o);}
 async function perform(name,p={},rerender){
   if(dialogObject&&!nearObject(dialogObject)){const failed={ok:false,message:'请先走到物件旁，再进行操作。'};closeDialog();notice(failed.message,true);return failed;}
   if(name==='openGate'&&!await loadSceneAssets('yard')){const failed={ok:false,message:'庭院图片未能载入，请重试。原有进度已保留。'};notice(failed.message,true);return failed;}
@@ -807,7 +810,7 @@ function showArchive(){
   button('查看家中的回响',showJournal,'archive-journal',true);
 }
 let selectedPlot=0;
-const gardenSpots=[[930,412],[974,393],[944,443],[988,424],[958,474],[1002,455]];
+const gardenSpots=NanlanGardenLayout.centers;
 function gardenTarget(index){const [visualX,visualY]=gardenSpots[index],edge=world.yard.objects.find(o=>o.id==='herbPlot');return {id:'gardenPlot'+index,label:plotName(index),type:'activity',action:'gardenDirect',plot:index,x:edge.x,y:edge.y,visualX,visualY};}
 function plotFrame(index){
   const s=state(),g=N.gardenPlot(s,index),c=N.crop(s,index);
@@ -1012,41 +1015,11 @@ function showBed(){
     actButton('搬入床褥，安顿卧房（东厢房）','setBed',{},showBed);
   }else prerequisiteNote(q==='M02'?'请先检查窗格与漏雨处，修好其中一处，再搬入床褥。':'请在 M02「今夜睡在哪里」中安顿卧房（东厢房）后再休息。');
 }
-function showStall(){
-  const s=state(),q=N.current(s),open=N.clock(s).minute>=540&&N.clock(s).minute<1020;
-  activity('镇集 · 第一张摊布','普通镇集时段为 09:00—17:00。第一次试摊有 6 分钟准备窗口，可以重新约，不罚钱。\n\n'+(s.stallUntil>s.worldTick?'当前预约还剩 '+Math.ceil(s.stallUntil-s.worldTick)+' 游戏分钟。':'当前没有有效的试摊预约。')+'\n\n主打制品：干药草、竹制小器、贝壳小饰。也可出售草绳与采集余货，已预留的订单货物不会被卖掉。');
-  if(q==='M10'||s.flags.stallBooked)actButton('预约 / 重新约一张摊布','bookStall',{},showStall);
-  if(!open&&q!=='M10')$('line').textContent+='\n普通集市已散，可休息到次日再来。';
-}
+function showStall(){window.NanlanHands.market('book');}
 function tradeStockNote(text){
   const note=document.createElement('p');note.className='production-note';note.setAttribute('role','status');note.textContent=text;$('panelExtra').append(note);
 }
-function showTrade(){
-  const s=state(),q=N.current(s),booked=s.stallUntil>s.worldTick;
-  activity('你的摊布 · 实货与承诺','主打：'+(N.itemNames[s.featured]||'还未选定')+'\n现有制品：'+N.products.map(k=>N.itemNames[k]+' '+N.quantity(s,k)).join(' · ')+
-    (s.order?'\n小批单：'+N.itemNames[s.order.product]+' ×2，已交 '+s.order.delivered+'，预留 '+s.order.reserved:'')+'\n\n首次试卖与未交小批单所需的货物自动留出。可出售数量已扣除这些物品。');
-  if(s.flags.stallBooked)globalThis.NanlanV3?.stallDisplay();
-  if(!booked)navButton('先预约或续约摊布',showStall,'trade-book');
-  if(q==='M10'&&!s.flags.productDisplayed)N.products.forEach(product=>{
-    const n=N.available(s,product),b=actButton('摆上 '+N.itemNames[product]+' · 行囊 '+N.quantity(s,product)+(n<1?' · 暂无可用库存':!booked?' · 请先预约':''),'displayProduct',{product},showTrade,'display-'+product);
-    b.disabled=n<1||!booked;
-  });
-  if(s.flags.productDisplayed){
-    const stock=N.saleAvailable(s,s.featured),sell=actButton('零售主打 '+N.itemNames[s.featured]+' ×1 · '+N.prices[s.featured]+' 文 · 可售 '+stock,'sell',{sequence:s.transactions.length},showTrade,'sell');
-    sell.disabled=stock<1||!booked;
-    if(stock<1)tradeStockNote(N.quantity(s,s.featured)>0?'现有主打货需留给小批单。交付后或补做新货，才能继续零售。':'主打制品库存为 0，请到仓房补做。');
-  }
-  for(const item of Object.keys(N.prices)){
-    if(s.flags.productDisplayed&&item===s.featured)continue;
-    const stock=N.saleAvailable(s,item,true);if(stock<1)continue;
-    const b=actButton('出售余货 '+N.itemNames[item]+' ×1 · '+N.prices[item]+' 文 · 可售 '+stock,'sellExtra',{item,sequence:s.transactions.length},showTrade,'extra-'+item);b.disabled=!booked;
-  }
-  if(q==='M11'&&!s.order)actButton('接下两件主打制品的小批单','acceptOrder',{},showTrade);
-  if(q==='M11'&&s.order){
-    const reserve=actButton('为承诺预留现有库存','reserveOrder',{},showTrade);reserve.disabled=N.available(s,s.order.product)<1||s.order.delivered+s.order.reserved>=s.order.total;
-    const deliver=actButton('交付一件 · 当前已交 '+s.order.delivered+'/2','deliverOrder',{expected:s.order.delivered},showTrade);deliver.disabled=s.order.reserved<1||N.quantity(s,s.order.product)<1;
-  }
-}
+function showTrade(){window.NanlanHands.market('trade');}
 function addConversation(o){
   const role=NanlanConversations.roles[o.id];if(!role||$('choices').querySelector('[data-action="chat-open"]'))return;
   navButton('聊聊近况 · '+NanlanConversations.cast[role].name,()=>showConversation(o),'chat-open');
@@ -1077,6 +1050,7 @@ function showConversation(o){
 function npc(o){npcStory(o);addConversation(o);window.NanlanSeals?.npc(o);window.NanlanProduction?.npc(o);window.NanlanVillage?.npc(o);window.NanlanBondUI?.npc(o);}
 function npcStory(o){
   const s=state(),f=s.flags,q=N.current(s),id=o.id;
+  if(q==='M19'&&['father','mother','motherHall','grandfather'].includes(id)){window.NanlanFamilyLetter.talk(id.startsWith('mother')?'mother':id,o,0,!!s.familyTalks[id.startsWith('mother')?'mother':id]);return;}
   if(!f.volume2Started&&N.done(s,'M20')&&['father','motherHall','grandfather'].includes(id)){window.NanlanV2.entry();return;}
   if(f.volume2Started&&['father','motherHall','grandfather'].includes(id)){window.NanlanV2.show('v2Family');return;}
     if(id==='grandfather'){
@@ -1168,6 +1142,8 @@ function objectGate(o){
 function visibleObjects(scene=state().scene,includeCooling=false){
   const s=state(),f=s.flags,q=N.current(s);
   return world[scene].objects.filter(o=>{
+    if(o.action==='crateMove')return N.current(s)==='M14'||!!f.cratesRaised;
+    if(o.action==='hallMove')return !window.NanlanEstate?.furnished?.(s)&&(N.current(s)==='M14'||!!f.hallwayCleared);
     if(globalThis.NanlanFestivalUI&&!globalThis.NanlanFestivalUI.visible(s,o))return false;
     if(globalThis.NanlanTown.rooms.includes(o.to)&&!f.volume2Started)return false;
     if(globalThis.NanlanVoyageUI&&!globalThis.NanlanVoyageUI.visible(s,scene,o))return false;
@@ -1212,7 +1188,7 @@ function visibleObjects(scene=state().scene,includeCooling=false){
     if(o.id==='qiu'&&!N.reached(s,'M17'))return false;
     // Physical quest objects remain visible; their panels explain exact prerequisites.
     return true;
-  });
+  }).map(o=>window.NanlanHallWork?.position(s,window.NanlanStoreWork?.position(s,o)||o)||o);
 }
 function objectLabel(o){
   const s=state();if(o.id==='silkPond'){const z=window.NanlanProductionModel.status(s);return !s.flags.volume2Started?'桑基鱼塘 · 第二卷开放':z.careOpen?'蚕匾 · 吐丝前可照料':z.wormReady||z.fishReady||z.mulberryReady?'桑基鱼塘 · 有产物可收':'桑基鱼塘 · 种桑、养蚕、喂鱼';}if(o.id==='v2Family')return s.flags.volume2Started?'家议 · 铺面与下一季':'新春家议 · 开启第二卷';if(['leaseEast','leaseWest'].includes(o.id)&&s.flags.v2Leased&&o.site===s.story2.site)return N.story2.shops[o.site].name+' · 已租用';if(o.id==='herbPlot'){const plots=Array.from({length:s.flags.fullGarden?6:4},(_,i)=>N.crop(s,i)),ready=plots.filter(c=>c.ready).length;return !s.flags.smallBed?'菜畦 · 待整理':ready?'菜圃药圃 · '+ready+' 块可收获':plots.some(c=>c.planted)?'菜圃药圃 · 照料作物':'菜圃药圃 · 可播种';}
@@ -1267,6 +1243,8 @@ async function interactCore(o){
   const s=state(),f=s.flags,q=N.current(s),a=o.action;
   if(a==='neighborStop'){window.NanlanVillage.stop(o);dialogObject=o;return;}
   if(a==='seasonDisplay'){window.NanlanSeasons.ledger();dialogObject=o;return;}
+  if(a==='crateMove'){window.NanlanStoreWork.show();dialogObject=o;return;}
+  if(a==='hallMove'){window.NanlanHallWork.show();dialogObject=o;return;}
   if(a==='dryRack'){activity('庭院 · 自家晾架','这就是当初留下的自家晾架。竹脚落在地面，药草与潮湿桑叶都在这里摊开通风。');window.NanlanVillage?.rack();dialogObject=o;return;}
   if(a==='gardenDirect'){await handleGardenPlot(o);return;}
   if(a==='silkProduction'){window.NanlanProduction.show();dialogObject=o;return;}
@@ -1324,75 +1302,27 @@ async function interactCore(o){
   else if(a==='pantry')showPantry();
   else if(a==='bridge'){activity('山路 · 木道','把眼前松动的一段铺好，才好进入竹林。先借出竹料，阿岑会帮工；先做自家晾架，则一起补另一段桥面。');if(q==='M06'&&!f.bridgeReady)actButton('铺通小路 · 枯枝 ×1'+(s.choices.bamboo==='rack'?'、竹材 ×1':''),'repairBridge',{},()=>{closeDialog();notice('小路铺好了，竹林入口已开放。');});}
   else if(a==='bookbox'){activity('仓房 · 旧住客书箱','书箱是旧住客留下的私人物件，里面的书页受了潮。先确认归属，联系程婉，征得同意后再查看和晾晒。');if(q==='M08'&&!f.boxFound)actButton('登记书箱，托人联系旧住客家人','findBox',{},()=>{closeDialog();notice('已记下书箱归属线索。去村里联系程婉。');});}
-  else if(a==='dry'){
-    activity('书房窗下 · 晾纸','只晾晒程婉同意的两页，不自行拆散整本旧簿。');
-    if(q==='M08'){
-      for(let index=0;index<2;index++){
-        if(f['driedPage'+index])continue;
-        const dryButton=actButton('把第 '+(index+1)+' 页铺平晾好','dryPage',{index},()=>interact(o),'dry-'+index);
-        dryButton.disabled=!f.ledgerPermission;
-      }
-      if(f.ledgerPermission&&!f.pagesDried)navButton('托起纸角，迎光细看',()=>showWindowPages(o),'inspect-paper');
-    }
-  }
+  else if(a==='dry'){window.NanlanHands.paper(o);}
   else if(a==='archive')showArchive();
   else if(a==='tide')showTide();
   else if(a==='stall')showStall();
   else if(a==='sellSurplus'){activity('村中收购 · 出售余货','按件出售采集物、菜蔬和手作制品。首次试卖和未交小批单所需的货物会自动留出；制作材料请按需要保留。');for(const item of Object.keys(N.prices))if(N.saleAvailable(s,item,true)>0)actButton('卖出 '+N.itemNames[item]+' ×1 · '+N.prices[item]+' 文','sellExtra',{item,sequence:s.transactions.length},()=>interact(o),'surplus-'+item);}
   else if(a==='trade')showTrade();
   else if(a==='gutter'){activity('宅院 · 屋檐与沟渠','先检查水能往哪儿走，再收好晾晒物，通知陈伯。风雨到来由剧情触发，不会因为日历换了一天就错过。');if(q==='M13')actButton('检查沟渠与屋檐，记下风雨准备','checkGutter',{},()=>{closeDialog();refreshHud();notice('沟渠与屋檐已经检查。');});}
+  else if(a==='crates'&&(q==='M14'||f.cratesRaised)){window.NanlanStoreWork.show();}
   else if(a==='crates'){
     activity('仓房 · 物资与货箱','按用途理好物资，把承诺的货物分清。整理本身不会增加材料或铜钱。');
     actButton('整理仓房，核对现有物资','tidy',{},()=>{closeDialog();notice(actionMessage('tidy'));});
     if(q==='M13')actButton('把晾晒物收回仓房','storeGoods',{},()=>interact(o));
     if(q==='M14')actButton('把货箱架高，避开积水','raiseCrates',{},()=>interact(o));
-  }else if(a==='shelter'){
-    activity('正厅 · 临时安置','母亲：「人也要进来，两件事，咱们一起做。」\n你：「现在也用得上。」\n\n先腾出通道、架高货物，再安排临时铺位。');
-    if(q==='M14'&&!f.hallwayCleared)actButton('腾出正厅通道','clearHallway',{},()=>interact(o));
-    if(q==='M14'&&f.hallwayCleared&&f.cratesRaised){actButton('先照应家人，再安置邻里','settleGuests',{choice:'family'},()=>interact(o),'shelter-family');actButton('按到达顺序安排铺位','settleGuests',{choice:'neighbors'},()=>interact(o),'shelter-neighbors');}
-  }else if(a==='waterMark'){activity('高地 · 水位标记','沿石上刻痕确认水位，再走阿岑指出的归路。');if(q==='M15')actButton('确认安全水位与返回路线','checkWater',{},()=>{closeDialog();notice('水位已确认，可以去找父亲。');});}
-  else if(a==='lamps'){activity('庭院 · 岁末灯火','把灯挂在回廊与门前，等人归家，也等邻里来坐。');if(q==='M20')actButton('挂起岁末的灯','hangLamps',{},()=>{closeDialog();notice('庭院挂好了灯，回正厅上菜。');});}
+  }else if(a==='shelter'){window.NanlanHallWork.show();}else if(a==='waterMark'){activity('高地 · 水位标记','沿石上刻痕确认水位，再走阿岑指出的归路。');if(q==='M15')actButton('确认安全水位与返回路线','checkWater',{},()=>{closeDialog();notice('水位已确认，可以去找父亲。');});}
+  else if(a==='lamps'){window.NanlanLanternWork.show();}
   else activity(o.label,'这处物件暂时没有新的安排。'+nextHint());
   prerequisiteNote(objectPrerequisite(o));
   dialogObject=o;
 }
 // A closer look is optional. The only saved action is the ordinary dryPage action.
-function showWindowPages(o){
-  const s=state(),f=s.flags;
-  if(N.current(s)!=='M08'||!f.ledgerPermission||f.pagesDried){void interact(o);return;}
-  const details=[
-    ['迎光辨墨迹','你把纸稍稍偏向窗光。“借灯”二字留了下来，日子却浅得只剩半笔。','「那一笔若是认不清，就留着吧。等纸干了，我陪你慢慢认。」'],
-    ['轻托小花旁的卷边','你从纸背托住卷边，一朵淡墨小花露了出来。最后一瓣歪着，倒像刚被风吹过。','「小时候我总想把那一瓣描圆。如今再看，倒舍不得添这一笔了。」']
-  ];
-  let selected=null;
-  activity('书房窗下 · 细看潮页','你将两张旧页分开一掌宽。窗风很轻，指腹托住纸背，就看得见上面的细处。','paper-reading');
-  dialogObject=o;
-  const desk=document.createElement('div');desk.className='paper-reading-desk';
-  desk.innerHTML=inventoryArt('ledgerOriginal');
-  const response=document.createElement('div');response.className='paper-reading-response';response.hidden=true;
-  response.setAttribute('aria-live','polite');
-  const portrait=document.createElement('img');portrait.src=DATA.assets.npc_wan;portrait.alt='程婉';
-  const words=document.createElement('div'),detail=document.createElement('p'),voice=document.createElement('p');
-  words.append(detail,voice);response.append(portrait,words);
-  $('panelExtra').append(desk,response);
-  const spots=[];
-  for(const [index,[label,observation,line]] of details.entries()){
-    if(f['driedPage'+index])continue;
-    const spot=document.createElement('button');spot.type='button';spot.className='paper-reading-spot page-'+index;
-    spot.textContent=label;spot.setAttribute('aria-pressed','false');spots.push(spot);
-    spot.onclick=()=>{
-      selected=index;
-      for(const other of spots)other.setAttribute('aria-pressed',String(other===spot));
-      desk.dataset.page=String(index);detail.textContent=observation;
-      voice.textContent='想起程婉递纸时的话：'+line;response.hidden=false;dry.disabled=false;
-    };
-    desk.append(spot);
-  }
-  const dry=button('把眼前这页铺平晾好',()=>perform('dryPage',{index:selected},()=>interact(o)),'paper-dry',false,false);
-  dry.disabled=true;
-  navButton('放回窗边',()=>interact(o),'paper-back');
-  spots[0]?.focus({preventScroll:true});
-}
+function showWindowPages(o){window.NanlanHands.paper(o);}
 function showFamilyMeal(feast=false,memory=false){
   const s=state(),imageKey=s.gender==='male'?'familyMealMale':'familyMealFemale';
   activity(memory?'饭桌旧事 · 一家同食':feast?'岁末家宴 · 一家同席':'第一顿热饭 · 一家同食',
@@ -1459,6 +1389,8 @@ async function switchScene(to){
   if(active)continueNavigation();
 }
 function objectFootprint(o){
+  if(o.action==='crateMove'){const f=window.NanlanStoreWork.items.find(i=>i.id===o.item).foot;return [f[2]*W/1536,f[3]*H/1024];}
+  if(o.action==='hallMove'){const f=window.NanlanHallWork.items.find(i=>i.id===o.item).foot;return [f[2]*W/1536,f[3]*H/1024];}
   if(o.type==='door'||resourceTypes.includes(o.type)||['window','leak','gutter','lamps','tide','waterMark'].includes(o.action))return null;
   const fixed={familyLuggage:[48,28],mealTable:[88,42],bedRest:[66,31],workbench:[75,35],bookBox:[28,18],goodsCrates:[62,32],silkPond:[76,44],herbPlot:[67,36],waterJar:[24,14],stove:[42,25],shelter:[55,28],generalStoreKeeper:[62,27],v2Shelf:[48,25],villageLetter:[23,10]};
   if(fixed[o.id])return fixed[o.id];
@@ -1468,6 +1400,7 @@ function objectFootprint(o){
   return null;
 }
 function insideObjectFootprint(o,x,y,clearance=0){
+  const rect=NanlanPhysical.rect(o,state());if(rect)return NanlanPhysical.contains(rect,x,y,clearance);
   const size=objectFootprint(o);if(!size)return false;const [rx,ry]=size;
   return ((x-o.x)/(rx+clearance))**2+((y-o.y)/(ry+clearance))**2<1;
 }
@@ -1485,6 +1418,7 @@ function blocked(x,y,clearance=0){
 function movementBlocked(x,y,fromX,fromY,clearance=0){
   if(baseBlocked(x,y,clearance))return true;
   for(const o of visibleObjects()){
+    const rect=NanlanPhysical.rect(o,state());if(rect){if(!NanlanPhysical.contains(rect,x,y,clearance))continue;if(!NanlanPhysical.contains(rect,fromX,fromY,clearance)||NanlanPhysical.depth(rect,x,y,clearance)>=NanlanPhysical.depth(rect,fromX,fromY,clearance))return true;continue;}
     const size=objectFootprint(o);if(!size||!insideObjectFootprint(o,x,y,clearance))continue;
     // Old saves may resume inside a newly-added footprint. They may walk outward, never farther in.
     if(!insideObjectFootprint(o,fromX,fromY,clearance))return true;
@@ -1501,7 +1435,8 @@ function findPath(target){
   let finish=null;
   for(let n=0;n<queue.length;n++){
     const [x,y]=queue[n],p=n===0?s.player:xy(x,y);
-    if((target.object&&Math.hypot(p.x-target.object.x,p.y-target.object.y)<=(target.object.type==='door'?16:64))||(!target.object&&Math.hypot(x-end[0],y-end[1])<=.1)){finish=[x,y];break;}
+    const point=target.object?interactionPoint(target.object):null;
+    if((target.object&&Math.hypot(p.x-point.x,p.y-point.y)<=(target.object.type==='door'?16:point!==target.object?18:64)&&!blocked(p.x,p.y))||(!target.object&&Math.hypot(x-end[0],y-end[1])<=.1)){finish=[x,y];break;}
     for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]]){
       const nx=x+dx,ny=y+dy,k=key(nx,ny),np=xy(nx,ny);if(nx<0||ny<0||nx>=cols||ny>=rows||previous.has(k)||movementBlocked(np.x,np.y,p.x,p.y,10))continue;
       if(dx&&dy&&(movementBlocked(p.x,np.y,p.x,p.y,10)||movementBlocked(np.x,p.y,p.x,p.y,10)))continue;
@@ -1542,7 +1477,7 @@ function resolveHit(p){
   const within=(p,r)=>!!r&&p.x>=r.x&&p.x<=r.x+r.w&&p.y>=r.y&&p.y<=r.y+r.h;
   // Garden plots share a safe walking destination at the fence, but each painted tile remains its own click target.
   const distance=h=>Math.hypot((h.o.visualX??h.o.x)-p.x,(h.o.visualY!==undefined?h.o.visualY-8:h.o.y)-p.y);
-  return hitTargets.find(h=>within(p,h.rect))?.o||hitTargets.filter(h=>within(p,h.anchor)).sort((a,b)=>distance(a)-distance(b))[0]?.o;
+  return hitTargets.find(h=>within(p,h.rect))?.o||hitTargets.filter(h=>h.polygon?NanlanGardenLayout.contains(p,h.polygon):within(p,h.anchor)).sort((a,b)=>distance(a)-distance(b))[0]?.o;
 }
 canvas.addEventListener('pointerdown',e=>{
   if(!active||transitioning)return;cancelNavigation();const p=worldPoint(e),o=resolveHit(p);
@@ -1619,6 +1554,7 @@ function paintCropPlant(x,y,size,ready){
 }
 function paintDifferenceLayers(){
   const s=state(),f=s.flags,sc=s.scene;
+  window.NanlanHallWork?.draw(ctx,s);window.NanlanStoreWork?.draw(ctx,s);window.NanlanLanternWork?.draw(ctx,s);
   if(sc==='bed'){
     const damage=images.bedDamage,clean=images.bed;
     if(damage?.naturalWidth&&clean?.naturalWidth){
@@ -1644,8 +1580,7 @@ function paintDifferenceLayers(){
       for(let i=0;i<(f.fullGarden?6:4);i++){
         if(i>0&&!N.gardenPlot(s,i).tilled)continue;
         const [col,row]=plotFrame(i),[x,y]=gardenSpots[i];
-        ctx.save();ctx.filter='saturate(.88) brightness(.96)';
-        ctx.drawImage(images.gardenStages,col*384,row*1024/3,384,1024/3,x-29,y-30,58,44);ctx.restore();
+        NanlanGardenLayout.draw(ctx,images.gardenStages,col,row,i);
       }
     }
   }
@@ -1791,7 +1726,7 @@ function render(){
     if(o.festival)hitTargets.push({o,rect:null,anchor:{x:o.x-36,y:o.y-70,w:72,h:75}});
     const locked=!!objectGate(o)||o.type==='locked'||o.type==='property',selected=o.id===focusedObjectId||o===destination,isObjective=o===objective;
     if(o.id==='dryRackVisual'){
-      actors.push({layer:40,y:o.y,draw:()=>{ctx.save();const x=o.x,y=o.y;ctx.strokeStyle='#765334';ctx.lineCap='round';ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(x-31,y);ctx.lineTo(x-23,y-61);ctx.moveTo(x+31,y);ctx.lineTo(x+23,y-61);ctx.stroke();ctx.strokeStyle='#b98a4e';ctx.lineWidth=3;for(let j=0;j<5;j++){ctx.beginPath();ctx.moveTo(x-30,y-52+j*10);ctx.lineTo(x+30,y-52+j*10);ctx.stroke();}ctx.fillStyle='#71854f';for(let j=0;j<9;j++){ctx.beginPath();ctx.ellipse(x-24+j*6,y-48+(j%3)*10,5,2.5,(j%2?-.5:.4),0,Math.PI*2);ctx.fill();}ctx.restore();}});
+      // Preserve drying actions without a flat diagram over the painted background.
       hitTargets.push({o,rect:null,anchor:{x:o.x-42,y:o.y-72,w:84,h:76}});continue;
     }
     if(o.id==='seasonDisplay'){
@@ -1822,7 +1757,7 @@ function render(){
     }
     if(o.action==='garden'){
       const count=s.flags.fullGarden?6:4;
-      for(let i=0;i<count;i++){const plot=gardenTarget(i),[x,y]=gardenSpots[i];hitTargets.push({o:plot,rect:null,anchor:{x:x-27,y:y-43,w:54,h:52}});if(plot.id===focusedObjectId){ctx.save();ctx.strokeStyle='#e7ca79';ctx.lineWidth=1.7;ctx.beginPath();ctx.ellipse(x,y-5,24,9,0,0,Math.PI*2);ctx.stroke();ctx.restore();}}
+      for(let i=0;i<count;i++){const plot=gardenTarget(i),[x,y]=gardenSpots[i];hitTargets.push({o:plot,rect:null,anchor:NanlanGardenLayout.bounds(i),polygon:NanlanGardenLayout.beds[i]});if(plot.id===focusedObjectId){ctx.save();ctx.strokeStyle='#d3be88';ctx.lineWidth=1;ctx.beginPath();NanlanGardenLayout.beds[i].forEach(([px,py],j)=>j?ctx.lineTo(px,py):ctx.moveTo(px,py));ctx.closePath();ctx.stroke();ctx.restore();}}
       hitTargets.push({o,rect:null,anchor:{x:890,y:365,w:145,h:125}});continue;
     }
     if(fruitTypes.includes(o.type)){
@@ -1834,8 +1769,9 @@ function render(){
       continue;
     }
     if(s.scene==='hall'&&o.id==='mealTable'){
-      const im=images.diningTable;if(im?.naturalWidth)ctx.drawImage(im,o.x-120,o.y-160,240,160);globalThis.NanlanKids?.draw('hall');
-      hitTargets.push({o,rect:null,anchor:{x:o.x-108,y:o.y-146,w:216,h:146}});
+      // Use the table already painted into the room; the protagonist approaches its near edge.
+      globalThis.NanlanKids?.draw('hall');
+      hitTargets.push({o,rect:null,anchor:NanlanPhysical.rect(o,s)});
       continue;
     }
     const pickup=storePickup(o);
@@ -1852,7 +1788,7 @@ function render(){
     if(s.scene==='store'&&o.id==='workbench'&&images.workbench?.naturalWidth){
       ctx.drawImage(images.workbench,o.x-80,o.y-106,160,107);
     }
-    if(s.scene==='store'&&o.id==='goodsCrates'&&images.inventoryHousehold?.naturalWidth){
+    if(s.scene==='store'&&o.id==='goodsCrates'&&!s.flags.cratesRaised&&N.current(s)!=='M14'&&images.inventoryHousehold?.naturalWidth){
       ctx.drawImage(images.inventoryHousehold,0,414,418,391,o.x-52,o.y-68,72,68);
       ctx.drawImage(images.inventoryHousehold,836,0,418,414,o.x-5,o.y-62,72,72);
     }

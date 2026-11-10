@@ -462,7 +462,9 @@
         if(name==='checkGutter'){quest('M13');requireScene(s,'yard');f.gutterChecked=true;return;}
         if(name==='storeGoods'){quest('M13');requireScene(s,'store');f.goodsStored=true;return;}
         if(name==='warnStorm'){quest('M13');requireScene(s,'village');f.stormWarned=true;return;}
+        if(name==='moveHallItem'){quest('M14');requireScene(s,'hall');requireThat(['basket','bundle','stool'].includes(p.item),'请选择通道里的一件物品。');requireThat(!f.hallwayCleared&&!f['hallMoved:'+p.item],'这件物品已经安放好了。');f['hallMoved:'+p.item]=true;f.hallwayCleared=['basket','bundle','stool'].every(k=>f['hallMoved:'+k]);return;}
         if(name==='clearHallway'){quest('M14');requireScene(s,'hall');f.hallwayCleared=true;return;}
+        if(name==='raiseStoreItem'){quest('M14');requireScene(s,'store');requireThat(['chest','sack','basket'].includes(p.item),'请选择仓房里的一批货。');requireThat(!f.cratesRaised&&!f['crateRaised:'+p.item],'这批货已经架好了。');f['crateRaised:'+p.item]=true;f.cratesRaised=['chest','sack','basket'].every(k=>f['crateRaised:'+k]);return;}
         if(name==='raiseCrates'){quest('M14');requireScene(s,'store');f.cratesRaised=true;return;}
         if(name==='settleGuests'){quest('M14');requireScene(s,'hall');requireThat(f.hallwayCleared&&f.cratesRaised,'先腾出通道、架高货物。');requireThat(['family','neighbors'].includes(p.choice),'先安排铺位。');s.choices.shelter=p.choice;f.guestsSettled=true;return;}
         if(name==='fatherClue'){quest('M15');requireScene(s,'village');f.fatherClue=true;return;}
@@ -482,7 +484,16 @@
         if(name==='writeReply'){quest('M19');requireScene(s,'hall');requireThat(f.letterFamily&&f.giftChosen,'先听听三位家人的想法，再选好随信小物。');return once(s,'writeReply',()=>{give(s,{reply:1});f.replyWritten=true;});}
         if(name==='sendReply'){quest('M19');requireScene(s,'village');return once(s,'sendReply',()=>{spend(s,{reply:1});f.replySent=true;});}
         if(name==='seating'){quest('M20');requireScene(s,'hall');requireThat(['family','neighbors'].includes(p.choice),'先选家宴座次。');s.choices.feast=p.choice;f.seatingChosen=true;return;}
-        if(name==='hangLamps'){quest('M20');requireScene(s,'yard');f.festivalLamps=true;return;}
+        if(name==='placeFestivalLamp'||name==='lightFestivalLamp'){
+          quest('M20');requireScene(s,'yard');requireThat(['left','right'].includes(p.side),'请选门前的一盏灯。');
+          const hung='festivalLampHang:'+p.side,lit='festivalLampLit:'+p.side;
+          requireThat(!f.festivalLamps,'两盏岁末灯已经点亮。');
+          if(name==='placeFestivalLamp'){requireThat(!f[hung],'这盏灯已经挂稳。');f[hung]=true;}
+          else{requireThat(f[hung],'先把灯挂稳，再点亮。');requireThat(!f[lit],'这盏灯已经亮了。');f[lit]=true;}
+          if(['left','right'].every(side=>f['festivalLampLit:'+side]))f.festivalLamps=true;
+          return;
+        }
+        if(name==='hangLamps'){quest('M20');requireScene(s,'yard');requireThat(!f.festivalLamps,'两盏岁末灯已经点亮。');f.festivalLamps=true;return;}
         if(name==='shareFeast'){quest('M20');requireScene(s,'hall');requireThat(f.seatingChosen&&f.festivalLamps,'先安排座次，再挂好庭院的灯。');return once(s,'shareFeast',()=>{spend(s,{feast:1});f.feastShared=true;});}
         if(name==='practice'){requireScene(s,'hall');requireThat(done(s,'M04'),'先让家人吃上第一顿热饭。');requireThat(Number.isInteger(p.index)&&p.index>=0&&p.index<6,'请选择字纸。');if(p.index>=2)requireThat(done(s,'M05'),'先认识村里的邻居，孩子们才会来借纸。');return once(s,'practice:'+p.index,()=>{s.practice[p.index]=true;s.journal.push({id:'S01-'+p.index,text:['把空白纸分好，祖父把第一张留给你。','写下一个家字，祖父说落脚处也能慢慢成家。','替借纸的孩子描一笔山字。','孩子认得海字，讲起自家出海的人。','祖父把讲过的草木名抄成字条。','商议明春的课，书案前留下新的约定。'][p.index]});});}
         if(name==='sortPage'){requireScene(s,'study');requireThat(f.ledgerPermission,'先完成 M08 的归属确认与查看许可。');if(f.bookReturned)requireThat(f.copyApproved,'原簿已经交还，等程婉同意留下副本后再回看。');requireThat(Number.isInteger(p.index)&&p.index>=0&&p.index<4,'请选择获准整理的页片。');return once(s,'page:'+p.index,()=>{s.pages[p.index]=true;});}

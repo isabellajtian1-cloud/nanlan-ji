@@ -47,7 +47,22 @@ const labels=[pair('初识 · 还有许多话未说','Acquainted · Much remains
 function description(s,r,en){if(!roles.includes(r))return '';return labels[level(s,r)][en?1:0];}
 function greeting(s,r,en){if(!roles.includes(r))return '';const l=level(s,r);if(!l)return '';const name=r==='chen'?pair('「自家邻里，坐近些，不必拘礼。」','“We are neighbours. Sit closer; no ceremony is needed.”'):r==='cen'?pair('「我把背篓放下。今日不赶路，你说。」','“I have set my basket down. No hurry today. Tell me.”'):r==='doctor'?pair('「茶还温着。我留了一盏，想着你或许会来。」','“The tea is still warm. I kept a cup, thinking you might come.”'):pair('「手里的事先放放，咱们坐一会儿。」','“Let us set the work aside and sit together.”');return l>=2?name[en?1:0]:pair('对方没有急着起身，替你留出了说话的空当。','They make time for you instead of turning back to their work.')[en?1:0];}
 function offered(s,r){if(!roles.includes(r)||s.mode!=='daily')return null;const i=history(s,r);if(i>=2)return null;if(familiarity(s,r)+deeds(s,r)<(i?4:2))return null;if(i&&day(s)<=s.choices[key(r,'eventDay0')])return null;return {index:i,...events[r][i]};}
-function rememberChat(s,r,count){if(!roles.includes(r)||s.mode!=='daily')return;const k=key(r,'chatDay');if(s.choices[k]===day(s))return;const topic=count%3;if(s.choices[key(r,'topic'+topic)]!==undefined)return;s.choices[key(r,'topic'+topic)]=day(s);s.choices[k]=day(s);}
+function rememberChat(s,r,count,spokenId){
+ if(!roles.includes(r)||s.mode!=='daily')return;
+ const today=day(s),when=key(r,'chatDay');
+ if(s.choices[when]===today)return;
+ let slot=count%3;
+ if(spokenId){
+  const heard=key(r,'heard:'+spokenId);
+  if(s.choices[heard]!==undefined)return;
+  slot=[0,1,2].find(i=>s.choices[key(r,'topic'+i)]===undefined);
+  if(slot===undefined)return;
+  s.choices[heard]=today;
+ }
+ if(s.choices[key(r,'topic'+slot)]!==undefined)return;
+ s.choices[key(r,'topic'+slot)]=today;
+ s.choices[when]=today;
+}
 function act(s,p,{requireThat,spend}){
  const offer=offered(s,p.role);requireThat(offer&&offer.index===p.index,'这件心事已记下，或还需要再熟悉些。');
  requireThat(p.choice===0||p.choice===1,'请选择一句回应。');

@@ -46,6 +46,14 @@ function people(){
   const offer=B.offered(s,role);note(offer?L('下次可以聊：','Available now: ')+T(offer.title):B.history(s,role)>=2?L('两段心事已经留记，仍可日常往来。','Both stories are remembered; everyday visits remain.'):L('不同日子聊新话题，或完成相关共事，会逐渐打开新的心事。','New topics on different days and shared deeds open further stories.'),box);
   for(let i=0;i<2;i++){const choice=s.choices[B.key(role,'event'+i)],event=B.events[role][i];if(choice!==undefined){note('✓ '+T(event.title)+' · '+T(event.choices[choice]),box);note(T(event.replies[choice]),box);}}
  }
+ for(const [id,p] of Object.entries(NanlanNeighbors.residents)){
+  if(!met.has(id))continue;
+  const box=section(T(p.name)+' · '+T(p.trade));
+  note(window.NanlanI18n.t(world[p.scene].name),box);
+  if(id==='peddler'&&s.flags.metMarketPeddler)note(L('在镇集货担前买过东西。','You bought something from his baskets at the market.'),box);
+  p.topics.forEach((t,i)=>{if(NanlanNeighbors.heard(s,id)&(1<<i))note(T(t.reply),box);});
+  if(NanlanNeighbors.relayed(s,id)&&p.received)note(T(p.received),box);
+ }
  note(L('日常闲谈次数与不同话题分开记录；旧档没有记录的对话，不补算次数。','Casual reply counts and distinct topics are separate. Unrecorded conversations in older saves are not reconstructed.'));
 }
 const glossary=[['文','Coins','游戏中的钱币计量。账本按文记收付；这里不作现实币值换算。','The game’s unit of money. No modern currency conversion is implied.'],['家计与保留','Household reserve','留给一家人生活的钱，仍属于现有现金。确认保留后，筹备付款会先核对这条底线。','Coins kept for household life remain part of your cash. Preparation payments check this reserve.'],['铺讯','Shop notice','本作里关于南街铺面与客流的消息纸。收过的铺讯可在手记重读。','The game’s written notice about shops and trade, kept in your notes.'],['契约与押金','Agreement & deposit','契约记租期、租金与责任；押金另列保管。游戏中每日租金是预付款的分摊，不会每日再扣一次。','The agreement records terms and responsibilities; the deposit is held separately. Daily rent is allocated from the prepaid amount.'],['闭账','Closing the books','核对已发生的成交、成本和费用，保存这一营业日的经营结果。睡觉本身不等于闭账。','Reconcile actual sales, costs and expenses. Sleeping alone does not close a trading day.'],['行商','Traveling merchant','往来各处做买卖的人。本作的运货与远行需要看实际货物、容量、时间和费用。','A merchant who trades between places. The game checks actual goods, capacity, time and cost.'],['誊写与凭单','Copies & receipts','誊写是另抄一份文字；凭单是事情或收付的留据。旧副本、买卖凭单的当前用途写在行囊说明里。','A copy preserves written words; a receipt records a transaction. Current uses are shown in the satchel.'],['岁末家宴','Year-end feast','一家人团聚、回看一年的日子。收卷绘景可以重播，不会再领一次奖励。','A family gathering to recall the year. Replaying a closing never grants its reward again.']];

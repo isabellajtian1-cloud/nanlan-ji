@@ -97,7 +97,10 @@ window.NanlanV2={
     function ledger(){const v=M.summary(s),d=v.day;table(['账目','当前记录'],[['现金余额',s.coins+' 文'],['家用保留目标',t.reserve+' 文'],['实收存货参考价值',v.stockValue+' 文'],['已完成闭账',v.closedDays+' 个不同营业日'],['当日成交收入',(d?.sales||0)+' 文'],['当日已售成本',num(d?.cost||0)+' 文'],['当日租金分摊',!t.contract?'尚未签约':t.contract.legacy&&t.contract.dailyRent===0?'旧约已付，不另计日租':num(v.rent)+' 文（已预付，不另扣）'],['当日设施分摊',num(v.wear)+' 文'],['当日经营结果',v.profit+' 文'],['今日状态',d?.closed?'已打烊并保存':'尚未闭账']]);const note=document.createElement('p');note.className='v2-note';note.textContent='成本依材料价与实付运钱核算。往期流水另册存放，不重记今日收支。租金已预付，押金另列保管，闭店不重复扣款。';$('panelExtra').append(note);}
     if(!f.volume2Started){window.NanlanV2.entry();return;}
     if(kind==='v2Family'){
-      title('家议 · 铺讯与分工','母亲：「东西做出来，总得有人用。」\n父亲：「每一笔写清，剩下多少，再决定用多少。」\n祖父把纸留在桌上，等你拿主意。'+(t.legacy?'\n\n旧约、存货与往期流水已收妥；从这里接续家议，已付租金不再收取。':''));
+      const familyWords=f.v2Opened?
+        deskText('母亲挪开父亲手边的碗。「又拿蘸醋的筷子指账本，昨日那点油花还在呢。」父亲低头一看，自己也笑了。他把账簿转向你。「来，你坐中间，咱们商量。」','Mother moves the bowl by Father’s elbow. “You’re pointing at the ledger with vinegary chopsticks again. Yesterday’s spot is still there.” Father looks and laughs. He turns the book towards you. “Come sit between us. Let’s talk.”'):
+        deskText('母亲把铺讯摊在桌上，一角又翘起来。祖父拿茶盏一压，三个人这才看清铺门朝哪边开。父亲用指头敲了敲空凳。「给你留的。先坐，有什么担心的都说说。」','Mother spreads the shop notice on the table. Grandfather weighs the curling corner with his cup so everyone can see which way the door faces. Father taps the empty stool. “Yours. Sit down. What’s on your mind?”');
+      title('家议 · 铺讯与分工',familyWords+(t.legacy?'\n\n旧约、存货与往期流水已收妥；从这里接续家议，已付租金不再收取。':''));
       button(deskText('回看铺讯与筹备手记','Read the Notice & Preparation Notes'),()=>window.NanlanContinuity.handbook(),'family-papers',true);
       if(s.scene!=='hall'){nav('回正厅共同商议家计与分工','hall','v2Family');return;}
       if(q==='V2_01'&&!f.v2Entry)action('读母亲留好的铺讯','v2ReadNotice');
@@ -163,7 +166,22 @@ window.NanlanV2={
         note(deskText('柜台成交扣店内实货，不扣行囊。行囊为 0 仍可出售店内可售货；装车、在途、店内分别记账。','Counter sales use shop stock, not your satchel. Zero in the satchel does not prevent selling available shop goods. Packed goods, shipments and shop stock are separate.'));
         if(Object.values(shop.holds).some(n=>n>0))action(deskText('解除自己的留货 · 不动顾客预订','Release My Holds · Keep Customer Reservations'),'v2NoHold');
       }
-      if(q==='V2_10')note(f.v2CustomerHeard?deskText('旧客的需求已听过。请在下方选择一件可售实货成交，完成 1 / 1 笔真实买卖。','The first customer has been heard. Sell one available item below to complete the first transaction.'):deskText('先听旧客说需求，随后成交按钮会直接出现，无需翻页。','Hear the customer first. Sale buttons will then appear directly, without paging.'));
+      const waiting=N.shopCustomers(s);
+      if(f.v2Opened&&!d?.closed&&waiting>0){
+        const voices={
+          chen:['陈伯拎起布袋。「我替几家人捎东西，最怕一转身就忘了谁要哪样。容我再想想。」','Chen lifts his bag. “Several households want me to bring things back. Give me a moment to remember whose is whose.”'],
+          luo:['罗掌柜拿两根指头比了比桌沿。「我那茶桌窄，物件好不好用，先得看它挤不挤客人的胳膊。」','Luo measures the counter with two fingers. “My tea tables are narrow. A good thing still needs to leave room for an elbow.”'],
+          xu:['许员外理理袖口。「家里托我亲自来瞧。回去她若问我摸着是什么样，可不能再说不知道了。」','Xu straightens his cuff. “I was asked to come in person. When my wife asks how it feels, I’d better have an answer this time.”'],
+          zhou:['周夫子在衣袖里找了一阵，摸出一张折得方方的小纸。「学里托买的，写下来免得回去才想起。」','Master Zhou finds a folded slip in his sleeve. “For the school. I wrote it down before I left so I wouldn’t remember on the way home.”']
+        };
+        let voice=voices[window.NanlanSealsModel.patron(s,'v2Sell')];
+        if(q==='V2_10'&&(!f.v2CustomerHeard||waiting===6)){
+          voice=f.v2CustomerHeard?
+            ['旧客在空中比了比篮口。「村里有位阿婆，拎宽篮子过门得侧着身。你若做得窄些，我下回带她来试。今儿先看看架上的货。」','The old customer measures a basket mouth in the air. “An old neighbor has to turn sideways through her door with a wide basket. If you make a narrower one I’ll bring her to try it. Let me look at your shelf today.”']:
+            ['门边的人朝里探了探头。「可算找着你了。还记得镇集那张摊布么？那日赶着回家，我有句话没问完。」','Someone peers round the door. “Found you at last. Remember your cloth at the market? I hurried home that day before I could finish my question.”'];
+        }
+        $('line').prepend(document.createTextNode(deskText(...voice)+'\n\n'));
+      }
       if(q==='V2_10'&&!f.v2CustomerHeard)action('听旧客问：改过的窄篮还在么？','v2HearCustomer');
       if(f.v2Opened&&!d?.closed&&f.v2CustomerHeard){for(const id of Object.keys(shop.stock).filter(id=>shop.stock[id]>0))action(deskText('成交 ','Sell ')+itemName(id)+' ×1 · '+N.shopPrice(s,id)+deskText('文',' coins'),'v2Sell',{item:id,quote:N.shopPrice(s,id)},N.shopCustomers(s)>0&&M.stockAvailable(s,id)>0,M.stockAvailable(s,id)===0?deskText('这件货已留出；自己的留货可在本页解除，顾客预订仍须保留。','This stock is held. Release your own holds here; customer reservations remain protected.'):'今日普通来客已散；可交已约订单或回家过夜。');action('这一位先不买，接待下一位','v2NextCustomer',{},N.shopCustomers(s)>0,'今日普通来客已散。');button('调整未成交货物价签',()=>window.NanlanV2.show('v2Pricing'),'v2-retail-pricing',true);}
       if(q==='V2_11'){const ready=M.stockAvailable(s,shop.featured)>0&&!d?.closed;action('只卖可售现货，保留旧承诺','v2Bulk',{choice:'cash'},ready,'主打暂无可售现货，请补货、解除自己的留货，或婉拒本单。');action('现货先交，另约一件分批补交','v2Bulk',{choice:'split'},ready,'需有主打现货且今日尚未闭账。');action('这次不接超出能力的大单','v2Bulk',{choice:'decline'});}

@@ -265,6 +265,32 @@
     if(role==='doctor'&&s.flags.medicinalHarvested)return [entry[0],lines('青禾把你收过的药草摊开看。「这一回你知道它从芽长到能收，得等几日了。」','Qinghe spreads out the herbs you harvested. “Now you know how many days it takes from a shoot to something you can gather.”'),lines('「等不是闲着。留心哪一叶先变色，下回便知道什么时候要多看一眼。」','“Waiting has its work. Notice which leaf changes first and you’ll know when to take a closer look next time.”')];
     return entry;
   }
+  const localQuestions={
+    xiaoman:[
+      lines('那个角上的记号，是你自己想出来的？','Did you invent that little corner mark?'),
+      lines('「是我弟小时候画的蜗牛。只会画壳，身子总忘。」小满拿手遮住记号的一半，让你瞧瞧。「是不是挺像？给掌柜看的是正经字，这一角归我。」','“My little brother used to draw a snail like that. The shell was all he ever remembered.” Xiaoman covers half the mark. “See it now? The writing is for the keeper. This corner is mine.”')
+    ],
+    lin:[
+      lines('您也有过削过头的时候？','Have you ever shaved off too much?'),
+      lines('「有一回做凳子，四条腿轮着短。等它不晃，我坐下去，膝盖险些顶着下巴。」林师傅伸手比了比那点高度。「那凳还在，给小孩儿坐正好。」','“I once made a stool. Each leg took its turn being too short. By the time it sat level, my knees were at my chin.” Lin shows you its height. “Still in use. Fits a child beautifully.”')
+    ],
+    boatman:[
+      lines('头一回认这个水弯，您认准了么？','Did you recognize the bend on your first trip?'),
+      lines('何行舟伸出两根指头。「过了两回才认得。头回光顾看树，师父问我岸上谁家晒被，我一个字也答不出。第二回我记着了，是一床打补丁的蓝被。」','Xingzhou holds up two fingers. “Two trips. First time I watched the tree so hard I couldn’t tell my master whose quilt was out drying. Second time I got it. Blue, with a patch.”')
+    ],
+    neighbor:[
+      lines('您头回看铺子，也这么会招呼人？','Did customers come easily to you when you began?'),
+      lines('陆掌柜压低声音。「头一个客，问我篮子多少钱。我报了个进货价。我爹在后头直咳，客人还劝他喝水。」说到这儿，他自己先咳着笑了。','Lu lowers his voice. “First customer asked what a basket cost. I gave him what I’d paid for it. Father coughed so hard behind me the customer offered him water.” Lu’s laugh ends in a cough of his own.')
+    ],
+    liang:[
+      lines('您在自家灶边也要这么尝么？','Do you taste everything this carefully at home?'),
+      lines('「在家？汤勺刚到嘴边，我娘就说，尝够了，端出去。」梁问炊学那口气学得太像，自己愣了片刻，轻轻把勺搁下。','“At home? Before the ladle reaches my lips Mother says, that’s plenty, put it on the table.” Liang catches her voice so well that he stops a moment and sets the ladle down gently.')
+    ],
+    seaMerchant:[
+      lines('岸上的人怎么认得是您的船回来了？','How does your family recognize your boat coming in?'),
+      lines('「认船？他们认我的嗓子。」苏茂清了清喉咙，又摇头。「在这儿喊一声，半条街都以为我靠岸了。改日咱们在海上试。」','“My boat? They know my voice.” Su Mao clears his throat, then thinks better of it. “One shout here and half the street will think I’ve docked. Ask me again when we’re out on the water.”')
+    ]
+  };
   function offer(o){
     if($('dialog').hidden||!nearObject(o)||$('choices').querySelector('[data-action="scene-local"]')||dialogKind==='voyage-extra-story')return;
     if(NanlanConversations.roles[o.id])return;
@@ -276,7 +302,13 @@
       if(!nearObject(o))return;
       const back=()=>interact(o);
       activity(name[0],L(...first),'dialogue-scene');dialogObject=o;
-      $('dialogKicker').textContent=L('闲坐片刻 · 1 / 3','A quiet talk · 1 / 3');
+      $('dialogKicker').textContent=L('闲坐片刻','A quiet talk');
+      const question=localQuestions[role];
+      if(question)navButton(L(...question[0]),()=>{
+        activity(name[0],L(...question[1]),'dialogue-scene');dialogObject=o;
+        $('dialogKicker').textContent=L('闲坐片刻','A quiet talk');
+        navButton(L('回到眼前的事','Return to what brought you here'),back,'scene-local-back');
+      },'scene-local-ask');
       navButton(L('再听一句','Listen a little longer'),()=>{
         activity(name[0],L(...reply),'dialogue-scene');dialogObject=o;
         const more=everydayMore[role];

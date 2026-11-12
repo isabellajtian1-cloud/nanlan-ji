@@ -11,7 +11,7 @@ function normalise(s,need){
  const c=s.chronicle;need(c.version===1&&c.volumes&&typeof c.volumes==='object'&&!Array.isArray(c.volumes),'行旅记录无效。');
  for(const [k,v]of Object.entries(c.volumes)){need(Object.hasOwn(flags,k)&&v&&typeof v.partial==='boolean','卷末记录无效。');for(const n of ['startedAt','income','expense','sales','crafted','closedDays'])need(Number.isFinite(v[n])&&v[n]>=0,'卷末数目无效。');need(v.finishedAt===null||Number.isFinite(v.finishedAt)&&v.finishedAt>=v.startedAt,'卷末时辰无效。');need(Number.isFinite(v.closedProfit)&&Array.isArray(v.people)&&v.people.every(x=>typeof x==='string')&&Array.isArray(v.decisions)&&v.decisions.every(d=>typeof d.key==='string'&&Number.isFinite(d.tick)&&['string','number','boolean'].includes(typeof d.value)),'行旅留记无效。');}
 }
-const knownFlags={metChen:'chen',metCen:'cen',metDoctor:'doctor',metYu:'yu',ledgerPermission:'wan',historyConfirmed:'grandfather',firstShared:'mother',fatherHome:'father'};
+const knownFlags={metChen:'chen',metCen:'cen',metDoctor:'doctor',metYu:'yu',ledgerPermission:'wan',historyConfirmed:'grandfather',firstShared:'mother',fatherHome:'father',metMarketPeddler:'peddler'};
 function people(s){const set=new Set(Object.entries(knownFlags).filter(([f])=>s.flags[f]).map(([,r])=>r));for(const [k,v]of Object.entries(s.choices||{})){const m=k.match(/^chatCount:(.+)$/)||k.match(/^bond:([^:]+):(?:topic\d|event\d|shared:)/);if(m&&(typeof v==='number'?v>=0:!!v))set.add(m[1]);}return [...set];}
 function record(before,s,key){
  normalise(s,(ok,msg)=>{if(!ok)throw Error(msg);});const k=volume(s),from=volume(before);if(!s.chronicle.volumes[k]&&!s.flags[flags[k]])s.chronicle.volumes[k]=entry(s,k===from);

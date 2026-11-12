@@ -9,6 +9,7 @@
   const chronicle=typeof module==='object'&&module.exports?require('./chronicle-model.js'):globalThis.NanlanChronicle;
   const bonds=typeof module==='object'&&module.exports?require('./bonds-model.js'):globalThis.NanlanBonds;
   const conversations=typeof module==='object'&&module.exports?require('./conversations.js'):globalThis.NanlanConversations;
+  const neighbors=typeof module==='object'&&module.exports?require('./neighbors.js'):globalThis.NanlanNeighbors;
   const rural=typeof module==='object'&&module.exports?require('./rural-model.js'):globalThis.NanlanRural;
   const production=typeof module==='object'&&module.exports?require('./production-model.js'):globalThis.NanlanProductionModel;
   const seals=typeof module==='object'&&module.exports?require('./seals-model.js'):globalThis.NanlanSealsModel;
@@ -64,6 +65,7 @@
   const products = ['driedHerb','bambooWare','shellCraft'];
   const prices = {mulberryLeaf:1,pondFish:7,rawSilk:12,fineSilk:22,lychee:4,longan:4,mandarin:3,ginseng:28,agarwood:22,huali:26,driedHerb:14,bambooWare:12,shellCraft:10,rope:5,wood:2,herb:3,bamboo:4,stone:2,mushroom:3,shoot:3,shell:2,seaweed:2,clam:3,vegetable:3};
   const supplyPrices={rice:3,ingredient:3,seed:4,repair:5,rope:6};
+  for(const [id,g]of Object.entries(neighbors.goods))itemNames[id]=g.name[0];
   const rareResources={ginseng:{cooldown:4320,stamina:5,tool:'hoe'},agarwood:{cooldown:2880,stamina:6,tool:'axe'},huali:{cooldown:4320,stamina:8,tool:'axe'}};
   const fruitResources=['lychee','longan','mandarin'];
   function resourceCooldown(type){if(fruitResources.includes(type))return 1440;return rareResources[type]?.cooldown||240;}
@@ -327,6 +329,23 @@
     act(name,p={}) {
       return this.commit(name,(s)=>{
         const f=s.flags, q=current(s), quest=id=>expectQuest(s,id);
+        if(name==='streetTalk'){
+          const person=this.world[s.scene].objects.find(o=>o.id===p.object);
+          requireThat(person&&Object.hasOwn(neighbors.residents,p.object)&&neighbors.present(s,p.object,children.camp(s))&&this.near(person),'请在街坊出门时走到对方身旁。');
+          return neighbors.act(s,p,requireThat);
+        }
+        if(name==='peddlerBuy'){
+          const seller=this.world[s.scene].objects.find(o=>o.id==='peddler');
+          requireThat(s.scene==='market'&&seller&&this.near(seller)&&neighbors.present(s,'peddler'),'请趁货郎在镇集时走到货担旁。');
+          const g=Object.hasOwn(neighbors.goods,p.item)&&neighbors.goods[p.item];
+          requireThat(g&&p.quote===g.price&&p.sequence===s.revision,'请重新核对货品与价钱。');
+          requireThat(s.coins>=g.price,'身上的铜钱不够买这一件。');
+          s.coins-=g.price;
+          s.flags.metMarketPeddler=true;
+          give(s,{[p.item]:1});
+          log(s,'buy',-g.price,'向镇集货郎买下'+g.name[0],p.item);
+          return;
+        }
         if(name==='festivalAttend')return festival.act(s,p,{requireThat,requireScene,spend});
         if(name.startsWith('pref'))return prefecture.act(s,name,p,{requireThat,requireScene,spend,give,log,prices,sleepToMorning,world:this.world});
         if(name.startsWith('estate'))return estate.act(s,name,{requireThat,requireScene,log});
@@ -338,7 +357,10 @@
           requireThat(p.choice===0||p.choice===1,'请选择一句回应。');
           const count=s.choices['chatCount:'+role]||0;
           requireThat(p.expected===count,'这段话已经记下，请重新打开闲谈。');
-          bonds.rememberChat(s,role,count);
+          const spoken=conversations.next(s,role);
+          requireThat(p.topic===undefined||p.topic===spoken.id,'这段话已经记下，请重新打开闲谈。');
+          bonds.rememberChat(s,role,count,spoken.id);
+          s.choices['chatScene:'+role]=spoken.id;
           s.choices['chatCount:'+role]=count+1;s.choices['chatLast:'+role]=p.choice;
           return;
         }

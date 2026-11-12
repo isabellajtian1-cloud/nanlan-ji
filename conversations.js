@@ -1,5 +1,8 @@
 /* Authored everyday conversations; no currency, affection grind or quest skipping. */
-(function(root,factory){const api=factory();if(typeof module==='object'&&module.exports)module.exports=api;else root.NanlanConversations=api;})(typeof globalThis!=='undefined'?globalThis:this,function(){
+(function(root,factory){
+  if(typeof module==='object'&&module.exports)module.exports=factory(require('./small-talk.js'));
+  else root.NanlanConversations=factory(root.NanlanSmallTalk);
+})(globalThis,function(stories){
   const roles={grandfather:'grandfather',father:'father',fatherHill:'father',v2FatherCounter:'father',mother:'mother',motherHall:'mother',v2MotherCounter:'mother',villager:'chen',doctor:'doctor',pharmacyKeeper:'doctor',aCen:'cen',v2Supplier:'cen',shenYu:'yu',shenYuCoast:'yu',chengWan:'wan'};
   const cast={
     mother:{name:'母亲',topics:[
@@ -43,14 +46,34 @@
       ['若替南澜留下一页，你想画什么？','画大家常走的那条路。','路旁添上名字吧，日后的人看见，也知道是谁住过。','画夜里亮灯的院子。','那一页不必写太多，灯下坐着谁，画清楚就好。']
     ]}
   };
-  function topic(s,role){const count=s.choices['chatCount:'+role]||0;return cast[role].topics[count%cast[role].topics.length];}
-  function greeting(s,role){const person=cast[role],count=s.choices['chatCount:'+role]||0,last=s.choices['chatLast:'+role];let text='';
-    if(count&&Number.isInteger(last)){const prev=person.topics[(count-1)%person.topics.length];text='上次你说“'+prev[last===0?1:3]+'”，我还记得。\n\n';}
-    if(s.stamina<25)text+='你看着有些累，先歇歇，事情慢慢说。\n\n';
-    else if(s.mode==='daily')text+=(s.worldTick%1440>=1080?'天色晚了，归路还认得吧？':s.worldTick%1440<600?'来得早，今日想从哪件事做起？':'难得碰见，停下来聊两句吧。')+'\n\n';
-    if(role==='father'&&s.flags.fatherHome)text+='如今出门，我会先把去向告诉家里。那回让你们担心，我记着。\n\n';
-    if(role==='mother'&&s.flags.v2Opened)text+='铺面开起来了，家里也要留出一起吃饭的时间。\n\n';
-    return text+topic(s,role)[0];
+  const cycles={};
+  for(const [role, person] of Object.entries(cast)){
+    // Preserve the three original conversations and their existing translations.
+    const familiar=person.topics.map(([opening,a,replyA,b,replyB],index)=>({
+      id:'original'+index, originalIndex:index, opening,
+      answers:[{say:a,reply:replyA},{say:b,reply:replyB}]
+    }));
+    const [first, second]=stories[role];
+    cycles[role]=[first, second, familiar[0], familiar[1], familiar[2]];
   }
-  return {roles,cast,topic,greeting};
+  function next(s,role){
+    const cycle=cycles[role];
+    const last=cycle.findIndex(t=>t.id===s.choices['chatScene:'+role]);
+    const turn=cycle[(last+1)%cycle.length];
+    if(role==='mother'&&turn.id==='original1'&&!s.flags.v2Opened){
+      return {...turn,opening:['「一会儿想收箱子，一会儿又想理针线。我把手里的事都放下了，倒好同你坐坐。」','“One minute I mean to unpack, the next to sort my thread. I’ve put both down. Sit with me a minute?”']};
+    }
+    return turn;
+  }
+  function memory(s,role){
+    const id=s.choices['chatScene:'+role], choice=s.choices['chatLast:'+role];
+    return stories[role].find(t=>t.id===id)?.answers[choice]?.memory;
+  }
+  function topic(s,role){
+    const {opening,answers}=next(s,role);
+    const zh=line=>Array.isArray(line)?line[0]:line;
+    return [opening,answers[0].say,answers[0].reply,answers[1].say,answers[1].reply].map(zh);
+  }
+  function greeting(s,role){return [memory(s,role)?.[0],topic(s,role)[0]].filter(Boolean).join('\n\n');}
+  return {roles,cast,topic,greeting,next,memory};
 });

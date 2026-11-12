@@ -1873,7 +1873,7 @@ function frame(t){
   const dt=Math.min(.1,(t-(lastFrame||t))/1000);lastFrame=t;
   try{update(dt);if($('sceneLoading').hidden)render();if(t-lastHud>300){refreshHud();lastHud=t;}
     if(!window.NanlanSettings?.isOpen())void window.NanlanProduction?.maybeMorning();
-    window.NanlanAudio?.setEnvironment(window.NanlanOpening?.environment()||world[state().scene].soundScene||state().scene,window.NanlanOpening?.running()?false:N.daylight(state()).darkness>.25,started&&active&&moving);
+    window.NanlanAudio?.setEnvironment(window.NanlanOpening?.environment()||state().scene,window.NanlanOpening?.running()?false:N.daylight(state()).darkness>.25,started&&active&&moving);
     if(started&&active&&t-lastAutosave>20000){const r=engine.save();$('saveState').textContent=r.ok?(engine.memoryOnly?'仅本次试玩':'已保存'):'自动保存失败 · 请手动保存';lastAutosave=t;}
   }catch(e){console.error(e);active=false;notice('画面暂停了，请先保存进度，再刷新重试。',true);}
   requestAnimationFrame(frame);

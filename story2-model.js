@@ -43,6 +43,12 @@
   function price(s,item){return Math.max(baseCost(item),basePrice(s,item)+([-2,0,3][s.shop?.tiers?.[item]??1]));}
   function stockAvailable(s,item){return Math.max(0,(s.shop.stock[item]||0)-(s.shop.holds[item]||0)-(s.shop.reserved[item]||0));}
   function freightQuote(s,method){const count=Object.values(s.story2.cargo).reduce((n,q)=>n+q,0),space=Object.entries(s.story2.cargo).reduce((n,[id,q])=>n+q*(id==='narrowBasket'?2:1),0),capacity=method==='shared'?8:20,fee=method==='shared'?8:12,minimum=s.flags.v2ShipmentReceived?1:2;return {count,space,capacity,fee,minimum,ready:['shared','regular'].includes(method)&&!s.story2.shipment&&count>=minimum&&space<=capacity&&s.coins-fee>=s.story2.reserve};}
+  function freightWarning(s,fee){
+    const today=clock(s).day;
+    const due=Object.values(s.story2.orders).filter(o=>o.delivered<o.quantity&&(o.expires===undefined||today<o.expires));
+    const value=due.length?due.reduce((sum,o)=>sum+(o.quantity-o.delivered)*o.unitPrice,0):(s.story2.days[today]?.sales||0);
+    return (due.length||value>0)&&fee>value?{basis:due.length?'orders':'today',value}:null;
+  }
   function shipmentStatus(s){const shipment=s.story2.shipment;if(!shipment)return null;const ready=s.worldTick>=shipment.eta;let target=ready?s.worldTick:shipment.eta;if(!ready){const minute=target%1440;if(minute>1320)target=(Math.floor(target/1440)+1)*1440+360;else if(minute<360)target=Math.floor(target/1440)*1440+360;}return {ready,target,wait:Math.max(0,Math.ceil(target-s.worldTick)),day:Math.floor(target/1440)+1};}
   function regularQuote(s,item){const available=Object.keys(s.shop.stock).filter(k=>stockAvailable(s,k)>0),chosen=item??(available.includes(s.shop.featured)?s.shop.featured:available[0]);if(!available.includes(chosen))return null;const unitPrice=price(s,chosen);return {item:chosen,quantity:1,unitPrice,deposit:Math.floor(unitPrice/2)};}
   function openingIssue(s){return !s.flags.v2PriceConfirmed?'先核对成本与价格。':!s.production?.shopName?'先到书房请祖父题下字号。':!Object.keys(s.shop.stock).some(id=>stockAvailable(s,id)>0)?'没有可售实货；请到货架解除自己的留货，或签收补货。':'';}
@@ -192,5 +198,5 @@
     if(name==='v2FamilyEnd'){quest(s,'V2_18');at(s,'hall');need(f.v2ThreeDays&&f.v2Cooperated,'先兑现邻铺协作，并完成三个不同营业日的闭账。');need(!Object.entries(t.orders).some(([k,o])=>k!=='silkSample'&&o.delivered<o.quantity),'还有已接受订单未交清；先按原报价交付，再结卷。');need(['steady','neighbors','travel'].includes(p.choice),'请选择下一步方向。');s.choices.nextSeason=p.choice;f.v2FamilyEnd=true;return;}
     need(false,'这项南街事务尚未开放。');
   }
-  return {freightQuote,shipmentStatus,regularQuote,openingIssue,entryStatus,observationStatus,sale,bookSale,cabinetPlan,order,titles,steps,rewards,products,shops,slots,emptyShop,emptyStory,normalise,reconcile,act,price,basePrice,baseCost,stockAvailable,customers,summary,leaseQuote,familyAtShop};
+  return {freightQuote,freightWarning,shipmentStatus,regularQuote,openingIssue,entryStatus,observationStatus,sale,bookSale,cabinetPlan,order,titles,steps,rewards,products,shops,slots,emptyShop,emptyStory,normalise,reconcile,act,price,basePrice,baseCost,stockAvailable,customers,summary,leaseQuote,familyAtShop};
 });

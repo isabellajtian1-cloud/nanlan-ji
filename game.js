@@ -76,6 +76,7 @@ function state(){return engine.state;}
 function clean(text){return String(text).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 const artwork=window.NanlanAssetLoader({images,assets:DATA.assets,resolveKey:id=>world[id]?.asset||id});
 function loadImage(id,options){return artwork.load(id,options);}
+let currentSceneLoad=null;
 async function loadSceneAssets(scene,sceneState=state()){
   const required=[scene,'playerIdle',sceneState.gender==='male'?'walkMale':'walkFemale'];
   if(scene==='prefTea')required.push('teaServings','teaExtras');
@@ -91,25 +92,31 @@ async function loadSceneAssets(scene,sceneState=state()){
   if(scene==='hall'){required.push('diningTable','familyMealFemale','familyMealMale');if(N.current(sceneState)==='M14'||sceneState.flags.hallwayCleared)required.push('hallBefore','hallAfter');}
   if(scene==='village')required.push('villageLetter');
   const unique=[...new Set(required.map(id=>world[id]?.asset||id))];
+  const signature=JSON.stringify([scene,unique]);
+  if(currentSceneLoad?.signature===signature)return currentSceneLoad.promise;
+  currentSceneLoad?.cancel();
+  const request={signature},ready=new Set(unique.filter(id=>images[id]?.naturalWidth>0));
+  currentSceneLoad=request;
   const overlay=$('sceneLoading'),previous=document.activeElement,retry=$('sceneLoadRetry'),cancel=$('sceneLoadCancel');
   let generation=0,closed=false,slow;
   $('loadingTitle').textContent=deskText('正在走进 · '+world[scene].name,'Entering · '+world[scene].name);
   retry.textContent=deskText('重新连接并载入','Reconnect & Retry');cancel.textContent=deskText('暂不进入 · 保留进度','Cancel · Keep Progress');
   overlay.hidden=false;overlay.focus({preventScroll:true});
-  return await new Promise(resolve=>{
-    function finish(ok){if(closed)return;closed=true;generation++;clearTimeout(slow);if(!ok)unique.forEach(id=>artwork.cancel(id));retry.onclick=cancel.onclick=null;overlay.hidden=true;settlePointerInput();if(previous?.isConnected)previous.focus({preventScroll:true});resolve(ok);}
+  request.promise=new Promise(resolve=>{
+    function finish(ok){if(closed)return;closed=true;generation++;clearTimeout(slow);if(!ok)unique.forEach(id=>artwork.cancel(id));currentSceneLoad=null;retry.onclick=cancel.onclick=null;overlay.hidden=true;settlePointerInput();if(previous?.isConnected)previous.focus({preventScroll:true});resolve(ok);}
     async function run(restart=false){
       artwork.cancelOther(unique);
-      const mine=++generation;clearTimeout(slow);let ready=unique.filter(id=>images[id]?.naturalWidth>0).length;
-      const progress=()=>{if(closed||mine!==generation)return;$('loadingProgress').max=unique.length;$('loadingProgress').value=ready;$('loadingCount').textContent=deskText('已备好 '+ready+' / '+unique.length,'Ready '+ready+' / '+unique.length);};
+      const mine=++generation;clearTimeout(slow);
+      const progress=()=>{if(closed||mine!==generation)return;$('loadingProgress').max=unique.length;$('loadingProgress').value=ready.size;$('loadingCount').textContent=deskText('已备好 '+ready.size+' / '+unique.length,'Ready '+ready.size+' / '+unique.length);};
       progress();$('loadingHint').textContent=deskText('正在备好场景与人物。可随时重新连接或返回。','Preparing artwork. You can reconnect or return at any time.');
       slow=setTimeout(()=>{if(!closed&&mine===generation)$('loadingHint').textContent=deskText('连接较慢；本轮最多等候 16 秒。已载好的画面会保留。','The connection is slow. This attempt lasts at most 16 seconds; completed artwork is kept.');},5000);
-      const results=await Promise.all(unique.map(async id=>{const cached=!!images[id]?.naturalWidth,ok=await loadImage(id,{restart});if(ok&&!cached)ready++;progress();return ok;}));
+      const results=await Promise.all(unique.map(async id=>{const ok=await loadImage(id,{restart});if(ok&&!closed&&mine===generation){ready.add(id);progress();}return ok;}));
       if(closed||mine!==generation)return;clearTimeout(slow);
       if(results.every(Boolean))finish(true);else $('loadingHint').textContent=deskText('连接未完成，请重新连接，或暂不进入。原存档没有改变。','Artwork could not finish loading. Reconnect or return; your save is unchanged.');
     }
-    retry.onclick=()=>run(true);cancel.onclick=()=>finish(false);run();
+    retry.onclick=()=>run(true);request.cancel=cancel.onclick=()=>finish(false);run();
   });
+  return request.promise;
 }
 // Loading is a temporary modal: keyboard shortcuts cannot change the save or open another panel underneath it.
 window.addEventListener('keydown',e=>{if(!$('sceneLoading').hidden&&!e.ctrlKey&&!e.metaKey&&!e.altKey){if(e.key==='Tab'||['Enter',' '].includes(e.key)&&e.target?.closest('#sceneLoading button'))return;e.preventDefault();e.stopImmediatePropagation();if(e.key==='Escape')$('sceneLoadCancel').click();}},true);
@@ -451,7 +458,7 @@ function navigateTaskStep(flag,label,index){
   if(index>first){notice('先办妥「'+steps[first][1]+'」，再做这一件。',true);return;}
   if(typeof objectiveForStep!=='function'){notice('路线正在写入舆图，请稍后再点一次。');return;}
   const target=objectiveForStep(flag,label);if(!target){notice('这一件事就在当前场景，先看看附近可互动之处。');return;}
-  if(!$('dialog').hidden)closeDialog(true);chooseTaskRoute(target);
+  chooseTaskRoute(target);
 }
 function taskStepHint(s,flag){
   const slot=Object.keys(N.story2.slots).find(k=>N.story2.slots[k].flag===flag);

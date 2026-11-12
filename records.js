@@ -76,7 +76,19 @@ function laterChoices(key,s,record,english){
 function summaryLines(key,s,english=false){
  const tr=(a,b)=>english?b:a,v=s.chronicle?.volumes[String(key)],out=[];
  if(!v)out.push(tr('旧卷未留下完整分卷数字，不补记为零。','This older chapter has no complete chapter totals; missing data is not zero.'));
- else{out.push(v.partial?tr('续记：以下只统计更新后本卷的经历。','Continued record: only this chapter’s activity since the update.'):tr('翻过这一卷，日子里多了这些。','These are the things this chapter left in your life.'));out.push(tr('钱囊收支相抵：','Change in your purse: ')+Number((v.income-v.expense).toFixed(2))+tr(' 文（计入回报、定金与置办花费）',' coins (includes rewards, deposits and preparations)'));out.push(tr('做买卖收得：','Shop and stall sales revenue: ')+v.sales+tr(' 文',' coins'));out.push(tr('亲手制成：','Workshop goods crafted: ')+v.crafted+tr(' 件 · 新添往来：',' · Newly recorded connections: ')+v.people.length+tr(" 位"," people"));if(v.closedDays)out.push(tr('铺中结清了 ','Closed accounts on ')+v.closedDays+tr(' 日账 · 盈亏合计 ',' days · Combined profit ')+v.closedProfit+tr(' 文',' coins'));else if(Number(key)>1)out.push(tr('这一卷尚未留下闭账记录。','This chapter has no closed trading-day entry.'));}
+ else{const partialNote=String(key)==='2'?tr('续记：收支、手作和闭账从本卷开始留记时算起。','Continued record: money, crafts and closed days are counted from the start of this chapter record.'):tr('续记：以下只统计更新后本卷的经历。','Continued record: only this chapter’s activity since the update.');out.push(v.partial?partialNote:tr('翻过这一卷，日子里多了这些。','These are the things this chapter left in your life.'));out.push(tr('钱囊收支相抵：','Change in your purse: ')+Number((v.income-v.expense).toFixed(2))+tr(' 文（计入回报、定金与置办花费）',' coins (includes rewards, deposits and preparations)'));out.push(tr('做买卖收得：','Shop and stall sales revenue: ')+v.sales+tr(' 文',' coins'));if(String(key)==='2'){
+   out.push(tr('亲手制成：','Workshop goods crafted: ')+v.crafted+tr(' 件',' items'));
+   const patrons=window.NanlanSealsModel.names;
+   const names=v.people.map(id=>{
+     if(id==='zhouSchoolmaster')return tr('周夫子','Master Zhou');
+     if(B.roles.includes(id))return B.name(id,english);
+     if(window.NanlanNeighbors.residents[id])return window.NanlanNeighbors.residents[id].name[english?1:0];
+     if(patrons[id])return english?window.NanlanI18n.english(patrons[id]):patrons[id];
+     return null;
+   }).filter(Boolean);
+   out.push(tr('本卷有据往来：','Contacts recorded this volume: ')+v.people.length+tr(' 位',' people')+(names.length?tr('（',' (')+names.join(tr('、',', '))+tr('）',')'):''));
+   out.push(tr('闲谈初识、邻铺协作、供货与有名可查的买卖，同一人只记一次。','First acquaintances from conversations, neighboring shops, suppliers and identifiable trades count once per person.')+(v.shopContacts==='recovered'?tr('旧账依原有签单和事项补记，未留姓名的旧交易可能未计入。',' Older books include only traceable receipts and dealings. Unnamed past sales may be missing.'):''));
+ }else{out.push(tr('亲手制成：','Workshop goods crafted: ')+v.crafted+tr(' 件 · 新添往来：',' · Newly recorded connections: ')+v.people.length+tr(" 位"," people"));}if(v.closedDays)out.push(tr('铺中结清了 ','Closed accounts on ')+v.closedDays+tr(' 日账 · 盈亏合计 ',' days · Combined profit ')+v.closedProfit+tr(' 文',' coins'));else if(Number(key)>1)out.push(tr('这一卷尚未留下闭账记录。','This chapter has no closed trading-day entry.'));}
  const rows=v?.decisions?.filter(d=>decisionNames[d.key])||[];for(const d of rows.slice(-3))out.push((decisionNames[d.key]?.[english?1:0]||d.key)+'：'+(values[d.value]?.[english?1:0]||tr('旧笺未详记','Not detailed in the old record')));
  if(!rows.length&&['1','2'].includes(String(key))){const map=String(key)==='2'?['shopReserve','nextSeason','shopRoster']:['repair','bamboo'];for(const k of map)if(s.choices[k]!==undefined)out.push(tr('存档现记 · ','Current saved choice · ')+(decisionNames[k]?.[english?1:0]||k)+'：'+(values[s.choices[k]]?.[english?1:0]||tr('旧笺未详记','Not detailed in the old record')));}
  out.push(...laterChoices(key,s,v,english));

@@ -107,7 +107,16 @@
   itemNames.travelBox='出行食盒';prices.travelBox=24;
   recipes.travelBox={label:'制作出行食盒',cost:{bamboo:2,rope:1},out:{travelBox:1}};
   const shopPrice=storyV2.price,shopCustomers=storyV2.customers;
-  function volume2Action(s,name,p){return seals.settle(s,name,p,()=>storyV2.act(s,name,p),requireThat);}
+  function volume2Action(s,name,p){
+    const patron=seals.eligible(name,p)?seals.patron(s,name):null;
+    const result=seals.settle(s,name,p,()=>storyV2.act(s,name,p),requireThat);
+    const v=s.chronicle?.volumes['2'];
+    if(v&&v.finishedAt===null){
+      const contact=patron||({v2Neighbor:'neighbor',v2Cooperate:'neighbor',v2SupplyTerms:'cen',v2SupplyReceive:'cen',v2Regular:'regular'})[name];
+      chronicle.addShopContact(v,contact);
+    }
+    return result;
+  }
 
   function initial(gender='female') {
     const s = {
@@ -292,6 +301,7 @@
     // Finish only a fully recorded, active final feast; never invent missing steps.
     if(!value.flags.volume2Started&&value.quests.M20?.status==='ACTIVE'&&ORDER.slice(0,-1).every(id=>done(value,id))&&steps.M20.every(([flag])=>value.flags[flag]))reconcile(value);
     climate.normalise(value,requireThat);chronicle.normalise(value,requireThat);
+    chronicle.recoverShopContacts(value);
     return copy(value);
   }
   class Engine {

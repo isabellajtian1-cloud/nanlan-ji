@@ -222,9 +222,17 @@ async function quickTravel(to,objectId=null){
   if(state().scene===to&&objectId){const o=visibleObjects().find(v=>v.id===objectId);if(o)approach(o);else notice('已经到达，目标会随当前事项出现。');}
 }
 function chooseTaskRoute(target){
-  if(target.scene===state().scene){startNavigation(target.scene,target.object);return;}
+  if(target.scene===state().scene){
+    const object=visibleObjects().find(o=>o.id===target.object);
+    if(object&&nearObject(object)){
+      if(!$('dialog').hidden)closeDialog(true);
+      return interact(object);
+    }
+    startNavigation(target.scene,target.object);return;
+  }
   const route=firstRoute(state().scene,target.scene),why=mapAccess(target.scene);
   if(why||route===null){notice(why||'这条路尚未走通。',true);return;}
+  if(!$('dialog').hidden)closeDialog(true);
   activity('这次怎样前往？',target.label+'\n'+world[target.scene].name,'task-route');
   navButton('沿路走去 · 可随时采集',()=>{closeDialog(true);startNavigation(target.scene,target.object);},'route-walk');
   if(state().visits[target.scene])navButton('快速抵达 · 已走过的地方',()=>quickTravel(target.scene,target.object),'route-quick');

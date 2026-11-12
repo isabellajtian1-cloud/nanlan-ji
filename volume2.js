@@ -78,7 +78,11 @@ window.NanlanV2={
       if(!ready){b.disabled=true;const x=document.createElement('small');x.className='v2-note';x.textContent=why;$('choices').append(x);}return b;
     }
     function note(text){const p=document.createElement('p');p.className='v2-note';p.textContent=text;$('panelExtra').append(p);}
-    function nav(label,scene,id){button(label,()=>{closeDialog();startNavigation(scene,id);},'v2-nav-'+scene+'-'+id,true);}
+    function nav(label,scene,id){navButton(label,()=>{closeDialog(true);startNavigation(scene,id);},'v2-nav-'+scene+'-'+id);}
+    function homeToBed(){
+      if(!s.visits.bed){nav(deskText('沿路回旧宅东厢房 · 各处门前确认','Walk home to the east wing · confirm each doorway'),'bed','bedRest');return;}
+      navButton(deskText('快行回旧宅东厢房 · 到床边选择休息','Fast travel home to the east-wing bed'),()=>quickTravel('bed','bedRest'),'v2-nav-bed-bedRest');
+    }
     function table(headers,rows){const table=document.createElement('table');table.className='shop-story-table';const head=document.createElement('thead'),tr=document.createElement('tr');headers.forEach(label=>{const th=document.createElement('th');th.textContent=label;tr.append(th);});head.append(tr);table.append(head);const body=document.createElement('tbody');rows.forEach(row=>{const tr=document.createElement('tr');row.forEach(value=>{const td=document.createElement('td');td.textContent=value;tr.append(td);});body.append(tr);});table.append(body);$('panelExtra').append(table);}
     function title(name,text){activity(name,text,'volume2');$('dialogKicker').textContent=deskText('第二卷 · 南街灯起'+(q?' · 当前第 '+(N.V2_ORDER.indexOf(q)+1)+' 段 / 共 '+N.V2_ORDER.length+' 段主线':' · 日常经营'),'Volume II · South Street Lights'+(q?' · Story entry '+(N.V2_ORDER.indexOf(q)+1)+' of '+N.V2_ORDER.length:' · Daily trading'));if(q){const story=document.createElement('p');story.className='shop-story-copy';story.textContent=window.NanlanV2.scenes[q];$('panelExtra').append(story);}button(deskText('查看任务详情与回报','Quest Details & Outcome'),()=>window.NanlanContinuity.rewards(),'v2-task-read',true);navButton('前往当前剧情目标',()=>{
       const current=state(),target=nextObjective();
@@ -91,8 +95,28 @@ window.NanlanV2={
           feedback.textContent=message;feedback.focus();notice(message,true);return;
         }
       }
-      closeDialog();startNavigation(target.scene,target.object);
+      const here=world[current.scene].objects.find(obj=>obj.id===target.object);
+      if(kind==='v2Shop'&&target.scene===current.scene&&here?.action==='v2Shop'){
+        const message=deskText('已经在柜台，可在本页办理「'+target.label+'」。','You are at the counter. Complete this step here: '+window.NanlanI18n.english(target.label));
+        notice(message,true);
+        $('dialogNotice').tabIndex=-1;$('dialogNotice').focus();
+        return;
+      }
+      chooseTaskRoute(target);
     },'v2-next-place');}
+    function freightAction(method,label){
+      const freight=M.freightQuote(s,method);
+      const why=freight.count<freight.minimum?'至少装入 '+freight.minimum+' 件实货。':freight.space>freight.capacity?'已装 '+freight.space+' 格，超过本班 '+freight.capacity+' 格；请卸货或改选班次。':'支付 '+freight.fee+' 文运费后需留家用 '+t.reserve+' 文，可先筹钱或回家调整。';
+      const warning=freight.ready?M.freightWarning(s,freight.fee):null;
+      if(!warning){action(label,'v2Ship',{method},freight.ready,why);return;}
+      const basis=warning.basis==='orders'?deskText('待交订单货值','undelivered order value'):deskText('今日已入账销售额','sales booked today');
+      const message=deskText('这一趟运费 '+freight.fee+' 文，高于'+basis+' '+warning.value+' 文。还要叫这班车吗？','The fare of '+freight.fee+' coins exceeds '+basis+' of '+warning.value+' coins. Send this load?');
+      navButton(label,()=>{
+        activity(deskText('装车前 · 核一核运费','Before dispatch · Check the fare'),message,'volume2');
+        navButton(deskText('先不发，回去装货','Keep packing'),again,'freight-back');
+        actButton(deskText('仍付 '+freight.fee+' 文发车','Pay '+freight.fee+' coins and dispatch'),'v2Ship',{sequence:s.revision,method},again,'freight-confirm');
+      },'review-v2Ship-'+method);
+    }
     function pricesPanel(){const ids=Object.keys(shop.stock).filter(id=>shop.stock[id]>0);table(['商品','到店参考成本','当前售价','可售'],ids.map(id=>[itemName(id),num(shop.cost[id]??M.baseCost(id))+' 文',N.shopPrice(s,id)+' 文',M.stockAvailable(s,id)]));if(!ids.length)return;const id=ids.includes(selected)?selected:ids.includes(shop.featured)?shop.featured:ids[0];for(const item of ids)button('选 '+itemName(item)+' 调价',()=>{window.NanlanDesktop?.resumeNextDialogue();window.NanlanV2.show('v2Pricing',o,item);},'v2-price-item-'+item,true);for(const tier of [0,1,2])action(itemName(id)+' · '+['让利价','常价','较高价'][tier],'v2Price',{item:id,tier});}
     function ledger(){const v=M.summary(s),d=v.day;table(['账目','当前记录'],[['现金余额',s.coins+' 文'],['家用保留目标',t.reserve+' 文'],['实收存货参考价值',v.stockValue+' 文'],['已完成闭账',v.closedDays+' 个不同营业日'],['当日成交收入',(d?.sales||0)+' 文'],['当日已售成本',num(d?.cost||0)+' 文'],['当日租金分摊',!t.contract?'尚未签约':t.contract.legacy&&t.contract.dailyRent===0?'旧约已付，不另计日租':num(v.rent)+' 文（已预付，不另扣）'],['当日设施分摊',num(v.wear)+' 文'],['当日经营结果',v.profit+' 文'],['今日状态',d?.closed?'已打烊并保存':'尚未闭账']]);const note=document.createElement('p');note.className='v2-note';note.textContent='成本依材料价与实付运钱核算。往期流水另册存放，不重记今日收支。租金已预付，押金另列保管，闭店不重复扣款。';$('panelExtra').append(note);}
     if(!f.volume2Started){window.NanlanV2.entry();return;}
@@ -141,7 +165,7 @@ window.NanlanV2={
     if(kind==='v2Cargo'){
       title('旧宅仓房 · 实货与装车','母亲：「这两只留给谁，你还记得么？」\n装箱从行囊扣实货，原有订单预留不能装车；发车后转入在途，签收后才能在县城出售。\n\n已装：'+(Object.entries(t.cargo).filter(([,n])=>n).map(([id,n])=>itemName(id)+' ×'+n).join('、')||'暂无')+(t.shipment?'\n已有一批在途，请去铺内验收。':''));
       if(!f.v2Sign){prerequisiteNote('先完成柜架检修、陈列和铺号。');return;}
-      if(!t.shipment){for(const id of Object.keys(N.prices)){const n=N.available(s,id);if(n>0){action('装入 '+itemName(id)+' ×1','v2Pack',{item:id,quantity:1});if(n>=3)action('装入 '+itemName(id)+' ×3','v2Pack',{item:id,quantity:3});}if(t.cargo[id]>0)action('卸回 '+itemName(id)+' ×1','v2Unpack',{item:id,quantity:1});}for(const [method,label]of [['shared','同乡拼车 · 8文 / 8格 / 90分钟'],['regular','商行定班 · 12文 / 20格 / 45分钟']]){const freight=M.freightQuote(s,method);action(label,'v2Ship',{method},freight.ready,freight.count<freight.minimum?'至少装入 '+freight.minimum+' 件实货。':freight.space>freight.capacity?'已装 '+freight.space+' 格，超过本班 '+freight.capacity+' 格；请卸货或改选班次。':'支付 '+freight.fee+' 文运费后需留家用 '+t.reserve+' 文，可先筹钱或回家调整。');}}
+      if(!t.shipment){for(const id of Object.keys(N.prices)){const n=N.available(s,id);if(n>0){action('装入 '+itemName(id)+' ×1','v2Pack',{item:id,quantity:1});if(n>=3)action('装入 '+itemName(id)+' ×3','v2Pack',{item:id,quantity:3});}if(t.cargo[id]>0)action('卸回 '+itemName(id)+' ×1','v2Unpack',{item:id,quantity:1});}for(const [method,label]of [['shared','同乡拼车 · 8文 / 8格 / 90分钟'],['regular','商行定班 · 12文 / 20格 / 45分钟']])freightAction(method,label);}
       nav('去县城铺内清点到货','generalStore','v2Shelf');nav('在仓房制作成品','store','workbench');return;
     }
     if(kind==='v2Shelf'){
@@ -192,7 +216,7 @@ window.NanlanV2={
       if(f.v2BulkResolved)for(const pending of Object.values(t.days).filter(day=>!day.closed&&day.quantity>0&&day.day<N.clock(s).day).sort((a,b)=>a.day-b.day))action('补核 '+dayLabel(pending.day)+' 账目 · 收入'+pending.sales+'文','v2Close',{day:pending.day});
       const saved=Object.values(t.days).filter(day=>day.closed).sort((a,b)=>a.day-b.day);if(saved.length)table(['已结营业日','成交收入','商品与费用成本','经营结果'],saved.map(day=>[dayLabel(day.day),day.sales+'文',num(day.cost+day.expenses+day.rent+day.wear)+'文',day.profit+'文']));
       if(q==='M18'&&f.v2FirstCounted)nav('走到门前亲手点灯','generalStore','v2ShopLamp');
-      if(f.v2Opened&&(!d||!d.closed)){if(!Object.keys(shop.stock).some(id=>M.stockAvailable(s,id)>0))note(deskText('柜台暂无可售实货。请到货架解除自己的留货，或回仓房装货转运。','No goods are available for sale. Release your holds at the shelf or send new stock from the storehouse.'));if(N.shopCustomers(s)===0)nav('今日普通来客已散 · 回东厢房睡一夜','bed','bedRest');}if(d?.closed)nav('回东厢房床榻睡一夜','bed','bedRest');nav('查看到货、预留与实货','generalStore','v2Shelf');button('查看逐笔家庭收支',showAccounts,'v2-ledger',true);
+      if(f.v2Opened&&(!d||!d.closed)){if(!Object.keys(shop.stock).some(id=>M.stockAvailable(s,id)>0))note(deskText('柜台暂无可售实货。请到货架解除自己的留货，或回仓房装货转运。','No goods are available for sale. Release your holds at the shelf or send new stock from the storehouse.'));if(N.shopCustomers(s)===0)homeToBed();}if(d?.closed)homeToBed();nav('查看到货、预留与实货','generalStore','v2Shelf');button('查看逐笔家庭收支',showAccounts,'v2-ledger',true);
       const primary=[...$('choices').children].filter(b=>/^settle-v2|^v2HearCustomer|^v2NoHold|^v2NextCustomer|^v2Close/.test(b.dataset.action||''));for(const b of primary.reverse())$('choices').prepend(b);$('panelExtra').before($('choices'));return;
     }
     if(kind==='v2Neighbor'){

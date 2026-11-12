@@ -140,7 +140,7 @@ function paint(retry=false){
  const cast=host.querySelector('.opening-portraits');cast.replaceChildren();cast.style.animation='none';void cast.offsetWidth;cast.style.animation='';
  for(const role of s.roles){const portrait=document.createElement('img');portrait.src=A['npc_'+role];portrait.alt='';portrait.draggable=false;portrait.onerror=()=>{portrait.hidden=true;};cast.append(portrait);}
  host.querySelector('#openingTitle').textContent=P(s.title);const copy=host.querySelector('#openingLine');copy.textContent=P(s.line);
- if(s.summary){copy.replaceChildren();for(const paragraph of P(s.line).split('\n\n')){const parts=paragraph.split(/ · (?=新添往来：|Newly recorded connections:)/);for(const text of parts){const span=document.createElement('span');span.className=/^(钱囊|做买卖|亲手制成|新添往来|Change in your purse|Shop and stall|Workshop goods|Newly recorded)/.test(text)?'summary-fact':'summary-note';span.textContent=text;copy.append(span);}}}
+ if(s.summary){copy.replaceChildren();for(const paragraph of P(s.line).split('\n\n')){const parts=paragraph.split(/ · (?=新添往来：|Newly recorded connections:)/);for(const text of parts){const span=document.createElement('span');span.className=/^(钱囊|做买卖|亲手制成|新添往来|本卷有据往来|Contacts recorded|Change in your purse|Shop and stall|Workshop goods|Newly recorded)/.test(text)?'summary-fact':'summary-note';span.textContent=text;copy.append(span);}}}
  labels();
 }
 function update(t){

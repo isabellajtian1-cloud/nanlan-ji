@@ -1,0 +1,5 @@
+failure
+page.waitForFunction: Timeout 20000ms exceeded.
+    at /home/runner/work/nanlan-ji/nanlan-ji/.qa/loading.cjs:42:71 {
+  name: 'TimeoutError'
+}

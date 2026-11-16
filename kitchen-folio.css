@@ -1,0 +1,19 @@
+.food-folio{color:#3f3326;line-height:1.5;text-align:left;font-size:15px;margin:8px 0 12px}
+.food-tabs,.food-trial,.food-technique{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 9px}
+.food-folio .food-choice{font:inherit;color:#443b2e;min-height:44px;padding:6px 12px;background:#f7eed8;border:1px solid #b6a17b;border-radius:4px;cursor:pointer;line-height:1.35}
+.food-folio .food-choice:focus-visible{outline:3px solid #986b25;outline-offset:2px}
+.food-folio .food-choice[aria-pressed=true]{background:#394e43;color:#fff5d9;border-color:#37473c}
+.food-folio .food-choice:disabled{opacity:.55;cursor:default}
+.food-banner,.food-mini{background-image:url('kitchen-folio-art.png');background-repeat:no-repeat;background-size:200% 200%}
+.food-banner{width:min(100%,258px);aspect-ratio:1.5;margin:8px auto 12px;border-radius:3px;border:1px solid #c8b491}
+.food-mini{display:inline-block;width:48px;height:38px;border-radius:4px}
+.food-banner.savoury,.food-mini.savoury{background-position:0 0}.food-banner.grain,.food-mini.grain{background-position:100% 0}
+.food-banner.sweet,.food-mini.sweet{background-position:0 100%}.food-banner.tea,.food-mini.tea{background-position:100% 100%}
+.food-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(150px,100%),1fr));gap:6px}
+.food-list .food-choice{display:flex;flex-direction:column;text-align:left;align-items:flex-start}
+.food-list small,.food-tally{font-size:.86em;color:#655943}.food-list .food-seal{color:#904336}
+.food-materials,.food-quote{font-weight:650}.food-note,.food-sense{margin:8px 0 6px}
+.food-source{color:#4d654f;text-decoration-thickness:1px;text-underline-offset:3px}.food-result:not(:empty){background:#eee3c8;border-left:3px solid #8b7950;padding:6px 10px}
+.food-damper{display:flex;align-items:center;flex-wrap:wrap;gap:4px 14px;padding:4px 0}.food-damper input{width:min(100%,180px);min-height:44px;accent-color:#944e32}
+@media(max-height:520px){.food-banner{width:165px;height:108px}.food-list .food-choice{min-height:44px}}
+@media(max-width:480px){.food-list{grid-template-columns:1fr 1fr}.food-folio .food-choice{padding:6px 8px}.food-banner{max-height:125px;width:190px}}

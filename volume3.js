@@ -69,11 +69,10 @@ const exercises={
 };
 const roleMap={zhou:'zhou',v3Zhou:'zhou',v3Fang:'fang',v3Boatman:'boatman',v3Xiaoman:'xiaoman',v3ZhouShop:'zhou',v2Neighbor:'lu',doctor:'doctor',villager:'chen',shenYuCoast:'yu'};
 function reading(i,o,pos=0){
- const ch=V.dialogue[i],line=ch.beats[pos];activity(roles[line[0]]||roles.narrator,line[1],'v3-voice');$('dialogKicker').textContent=ch.title[0]+' · '+(pos+1)+' / '+ch.beats.length;
- if(line[0]==='player')playerPortrait();$('next').hidden=true;
+ const ch=V.dialogue[i],line=ch.beats[pos];activity(roles[line[0]]||roles.narrator,line[1],'v3-voice',NanlanPortraitStage.partner(ch.beats,line,roles));$('dialogKicker').textContent=ch.title[0]+' · '+(pos+1)+' / '+ch.beats.length;
+ $('next').hidden=true;
  button(pos+1<ch.beats.length?L('听下一句','Hear the Next Line'):L('回到眼前的事','Return to the Task'),()=>pos+1<ch.beats.length?reading(i,o,pos+1):place(o),'v3-read');
 }
-function playerPortrait(){const host=$('dialogPortraits');host.replaceChildren();host.hidden=false;const f=document.createElement('figure'),box=document.createElement('div'),img=document.createElement('img');box.className='portrait-frame';img.src=DATA.assets['npc_'+(state().gender==='male'?'playerMale':'playerFemale')];img.alt=roles.player;box.append(img);f.append(box);host.append(f);}
 function stepSuccess(o,k,i,c){
  const s=state(),ch=V.dialogue[i],first=V.first(s),echo=ch.echo[['choiceA','choiceB','choiceC'][c]];
  const title=roles[roleMap[o.id]]||ch.title[0];
@@ -87,8 +86,8 @@ function stepSuccess(o,k,i,c){
 function play(o,r,stage=0){
  const s=state(),k=r[0],i=V.chapterOf[k],ch=V.dialogue[i],role=roleMap[o.id]||o.role;
  const words=ch.beats.find(b=>b[0]===role)||ch.beats[Math.min(V.chapters[i].indexOf(r),ch.beats.length-1)];
- activity(roles[words[0]]||ch.title[0],words[1],'v3-story');$('dialogKicker').textContent=ch.title[0];$('next').hidden=true;
- if(words[0]==='player')playerPortrait();
+ activity(roles[words[0]]||ch.title[0],words[1],'v3-story',NanlanPortraitStage.partner(ch.beats,words,roles));$('dialogKicker').textContent=ch.title[0];$('next').hidden=true;
+ 
  if(pictures[k]!=null)prop(pictures[k]);note(r[3]);
  const memory={claim:'cord',herbal:'herb',mend:'mark',teach:'teach'}[k];if(memory)window.NanlanThreads.offer(memory);
  const ex=exercises[k];

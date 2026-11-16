@@ -6,6 +6,7 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
   const SAVE_KEY = 'nanlan_v20';
+  const identity=typeof module==='object'&&module.exports?require('./character-model.js'):globalThis.NanlanCharacter;
   const chronicle=typeof module==='object'&&module.exports?require('./chronicle-model.js'):globalThis.NanlanChronicle;
   const bonds=typeof module==='object'&&module.exports?require('./bonds-model.js'):globalThis.NanlanBonds;
   const conversations=typeof module==='object'&&module.exports?require('./conversations.js'):globalThis.NanlanConversations;
@@ -255,6 +256,7 @@
   function normaliseLoaded(value) {
     requireThat(value && value.schemaVersion===2,'这个存档不属于当前剧情版本，原数据已保留。');
     requireThat(['female','male'].includes(value.gender),'存档角色资料不完整。');
+    if(value.identity!==undefined){try{value.identity=identity.validate(value.identity,value.gender);}catch(e){requireThat(false,'存档姓名或立绘资料无效。');}}
     requireThat(typeof value.scene==='string'&&value.player&&Number.isFinite(value.player.x)&&Number.isFinite(value.player.y),'存档位置无效。');
     requireThat(Number.isFinite(value.worldTick)&&value.worldTick>=0&&value.worldTick<1e9,'存档时间无效。');
     requireThat(Number.isFinite(value.coins)&&value.coins>=0&&Number.isFinite(value.stamina)&&value.stamina>=0&&value.stamina<=100,'存档数值无效。');
@@ -307,7 +309,7 @@
   class Engine {
     constructor(storage,world) {this.storage=storage;this.world=world||{};this.state=initial();this.memoryOnly=false;}
     write(next) {if(!this.memoryOnly){if(this.storage.getItem&&this.loadedRaw!==undefined)requireThat(this.storage.getItem(SAVE_KEY)===this.loadedRaw,'另一页已更新存档，本页已停止覆盖。请先导出本页备份，再接续最新进度。');const raw=JSON.stringify(next);this.storage.setItem(SAVE_KEY,raw);this.loadedRaw=raw;}}
-    reset(gender) {const next=initial(gender);if(this.storage.getItem)this.loadedRaw=this.storage.getItem(SAVE_KEY);this.write(next);this.state=next;return next;}
+    reset(gender,profile) {const next=initial(gender);if(profile)next.identity=identity.validate(profile,gender);if(this.storage.getItem)this.loadedRaw=this.storage.getItem(SAVE_KEY);this.write(next);this.state=next;return next;}
     save() {try{this.write(this.state);return {ok:true};}catch(e){return {ok:false,message:e.userMessage||'保存失败。当前进度仍在，请检查浏览器存储后重试。'};}}
     load(raw) {const snapshot=JSON.parse(raw),savedTick=snapshot.worldTick,next=normaliseLoaded(snapshot);requireThat(next.worldTick===savedTick,'恢复时辰未能核对，原存档已保留。');requireThat(this.world[next.scene],'存档场景不存在。');requireThat(!sceneGate(next,next.scene),'存档位置尚未开放。');
       const b=this.world[next.scene].bounds;

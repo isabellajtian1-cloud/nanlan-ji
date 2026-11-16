@@ -204,11 +204,12 @@ function dialogueCast(title){
   for(const [id,p] of Object.entries(NanlanNeighbors.residents)){
     if(title.startsWith(p.name[0])||title.startsWith(p.name[1]))return [[p.name[0],id]];
   }
-  if(title.startsWith('杜掌柜'))return [['杜掌柜','customer']];
-  const shopkeeper=[['顾绣娘','clothKeeper'],['叶先生','bookKeeper'],['冯掌柜','innKeeper']].find(([name])=>title.startsWith(name));
+  if(title.startsWith('杜掌柜')||title.split(' · ')[0]===NanlanI18n.english('杜掌柜'))return [['杜掌柜','customer']];
+  const shopkeeper=[['顾绣娘','clothKeeper'],['叶先生','bookKeeper'],['冯掌柜','innKeeper']].find(([name])=>title.startsWith(name)||title.split(' · ')[0]===NanlanI18n.english(name));
   if(shopkeeper)return [shopkeeper];
   const people=[['苏茂','seaMerchant'],['京中故交','visitor'],['梁问炊','liang'],['罗小满','xiaoman'],['何行舟','boatman'],['周成','zhou'],['方掌柜','fang'],['祖父','grandfather'],['父亲','father'],['母亲','mother'],['陈伯','chen'],['许青禾','doctor'],['阿岑','cen'],['程婉','wan'],['沈晚渔','yu'],['邱管事','qiu'],['林师傅','lin'],['郑掌柜','landlord'],['陆掌柜','neighbor'],['茶馆掌柜','tea'],['罗掌柜','tea'],['南街熟客','customer'],['官兵','guard']];
-  const matched=people.find(([name])=>title.startsWith(name));if(matched)return [matched];
+  const label=title.split(' · ')[0];
+  const matched=people.find(([name])=>title.startsWith(name)||label===window.NanlanI18n?.english(name));if(matched)return [matched];
   if(/^(家议|正厅 · 家宴后的铺讯|正厅 · 临时安置|第一卷完成)/.test(title))return [['母亲','mother'],['父亲','father'],['祖父','grandfather']];
   if(title==='旧宅门前 · 交接')return [['官兵','guard'],['祖父','grandfather']];
   if(/^(旧宅仓房 · 实货与装车|门前灯笼)/.test(title))return [['母亲','mother']];
@@ -217,27 +218,30 @@ function dialogueCast(title){
   if(/柜台与账目/.test(title)&&state().flags.v2Opened)return [['南街来客','customer']];
   return [];
 }
-function showDialoguePortraits(title){
-  const host=$('dialogPortraits'),cast=dialogueCast(title);host.replaceChildren();host.hidden=!cast.length;
+function showDialoguePortraits(title,kind,partnerTitle){
+  const host=$('dialogPortraits'),cast=dialogueCast(title);
+  if(NanlanPortraitStage.open(title,kind,cast,partnerTitle))return;
+  host.replaceChildren();host.hidden=!cast.length;
   host.className=cast.length>1?'portrait-group':'portrait-single';
   for(const [name,role]of cast){const src=window.NANLAN_DATA.assets['npc_'+role];if(!src)continue;const figure=document.createElement('figure'),frame=document.createElement('div'),img=document.createElement('img'),caption=document.createElement('figcaption');frame.className='portrait-frame';img.src=src;img.alt=name+'的肖像';if(role==='grandfather')img.style.transformOrigin='85% 0';img.onerror=()=>{figure.hidden=true;};caption.textContent=name;frame.append(window.NanlanProduction?.portraitElement(role,name)||img);figure.append(frame,caption);host.append(figure);}
   window.NanlanAudio?.setDialogue(cast.length>0);
 }
-function activity(title,text,kind='general'){
+function activity(title,text,kind='general',partnerTitle=''){
   globalThis.NanlanScholar?.interrupt();
   if(typeof cancelNavigation==='function')cancelNavigation();
   clearSceneNotice();clearDialogNotice();
   settlePointerInput();
   previousFocus=document.activeElement;active=false;path=[];keys={};moving=false;dialogKind=kind;
-  showDialoguePortraits(title);$('speaker').textContent=title;$('line').textContent=text;$('panelExtra').replaceChildren();$('choices').replaceChildren();
+  $('speaker').textContent=title;$('line').textContent=text;$('panelExtra').replaceChildren();$('choices').replaceChildren();
   $('dialogNotice').after($('choices'));
   $('dialog').classList.remove('arrival-mode','travel-confirm','mobile-tools-sheet');
   $('dialogKicker').textContent=kind==='quest'?'南澜记 · 眼前的事':'南澜小事';
+  showDialoguePortraits(title,kind,partnerTitle);
   $('dialogQuestNavigate').hidden=true;
   $('choices').hidden=false;$('next').hidden=true;$('next').onclick=null;$('dialog').hidden=false;$('skip').textContent=started?'返回游戏 ×':'返回启程页 ×';
-  $('dialog').scrollTop=0;
+  $('dialog').scrollTop=0;$('dialog').querySelector('.sheet').scrollTop=0;
   window.NanlanHomeMemories?.vignette(kind);
-  $('skip').onclick=closeDialog;$('skip').focus();if(!/^(v[345]-|season-|voyage-|paper-work|market-work|hall-work|lantern-work|family-letter)/.test(kind)&&!['arrival','pantry','town-shop','dialogue-scene','voyage-extra-story','voyage-memory','volume2','decision-preview','player-records','seal-draft','seal-receipt','contract-record','paper-records'].includes(kind))window.NanlanDesktop?.dialogue(title,text);
+  $('skip').onclick=closeDialog;$('skip').focus();if(!/^(v[345]-|season-|voyage-|paper-work|market-work|hall-work|lantern-work|family-letter)/.test(kind)&&!['arrival','pantry','town-shop','dialogue-scene','peddler-shop','voyage-extra-story','voyage-memory','volume2','decision-preview','player-records','seal-draft','seal-receipt','contract-record','paper-records'].includes(kind))window.NanlanDesktop?.dialogue(title,text);
 }
 function button(label,fn,id,secondary=false,showOutcome=true){
   const b=document.createElement('button');b.textContent=label;b.dataset.action=id||label;
@@ -496,7 +500,8 @@ function refreshHud(){
   const s=state(),q=N.current(s),t=timeText();
   $('cameraView').textContent=overviewCamera?deskText('跟随主角','Follow Player'):deskText('看全景','Full Scene');
   $('estateOpen').hidden=!started||!['yard','hall'].includes(s.scene);
-  $('where').textContent=s.scene==='generalStore'&&s.story2?.site?'南街 · '+(s.production?.shopName||N.story2.shops[s.story2.site].name):world[s.scene].name;$('roleName').textContent=s.gender==='male'?'李家晚辈 · 男主角':'李家晚辈 · 女主角';
+  $('where').textContent=s.scene==='generalStore'&&s.story2?.site?'南街 · '+(s.production?.shopName||N.story2.shops[s.story2.site].name):world[s.scene].name;$('roleName').dataset.noLocalize='';$('roleName').textContent=s.identity?NanlanCharacter.display(s.identity):(s.gender==='male'?'李家晚辈 · 男主角':'李家晚辈 · 女主角');
+  const familySeal=document.querySelector('#status .seal');if(familySeal){familySeal.dataset.noLocalize='';familySeal.textContent=s.identity?[...s.identity.surname][0]:'李';}
   $('statusTime').textContent=t.short;$('clock').replaceChildren();
   const text=document.createElement('div');text.style.whiteSpace='pre-line';text.textContent=t.full;
   const small=document.createElement('small');small.textContent=t.extra;$('clock').append(text,small);
@@ -1296,7 +1301,7 @@ async function interactCore(o){
   if(a?.startsWith('v2')){window.NanlanV2.show(a,o);dialogObject=o;addConversation(o);window.NanlanSeals?.npc(o);window.NanlanProduction?.npc(o);window.NanlanVillage?.npc(o);window.NanlanBondUI?.npc(o);globalThis.NanlanTownUI?.family(o);return;}
   if(f.volume2Started&&o.id==='goodsCrates'){window.NanlanV2.show('v2Cargo',o);dialogObject=o;return;}
   if(a==='arrival'){
-    activity('旧宅门前 · 交接',deskText(
+    activity('母亲 · 旧宅门前',deskText(
       '笃、笃。门里响了两下。\n\n祖父扶着车辕没作声。母亲压住箱笼上的湿布：「干铺盖都在这口箱里。先帮我照看一头。」',
       'Knock, knock. The sound comes from behind the gate.\n\nGrandfather leans silently against the cart. Mother holds down the damp covering on a trunk. “All our dry bedding is in here. Give one of us a hand.”'),'arrival');
     actButton('先扶祖父到门边','handover',{choice:'grandfather'},()=>arrivalReply('grandfather'),'arrival-grandfather');
@@ -1308,7 +1313,7 @@ async function interactCore(o){
       navButton(deskText('拿着钥匙去院门','Take the key to the gate'),()=>goToArrival('gate'),'arrival-go-gate');
     });
   }else if(a==='gate'){
-    activity('旧宅院门',deskText('你扶住湿漉漉的门板。母亲在身后说：「先给祖父找个干地方坐。其余的，咱们慢慢来。」','You put a hand on the rain-soaked wood. Behind you, Mother says, “First find Grandfather somewhere dry to sit. The rest can wait.”'),'arrival');
+    activity('母亲 · 旧宅院门',deskText('你扶住湿漉漉的门板。母亲在身后说：「先给祖父找个干地方坐。其余的，咱们慢慢来。」','You put a hand on the rain-soaked wood. Behind you, Mother says, “First find Grandfather somewhere dry to sit. The rest can wait.”'),'arrival');
     actButton('用钥匙打开院门','openGate');
   }else if(a==='window'||a==='leak'){
     const window=a==='window',fixed=f[window?'windowPatched':'leakPatched'];
@@ -2051,11 +2056,12 @@ function startLoadError(text,retry){
   $('loadWarning').hidden=false;$('loadWarning').textContent=text;
   const b=$('startLoadRetry');b.hidden=false;b.onclick=()=>{b.hidden=true;retry();};b.focus({preventScroll:true});
 }
-async function beginGame(confirmed=false){
+async function beginGame(confirmed=false,identity=null){
   if(transitioning)return;
+  if(!identity){window.NanlanCharacterUI.open(gender,profile=>{chooseGender(profile.gender);beginGame(false,profile);});return;}
   if(storedRaw&&confirmed!==true){
     activity('另开一段新旅程？','开始新的第一卷？当前进度会先保留一份备份，再创建新开局。','new-journey');
-    button('确认，开始新旅程',()=>{closeDialog();return beginGame(true);},'confirm-new-journey');
+    button('确认，开始新旅程',()=>{closeDialog();return beginGame(true,identity);},'confirm-new-journey');
     button('取消，保留当前存档',closeDialog,'cancel-new-journey',true);
     return;
   }
@@ -2063,13 +2069,13 @@ async function beginGame(confirmed=false){
   const startLabel=$('begin').textContent;$('begin').textContent=deskText('正在准备旅程…','Preparing the journey…');$('begin').setAttribute('aria-busy','true');
   try{
     $('loadWarning').hidden=true;
-    if(!await loadSceneAssets('gate',{gender})){startLoadError(deskText('门前画面暂未载入。请重试，原存档没有改变。','The gate artwork could not load. Retry; your save is unchanged.'),()=>beginGame(confirmed));return;}
+    if(!await loadSceneAssets('gate',{gender})){startLoadError(deskText('门前画面暂未载入。请重试，原存档没有改变。','The gate artwork could not load. Retry; your save is unchanged.'),()=>beginGame(confirmed,identity));return;}
     if(storedRaw&&!engine.memoryOnly){storage.setItem('nanlan_v20_previous',storedRaw);$('restoreAutoBackup').hidden=false;}
-    engine.reset(gender);if(!engine.memoryOnly)localStorage.removeItem('nanlan_last_night');started=true;active=true;$('start').hidden=true;$('hud').hidden=false;storedRaw=null;
+    engine.reset(gender,identity);if(!engine.memoryOnly)localStorage.removeItem('nanlan_last_night');started=true;active=true;$('start').hidden=true;$('hud').hidden=false;storedRaw=null;
     refreshHud();playArrival();
   }catch(e){
     activity('浏览器暂时无法保存','当前浏览器没有可用的本地存储。你可以检查浏览器设置后重试，或选择仅本次试玩；试玩模式关闭网页后不会保留进度。');
-    button('仅本次试玩 · 我知道关闭后会丢失',()=>{engine.memoryOnly=true;storedRaw=null;closeDialog();beginGame();},'memory-only');
+    button('仅本次试玩 · 我知道关闭后会丢失',()=>{engine.memoryOnly=true;storedRaw=null;closeDialog();beginGame(true,identity);},'memory-only');
     button('返回，稍后重试',closeDialog,'retry-storage',true);
   }finally{transitioning=false;$('begin').disabled=false;$('begin').textContent=startLabel;$('begin').removeAttribute('aria-busy');}
 }

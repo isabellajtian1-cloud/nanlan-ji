@@ -81,12 +81,11 @@ function details(k){
  if(k==='reply')note('京里的口信只供一家人商量。先写什么，由你决定；已立的约仍会履行。');
 }
 function reader(i,o,pos=0){
- const ch=V.script[i],b=ch.beats[pos];activity(cast[b[0]]||'帆影手记',b[1],'v4-voices');$('dialogKicker').textContent=ch.title[0]+' · '+(pos+1)+' / '+ch.beats.length;$('next').hidden=true;
- if(b[0]==='player')portraitPlayer();
+ const ch=V.script[i],b=ch.beats[pos];activity(cast[b[0]]||'帆影手记',b[1],'v4-voices',NanlanPortraitStage.partner(ch.beats,b,cast));$('dialogKicker').textContent=ch.title[0]+' · '+(pos+1)+' / '+ch.beats.length;$('next').hidden=true;
+ 
  if(pos+1<ch.beats.length)button(window.NanlanI18n?.language==='en'?'Turn to the work at hand':'先动手，稍后再听',()=>panel(o),'v4-scene-skip',true,false);
  button(pos+1<ch.beats.length?'听下一句':'回到手边的事',()=>pos+1<ch.beats.length?reader(i,o,pos+1):panel(o),'v4-voices-next');
 }
-function portraitPlayer(){const img=document.createElement('img'),fig=document.createElement('figure'),frame=document.createElement('div');frame.className='portrait-frame';img.src=DATA.assets['npc_'+(state().gender==='male'?'playerMale':'playerFemale')];img.alt='你';frame.append(img);fig.append(frame);const el=$('dialogPortraits');el.replaceChildren(fig);el.hidden=false;}
 function prologue(o){const m=state().story3?.choices.meal;
  activity('海湾 · 风雨泊帆','船没有进港叫卖。它放下的是避风信号。沈晚渔站在石岸边，等你走近才把望帆的地方让开。','v4-intro');
  note(['你给熟客留过货，知道先看看别人手上的旧约。','你曾守着工棚等第一件成品，也知道慢工有它的时辰。','你几次试过小批班期，认得寻常来往的船。今日这面帆很陌生。'][m]||'海风里传来两声收缆的吆喝。');
@@ -127,7 +126,7 @@ function panel(o,stage=0,pick){
   const k=r[0],i=V.chapter[k],ch=V.script[i],idx=V.chapters[i].indexOf(r),preferred={v4Merchant:'seaMerchant',v2Neighbor:'neighbor',v3Boatman:'boatman',v3Bench:'xiaoman',v4Visitor:'visitor',v4Letter:'father',v4Lamp:'grandfather',v4Bell:'yu'}[o.id];
   const lines=idx===0&&heard.has(i)&&ch.beats.length>1?ch.beats.slice(1):ch.beats;
   const line=lines.find(b=>b[0]===preferred)||lines[Math.min(idx,lines.length-1)];
-  activity(cast[line[0]]||ch.title[0],line[1],'v4-story');$('next').hidden=true;$('dialogKicker').textContent=ch.title[0];if(line[0]==='player')portraitPlayer();
+  activity(cast[line[0]]||ch.title[0],line[1],'v4-story',NanlanPortraitStage.partner(ch.beats,line,cast));$('next').hidden=true;$('dialogKicker').textContent=ch.title[0];
   note(r[3]);details(k);window.NanlanThreads.fourth(k,s);const parts=moments[k];
   const gesture=gestures[k];
   if(gesture&&pick!==undefined)sceneGesture(k,o,pick);
@@ -150,7 +149,7 @@ function offer(o){
  if(o.id==='v4Bell'&&V.canStart(s)){prologue(o);return true;}
  if(!s.story4||o.type==='door')return false;const to=objective();
  if(to&&to.sc===s.scene&&to.id===o.id){const i=V.chapter[to.r[0]];
-   if(V.chapters[i][0][0]===to.r[0]&&!heard.has(i)){heard.add(i);const opening=V.script[i].beats[0];activity(cast[opening[0]],opening[1],'v4-arrival');$('dialogKicker').textContent=V.titles[V.order[i]];if(opening[0]==='player')portraitPlayer();button(window.NanlanI18n?.language==='en'?'Turn to the work at hand':'走近些，动手吧',()=>panel(o),'v4-arrival-next');return true;}}
+   if(V.chapters[i][0][0]===to.r[0]&&!heard.has(i)){heard.add(i);const opening=V.script[i].beats[0];activity(cast[opening[0]],opening[1],'v4-arrival',NanlanPortraitStage.partner(V.script[i].beats,opening,cast));$('dialogKicker').textContent=V.titles[V.order[i]];button(window.NanlanI18n?.language==='en'?'Turn to the work at hand':'走近些，动手吧',()=>panel(o),'v4-arrival-next');return true;}}
  if(o.action==='v4Scene'||to&&to.sc===s.scene&&to.id===o.id){panel(o);return true;}return false;
 }
 window.NanlanV4={offer,visible,ledger};

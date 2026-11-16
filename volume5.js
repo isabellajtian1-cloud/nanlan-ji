@@ -30,7 +30,7 @@ function prologue(o){
  actButton(L('接过水样，去井边亲自看','Take the sample and inspect the well'),'v5Start',{sequence:state().revision},()=>{closeDialog();notice(L('陈伯在村井旁等你。','Uncle Chen is waiting by the village well.'));},'v5-start');
  button(L('先把手边事情做完','Return to Today’s Work'),closeDialog,'v5-later',true,false);
 }
-function reader(i,o,pos=0){const ch=V.script[i],b=ch.beats[pos],en=window.NanlanI18n?.language==='en';activity(cast[b[0]][en?1:0],b[en?2:1],'v5-voices');$('dialogKicker').textContent=ch.title[en?1:0]+' · '+(pos+1)+' / '+ch.beats.length;
+function reader(i,o,pos=0){const ch=V.script[i],b=ch.beats[pos],en=window.NanlanI18n?.language==='en';activity(cast[b[0]][en?1:0],b[en?2:1],'v5-voices',NanlanPortraitStage.partner(ch.beats,b,cast));$('dialogKicker').textContent=ch.title[en?1:0]+' · '+(pos+1)+' / '+ch.beats.length;
  if(pos+1<ch.beats.length)button(L('听下一句','Hear the Next Line'),()=>reader(i,o,pos+1),'v5-read-next');
  else button(L('回到手边的事','Return to the Work'),()=>panel(o),'v5-read-back');}
 function ledger(){
@@ -43,7 +43,7 @@ function panel(o,stage=0){
  const s=state(),to=objective(),r=to?.r;if(!to||to.sc!==s.scene||to.id!==o.id){activity(o.label,s.flags.volume5Complete?L('清渠仍照轮值流着。今日若有漏处，也知道该去找哪一本簿、哪一双手。','The channel still runs by its watch. A leak today has a ledger and a pair of hands to answer it.'):L('水路上的每一处都要走到眼前再动手。','Every part of the waterway must be handled where it stands.'));nextRoute(o);}
  else{
   const k=r[0],i=V.chapter[k],ch=V.script[i],en=window.NanlanI18n?.language==='en',line=ch.beats[Math.min(V.chapters[i].indexOf(r),ch.beats.length-1)];
-  activity(cast[line[0]][en?1:0],line[en?2:1],'v5-story');$('dialogKicker').textContent=ch.title[en?1:0];note(r[3]);
+  activity(cast[line[0]][en?1:0],line[en?2:1],'v5-story',NanlanPortraitStage.partner(ch.beats,line,cast));$('dialogKicker').textContent=ch.title[en?1:0];note(r[3]);
   const m=moments[k];
   if(m&&stage===0){button(m[en?1:0],()=>{touched.add(k);panel(o,1);},'v5-hands-'+k,false,false);}
   else if(r.length>4){for(let c=0;c<r.length-4;c++)objectAction(r[c+4],k,c,()=>outcome(o,k,i));}

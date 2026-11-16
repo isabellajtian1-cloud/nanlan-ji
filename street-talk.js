@@ -10,7 +10,7 @@
   }
   function basket(o,id){
     const s=state(),g=model.goods[id];
-    activity(deskText('周六顺 · 货郎担','Zhou Liushun · The peddler’s baskets'),g?word(g.detail):deskText('周六顺把筐盖斜靠在担边。「慢慢挑。中意哪件，先拿近了看看。」','Zhou props the lid against the yoke. “Take your time. Pick one up for a closer look.”'),'dialogue-scene');
+    activity(deskText('周六顺 · 货郎担','Zhou Liushun · The peddler’s baskets'),g?word(g.detail):deskText('周六顺把筐盖斜靠在担边。「慢慢挑。中意哪件，先拿近了看看。」','Zhou props the lid against the yoke. “Take your time. Pick one up for a closer look.”'),'peddler-shop');
     dialogObject=o;
     if(g){
       const closeup=document.createElement('div');
@@ -44,8 +44,9 @@
     const person=model.residents[o.id],s=state(),minute=s.worldTick%1440;
     const light=minute<660?0:minute<1050?1:2;
     const last=person.topics[s.choices['chatStreetLast:'+o.id]];
+    const greeting=word(person.hours[light])+'\n\n'+word(last?.remember||person.hello);
     function page(text){
-      activity(word(person.name),text,'dialogue-scene');
+      activity(word(person.name),text,o.id==='peddler' && text===greeting?'peddler-shop':'dialogue-scene');
       dialogObject=o;
       $('dialogKicker').textContent=word(person.trade);
     }
@@ -61,7 +62,7 @@
       navButton(deskText('再聊两句','Keep talking'),()=>open(o),'street-back');
       navButton(deskText('改日再聊','Say goodbye'),closeDialog,'street-leave');
     }
-    page(word(person.hours[light])+'\n\n'+word(last?.remember||person.hello));
+    page(greeting);
     if(o.id==='peddler')addTray(o);
     if(person.child&&N.quantity(s,'handDrum')>0){
       button(deskText('把拨浪鼓摇给孩子听','Play the rattle drum'),()=>respond('drum',person.toy),'street-drum',false,false);

@@ -1,0 +1,53 @@
+/* Painted Ming-era Lingnan entrance, with quiet looping atmosphere. */
+#start{isolation:isolate;min-height:100dvh;align-items:center;padding:clamp(22px,5vw,75px)}
+#start .start-art{background-image:url(opening-homecoming-v663.webp);background-position:62% center;filter:brightness(.69) saturate(.78);animation:ming-breathe 32s ease-in-out infinite alternate}
+#start .start-vignette{background:linear-gradient(90deg,#142b26ed 0%,#142b26c2 28%,#142b2633 64%,#142b2626),linear-gradient(0deg,#122a25a8,transparent 35%);animation:none}
+#start::before,#start::after{content:'';position:fixed;pointer-events:none;z-index:0;inset:0;background:radial-gradient(ellipse at 70% 90%,#eee6ce24,transparent 58%);animation:ming-mist 22s ease-in-out infinite alternate}
+#start::after{inset:0 0 0 42%;background:radial-gradient(circle at 70% 32%,#ffd59130,transparent 12%);animation:ming-glow 6s ease-in-out infinite alternate}
+#start .start-layout{position:relative;z-index:1;width:100%;display:block;max-width:1400px;margin:auto}
+#start .start-sheet{width:min(480px,100%);padding:18px 0;background:none;border:0;box-shadow:none;color:#e9dfc6;border-radius:0;backdrop-filter:none}
+#start .language-choice{justify-content:flex-start;color:#d2c5aa;margin-bottom:28px}
+#start .language-choice button{color:#ddd3b9;background:#142b2666;border-color:#b9a47566;min-height:36px}
+#start .language-choice button[aria-pressed=true]{background:#e7d9b7;color:#243e33}
+#start h1{font-size:clamp(64px,8vw,104px);font-weight:400;letter-spacing:.18em;line-height:1.25;color:#f3e7c9;margin:12px 0 20px;text-shadow:0 4px 32px #081a15}
+#start .eyebrow{color:#d0b584;letter-spacing:.4em;font-size:12px;border-left:2px solid #a1654d;padding-left:12px}
+#start .tagline{font-size:14px;color:#dbceb2;letter-spacing:.13em;line-height:2}
+#start .premise{color:#bdbda6;max-width:350px;font-size:13px;line-height:1.9}
+#start .premise+.premise,#start .gender-choice,#start #selection{display:none}
+#start .start-buttons{display:flex;flex-direction:column;gap:12px;max-width:285px;margin-top:30px}
+#start .start-buttons button{min-height:51px;border:1px solid #c0a575;background:#e5d6b2;color:#274235;border-radius:2px;font-size:16px;letter-spacing:.14em;box-shadow:0 5px 24px #091d1733}
+#start .start-buttons #continueGame{background:#223e33aa;color:#e8d9b7}
+#start .start-buttons button:hover{background:#f0e2c3;color:#294436;transform:translateY(-1px)}
+#start #openingReplay{color:#d7c3a0;margin:15px 0;background:none;border:0;padding:8px 0}
+#start .start-more{border-top:1px solid #d0b88444;color:#c5b99d;font-size:12px;margin-top:16px;max-width:390px}
+#start .start-links button,#start #startSound{color:#dfcfac;background:#203e31;border:1px solid #b8a27766}
+#start #audioHint,#start #bootStatus,#start #languageStatus,#start .save-summary,#start .version-note{color:#c1baa1}
+#start .version-note{display:block;font-size:10px;margin-top:18px;opacity:.65}
+#startChapterShelf{display:none!important}
+#characterCreate{position:fixed;inset:0;z-index:150;background:linear-gradient(#132e28e8,#132e28f5),url(opening-homecoming-v663.webp) center/cover;overflow:auto;display:grid;place-items:center;padding:28px 20px;color:#33493c;font-family:inherit}
+#characterCreate[hidden]{display:none}
+.character-sheet{width:min(940px,100%);padding:32px 40px;border:1px solid #b19a6d;background:linear-gradient(120deg,#f4ebd6,#e9ddbe);box-shadow:0 22px 80px #071a1677;outline:5px solid #d2bd8944;outline-offset:6px}
+.character-sheet header{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;border-bottom:1px solid #af9c764f;padding-bottom:18px}
+.character-sheet header small{font-size:10px;letter-spacing:.25em;color:#8a724c}.character-sheet h2{font-size:28px;font-weight:400;letter-spacing:.08em;margin:8px 0 0}
+.character-sheet header button{background:none;border:0;color:#756448;padding:8px;min-height:44px;font:inherit;font-size:12px}
+.character-intro{color:#897656;font-size:13px;line-height:1.8}
+.character-layout{display:grid;grid-template-columns:1fr 1.05fr;gap:35px;align-items:center}
+.character-preview{display:flex;flex-direction:column;align-items:center;min-height:365px;justify-content:center;background:radial-gradient(ellipse at 50% 70%,#a9b89b55,transparent 65%);border-right:1px solid #b6a27b55}
+.identity-sprite{display:block;width:290px;max-width:100%;aspect-ratio:1;background:url(dialogue-playerFemale-6927.webp) center bottom/contain no-repeat;pointer-events:none}
+.identity-sprite[data-gender=male]{background-image:url(dialogue-playerMale-6927.webp)}
+#characterNamePreview{font-size:25px;letter-spacing:.17em;margin:12px 0;color:#3b5644}.character-preview>small{color:#9a8460;font-size:11px}
+.character-fields fieldset{margin:15px 0 0;border:0;padding:0}.character-fields legend{font-size:14px;letter-spacing:.08em;padding:0;margin-bottom:14px;color:#5e684a}
+.identity-name-fields{display:grid;grid-template-columns:1fr 1.5fr;gap:12px}.identity-name-fields label>span{display:block;font-size:11px;color:#8d7955;margin-bottom:8px}
+.identity-name-fields input{box-sizing:border-box;min-width:0;width:100%;height:48px;border:1px solid #b7a179;border-radius:2px;padding:10px;background:#faf3e1;color:#364d3d;font:inherit;font-size:19px}
+.character-fields fieldset p,.identity-footnote{font-size:11px;color:#937d58;line-height:1.7}
+.identity-options{display:flex;gap:12px}.identity-options button{flex:1;min-width:0;border:1px solid #c3af88;background:#f4ead2;border-radius:2px;padding:6px 8px 12px;color:#6a7255;font:inherit;cursor:pointer}.identity-options .identity-sprite{width:108px;margin:auto}.identity-options b{font-size:12px;font-weight:400}
+.identity-options button[aria-pressed=true]{border:2px solid #546d52;background:#dce1c9;padding:5px 7px 11px;box-shadow:inset 0 0 0 3px #f5efd9}.identity-options button[aria-pressed=true] b::before{content:'✓ ';color:#546d52}
+#characterConfirm{width:100%;min-height:49px;border:1px solid #354f3b;background:#405d45;color:#f5e8c8;font:inherit;font-size:15px;letter-spacing:.12em;cursor:pointer}
+#characterError{color:#9b493a;min-height:18px;font-size:12px;line-height:1.6}.identity-footnote{text-align:center}
+#characterCreate button:focus-visible,#characterCreate input:focus-visible,#start button:focus-visible{outline:2px solid #c39850;outline-offset:4px}
+@keyframes ming-breathe{from{transform:scale(1.02) translateX(0)}to{transform:scale(1.09) translateX(-1%)}}
+@keyframes ming-mist{from{transform:translateX(-7%);opacity:.35}to{transform:translateX(5%);opacity:.9}}
+@keyframes ming-glow{from{opacity:.4}to{opacity:1}}
+@media(max-width:650px){#start{padding:28px 24px}#start .start-vignette{background:linear-gradient(90deg,#142b26e8,#142b2670),linear-gradient(0deg,#142b26dd,transparent)}#start .start-art{background-position:68% center}#start h1{font-size:64px}#characterCreate{padding:16px 12px}.character-sheet{padding:22px 18px;outline:0}.character-sheet h2{font-size:23px}.character-layout{grid-template-columns:1fr;gap:8px}.character-preview{min-height:0;border-right:0;border-bottom:1px solid #b6a27b55;padding-bottom:14px}.character-preview .identity-sprite{width:200px}#characterNamePreview{margin:0 0 5px;font-size:21px}.identity-options .identity-sprite{width:85px}.character-intro{font-size:12px}}
+@media(max-height:550px) and (min-width:651px){.character-sheet{padding:18px 28px}.character-preview{min-height:280px}.character-preview .identity-sprite{width:240px}.character-intro{display:none}.identity-options .identity-sprite{width:65px}.character-fields fieldset{margin-top:8px}.character-sheet header{padding-bottom:8px}}
+@media(prefers-reduced-motion:reduce){#start .start-art,#start::before,#start::after{animation:none;transform:none}#start .start-buttons button:hover{transform:none}}

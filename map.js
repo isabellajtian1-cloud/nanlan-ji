@@ -64,6 +64,8 @@ function objectiveForStep(flag,label){
 }
 function nextObjective(){
   const s=state(),q=N.current(s),f=s.flags;
+  const waiting=N.pendingFamilyRequest(s);
+  if(waiting){const offer=N.familyRequests[waiting];return {scene:offer.scene,object:offer.person,label:nextHint(s)};}
   if(!q){const entry=N.chapterEntries(s).find(e=>!e.started&&e.ready);if(entry)return {scene:entry.scene,object:entry.object,label:'前往'+entry.title+'的开启地点'};}
   if(!q&&N.voyage?.canStart(s))return {scene:'backHall',object:'voyageBook',label:'拆开春潮来信，安排青屿行程'};
   if(!q&&s.flags.voyageComplete){const a=N.voyage.get(s).extra.active;if(a&&!a.paused&&N.voyage.day(s)>=a.day){const to=N.voyage.extraTargets(a.id,a.stage);return {scene:to[0],object:to[1],label:N.voyage.bonus[a.id].stages[a.stage][0]};}return {scene:'backHall',object:'voyageExtras',label:'闲日邀约 · 六篇番外'};}
@@ -107,7 +109,7 @@ function drawMap(){
   }$('mapLines').innerHTML=svg;$('mapNodes').replaceChildren();
   for(const [id,[x,y]] of Object.entries(mapPositions)){
     const why=mapAccess(id),known=mapKnown(id),b=document.createElement('button');
-    b.className='map-node'+(!why?' open':'')+(s.scene===id?' current':'')+(objective.scene===id?' objective':'');
+    b.className='map-node'+(!why?' open':'')+(s.scene===id?' current':'')+(!N.pendingFamilyRequest(s)&&objective.scene===id?' objective':'');
     b.dataset.mapPlace=id;b.style.left=(x/12)+'%';b.style.top=(y/8.2)+'%';
     const label=world[id].name.replace('旧宅 · ','').replace('青岚山 · ','').replace('南澜海湾 · ','').replace('南澜县城 · ','');
     const chapter=mapChapterLabels(id);

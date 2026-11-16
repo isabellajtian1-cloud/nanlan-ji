@@ -64,7 +64,8 @@ DATA.assets.walkFemale='player-female-walk-v39.png';
 DATA.assets.walkMale='player-male-walk-v39.png';
 DATA.assets.playerIdle='player-idle-v6911.png';
 Object.assign(DATA.assets, {
-  gaitFemale:'gait-female-plain.webp', gaitFemaleSilk:'gait-female-silk.webp',
+  courtyardMattes:'courtyard-mattes-6928.png',
+  gaitFemale:'gait-female-courtyard-6928.webp', gaitFemaleSilk:'gait-female-silk.webp',
   gaitMale:'gait-male-plain.webp', gaitMaleSilk:'gait-male-silk.webp'
 });
 DATA.assets.inventoryHousehold='inventory-household-v392.png';
@@ -89,7 +90,7 @@ async function loadSceneAssets(scene,sceneState=state()){
   if(globalThis.NanlanTown.rooms.includes(scene))required.push(...world[scene].objects.filter(o=>o.role).map(o=>'npc_'+o.role));
   if(scene==='backHall')required.push('backHallReady');
   if(world[scene]?.objects?.some(o=>o.v3Art!=null))required.push('v3Props');
-  if(scene==='yard')required.push('yearLamp','gardenStages','productionStages','productionItems','waterJar','stove','weedPatch');
+  if(scene==='yard')required.push('courtyardMattes','yearLamp','gardenStages','productionStages','productionItems','waterJar','stove','weedPatch');
   if(sceneState.actorState?.outfit==='nanlanSilk')required.push('familySilk',sceneState.gender==='male'?'walkMaleSilk':'walkFemaleSilk');
   if(['mountain','coast'].includes(scene))required.push('seals');
   if(['foothill','mountain'].includes(scene))required.push('fruitTrees','fruitTreesPicked');
@@ -179,7 +180,7 @@ const storyHooks={
 function reward(id,silent=false){
   if(!silent)window.NanlanAudio?.play('success');
   startCompletionFeedback(id);
-  $('chapterToast').textContent=N.titles[id]+' · '+N.rewards[id][1]+(storyHooks[id]?'\n余音 · '+storyHooks[id]:'');
+  $('chapterToast').textContent=N.titles[id]+' · '+N.rewards[id][1]+(N.pendingFamilyRequest(state())?'\n'+nextHint():storyHooks[id]?'\n余音 · '+storyHooks[id]:'');
   $('chapterToast').hidden=false;clearTimeout(rewardTimer);
   rewardTimer=setTimeout(()=>$('chapterToast').hidden=true,8500);
 }
@@ -328,7 +329,7 @@ async function perform(name,p={},rerender){
   }
   if(name==='openGate'){
     closeDialog(true);focusedObjectId='bed';render();
-    notice(deskText('门推开了。东厢的窗扇又响了一声，窗下还泛着湿光。去看看今晚能不能在那儿睡。','The gate opens. The east wing shutter knocks again, and the stone beneath it glistens. See if the room can shelter your family tonight.'),true);
+    notice(deskText('门推开了。东厢的窗扇又响了一声，窗下还泛着湿光。母亲抱着铺盖先进去了。','The gate opens. The east wing shutter knocks again, and the stone beneath it glistens. Mother has gone inside with the bedding.'),true);
     const lead=document.createElement('button');
     lead.className='receipt-open';lead.textContent=deskText('去看看东厢房','Look inside the East Wing');
     lead.onclick=()=>{
@@ -384,6 +385,8 @@ function actionMessage(name){
   };return messages[name]||'这一步已经记下了。'+nextHint();
 }
 function nextHint(s=state(),q=N.current(s)){
+  const waiting=N.pendingFamilyRequest(s);
+  if(waiting)return deskText(...familyWords[waiting].clue);
   const f=s.flags;
   if(!f.volume2Started&&N.done(s,'M20'))return window.NanlanI18n?.language==='en'?'The feast is over. Open the South Street notice and meet your family in the hall to begin Volume II.':'家宴已毕。打开「南街铺讯」查看条件，到正厅与家人读铺讯，开启第二卷。';
   if(q?.startsWith('V6_')){const r=N.voyage.first(s);return r?r.actions[r.j][window.NanlanI18n?.language==='en'?1:0]:'';}
@@ -482,8 +485,56 @@ function renderQuestSteps(host,dialog=false,s=state(),q=N.current(s)){
   });
   if(dialog)host.classList.add('task-step-list');
 }
-// Title, rows and hint always describe the same current quest, even while folded.
+const familyWords={
+  M01:{clue:['母亲在车旁朝你招了招手。','Mother waves to you from beside the cart.'],
+    notes:[['帮母亲照看行李','Give Mother a hand'],['去官差那里接钥匙','Take the key from the guard'],['替家人推开院门','Open the gate for the family']]},
+  M02:{clue:['母亲抱着铺盖进了东厢房。','Mother took the bedding into the east wing.'],
+    speaker:['母亲','Mother'],
+    line:['这床被子跟了咱们一路，可别到家了反倒淋湿。你听，窗子在响，梁上也滴水。帮娘看看，先补哪一处？我把铺盖抱着，等你挑个干地方。','This quilt stayed dry the whole way here. What a shame to wet it now. Hear that shutter? The beam is dripping, too. Will you see which needs mending first? I’ll hold the bedding until you find a dry spot.'],
+    reply:['娘，我看看哪儿能铺床。','Let me find a dry spot, Mother.'],
+    notes:[['看看东厢的窗榫','Look at the east wing shutter'],['看看梁下的水痕','Look for drips below the beam'],['挑一处先修好','Choose which to mend first'],['替祖父铺好床','Lay out Grandfather’s bedding']]},
+  M03:{clue:['父亲在正厅抖落鞋上的草籽。','In the hall, Father brushes grass seeds from his shoes.'],
+    speaker:['父亲','Father'],
+    line:['你瞧我这鞋，去后院走了一趟，草籽粘了半脚。仓房里那把镰还在，就是柄松了。肯帮我拾掇拾掇吗？路清出来，你自己挑块地，爱种菜、种香草都成。','Look at my shoes. One trip through the yard and they’re covered in grass seeds. Our sickle is in the storehouse, but the handle wobbles. Will you give me a hand? Once the path is clear, pick a patch for vegetables or herbs.'],
+    reply:['我去试试那把旧镰。','I’ll have a look at the sickle.'],
+    notes:[['去仓房找那束农具','Find the old tools in the storehouse'],['在工作台上修紧镰柄','Fix the loose handle at the workbench'],['用镰刀清出院中小路','Clear the path with the sickle'],['挑一块自己想种的地','Choose a patch to plant']]},
+  M04:{clue:['正厅里，母亲正在量米。','Mother is measuring out rice in the hall.'],
+    speaker:['母亲','Mother'],
+    line:['米袋底下还够一锅。你祖父一路嚼干粮，方才还问我，有没有一口热的。咱们把院里的灶拾掇好，汲桶水，看看灶边的水能不能排出去。今儿这顿，你来掌勺？','There’s rice enough for a pot. Your grandfather has chewed dry rations the whole way and just asked for something warm. Shall we clean the stove, draw some water and clear the drain beside it? You can have the ladle tonight.'],
+    reply:['今晚我掌勺。','I’ll cook tonight.'],
+    notes:[['把院里的灶收拾干净','Clean the courtyard stove'],['提一桶水回来','Bring back a bucket of water'],['疏开灶边的水口','Clear the drain by the stove'],['给家里煮一锅热饭','Cook a hot meal for the family'],['端去正厅，一起吃饭','Take the meal to the hall']]}
+};
+const pendingObjectWords={
+  M01:{gate:['门闩还扣着。车边的母亲正向你招手。','The gate is still fastened. Mother waves from the cart.']},
+  M02:{window:['窗扇轻轻碰着窗框。母亲把铺盖抱在怀里。','The shutter taps its frame. Mother is holding the bedding.'],leak:['梁下落了一滴水，母亲往旁边挪了半步。','A drop falls from the beam. Mother steps aside.'],bed:['床板上落了一层薄灰。母亲还抱着铺盖。','A film of dust covers the boards. Mother still holds the bedding.']},
+  M03:{tools:['镰柄上还绕着半截麻绳。父亲在正厅。','A frayed cord is wrapped around the sickle handle. Father is in the hall.']},
+  M04:{cook:['灶膛冷着。你听见母亲在正厅舀米。','The hearth is cold. You can hear Mother scooping rice in the hall.']}
+};
+function familyNote(s,q){
+  const i=N.steps[q].findIndex(([flag])=>!s.flags[flag]);
+  return deskText(...familyWords[q].notes[Math.max(0,i)]);
+}
+function offerFamilyRequest(o){
+  const id=N.pendingFamilyRequest(state());
+  if(!id||id==='M01'||N.familyRequests[id].person!==o.id)return false;
+  const words=familyWords[id];
+  activity(deskText(...words.speaker),deskText(...words.line),'arrival');
+  dialogObject=o;
+  actButton(deskText(...words.reply),'acceptFamilyRequest',{id},()=>closeDialog(true),'family-accept');
+  navButton(deskText('我一会儿再来。','I’ll come back in a little while.'),()=>closeDialog(true),'family-later');
+  return true;
+}
 function refreshQuestBanner(s=state(),q=N.current(s)){
+  const waiting=N.pendingFamilyRequest(s),personal=!!familyWords[q],tasks=$('tasks');
+  tasks.hidden=!!waiting;
+  tasks.classList.toggle('family-note',personal);
+  $('familyNote').hidden=!personal;
+  $('mapObjective').hidden=!!waiting;
+  if(waiting||personal){
+    if(personal)$('familyNote').textContent=familyNote(s,q);
+    lastQuestSignature=null;
+    return;
+  }
   const hint=nextHint(s,q);
   const questSignature=q+'|'+(q?N.steps[q].map(([flag])=>flag+':'+rowProgress(flag)).join('|'):'none');
   if(questSignature!==lastQuestSignature){
@@ -581,8 +632,20 @@ function selectTool(index){
 }
 function showQuest(){
   const s=state(),q=N.current(s);
+  const waiting=N.pendingFamilyRequest(s);
+  if(waiting){
+    activity(deskText('随身手记','Pocket journal'),nextHint(s),'quest');
+    if(s.journal.length)navButton(deskText('翻翻前页','Read earlier pages'),showQuestCatalog,'catalog');
+    navButton(deskText('去找家人','Find my family'),()=>chooseTaskRoute(nextObjective()),'find-family');
+    return;
+  }
   activity(q?N.titles[q]:s.flags.voyageComplete?'春潮有信 · 日常与番外继续':s.flags.season5Complete?'岁序长青 · 来年有约':s.flags.volume5Complete?'清水满缸 · 日常继续':s.flags.volume4Complete?'海天帆影 · 家灯长明':s.flags.volume3Complete?'山海之间 · 日常继续':s.flags.volume2Complete?'南街灯起 · 日常继续':'岁末满庭 · 新春家议',q?'点一条眼前的具体事项，人物会沿已经走通的路前往。事情要按生活里的先后去办，不必另找“下一步”按钮。\n\n事情办妥后：'+N.rewards[q][1]:nextHint());
   $('dialogKicker').textContent='只记下已经发生与眼前要做的事';
+  if(familyWords[q]){
+    $('dialogKicker').textContent=deskText('家人的嘱托','A family request');
+    $('line').textContent=familyNote(s,q);
+    navButton(deskText('带我去看看','Show me the way'),()=>chooseTaskRoute(nextObjective()),'family-guide');
+  }
   if(q){const list=document.createElement('div');renderQuestSteps(list,true);$('panelExtra').append(list);navButton(deskText('查看本段回报','Read This Entry’s Outcome'),()=>window.NanlanContinuity.rewards(),'quest-rewards');}
   if(s.flags.volume2Started||N.done(s,'M20'))navButton(deskText('铺讯与手记 · 随时回看','Shop Notice & Notes'),()=>window.NanlanContinuity.handbook(),'quest-papers');
   navButton(window.NanlanI18n?.language==='en'?'Chapter Entrances · Requirements':'篇章入口 · 查看开启条件与去向',()=>window.NanlanChapters.show(),'quest-chapter-entry');
@@ -1246,6 +1309,7 @@ function objectLabel(o){
   return o.label;
 }
 function localObjectiveObject(){
+  if(N.pendingFamilyRequest(state()))return null;
   if(typeof nextObjective!=='function')return null;const target=nextObjective();
   if(!target||target.scene!==state().scene||!target.object)return null;
   return visibleObjects().find(o=>o.id===target.object)||null;
@@ -1268,6 +1332,14 @@ async function interactCore(o){
   if(!o||transitioning)return;
   if(o.type==='door'&&!nearObject(o)){approach(o);return;}
   if(!nearObject(o)){notice('先走近'+o.label+'。');return;}
+  if(offerFamilyRequest(o))return;
+  const waiting=N.pendingFamilyRequest(state());
+  const idleWords=pendingObjectWords[waiting]?.[o.action||o.type];
+  if(idleWords){
+    activity(objectLabel(o),deskText(...idleWords),'quest');
+    dialogObject=o;
+    return;
+  }
   if(globalThis.NanlanFestivalUI?.offer(o)){dialogObject=o;return;}
   if(globalThis.NanlanTownUI?.offer(o)){dialogObject=o;return;}
   if(globalThis.NanlanVoyageUI?.offer(o)){dialogObject=o;return;}
@@ -1306,6 +1378,7 @@ async function interactCore(o){
       'Knock, knock. The sound comes from behind the gate.\n\nGrandfather leans silently against the cart. Mother holds down the damp covering on a trunk. “All our dry bedding is in here. Give one of us a hand.”'),'arrival');
     actButton('先扶祖父到门边','handover',{choice:'grandfather'},()=>arrivalReply('grandfather'),'arrival-grandfather');
     actButton('先把行李搬到门边','handover',{choice:'luggage'},()=>arrivalReply('luggage'),'arrival-luggage');
+    navButton(deskText('先看看四周。','Look around first.'),()=>closeDialog(true),'arrival-later');
   }else if(a==='key'){
     activity('官兵 · 院门钥匙',deskText('「文书收好。钥匙在这儿，宅院往后就交给你们了。」\n\n他摊开手，一枚发暗的钥匙躺在掌中。','“Keep the papers safe. Here is the key. The house is in your hands now.”\n\nHe opens his hand. A tarnished key lies in his palm.'),'arrival');
     actButton('接过钥匙，收入行囊','takeKey',{},()=>{
@@ -1394,7 +1467,7 @@ function showNearby(){
   const distance=o=>Math.hypot(o.x-s.player.x,o.y-s.player.y),rank=o=>o===objective?0:nearObject(o)?1:isGatherable(o)?2:o.type==='door'?4:3;
   all.sort((a,b)=>rank(a)-rank(b)||distance(a)-distance(b));
   activity('场景互动 · '+world[s.scene].name,
-    '已按“当前任务 → 就在旁边 → 采集与设施 → 出入口”排列。选择后，主角会先沿可走的路靠近，再进行交谈或操作。'+
+    (N.pendingFamilyRequest(s)?nextHint(s):'已按“当前任务 → 就在旁边 → 采集与设施 → 出入口”排列。选择后，主角会先沿可走的路靠近，再进行交谈或操作。')+
     (objective?'\n\n当前任务目标：'+objectLabel(objective):''));
   for(const o of all){
     const resource=resourceTypes.includes(o.type),last=s.nodes[o.id],cooldown=resource&&last!==undefined&&s.worldTick-last<N.resourceCooldown(o.type);
@@ -1466,12 +1539,14 @@ function baseBlocked(x,y,clearance=0){
 }
 function blocked(x,y,clearance=0){
   if(baseBlocked(x,y,clearance))return true;
+  if(state().scene==='yard'&&NanlanPhysical.courtyardBases.some(r=>NanlanPhysical.contains(r,x,y,clearance)))return true;
   return visibleObjects().some(o=>insideObjectFootprint(o,x,y,clearance));
 }
 function movementBlocked(x,y,fromX,fromY,clearance=0,obstacles=visibleObjects()){
   if(baseBlocked(x,y,clearance))return true;
+  if(state().scene==='yard'&&NanlanPhysical.courtyardBases.some(r=>NanlanPhysical.blocksStep(r,x,y,fromX,fromY,clearance)))return true;
   for(const o of obstacles){
-    const rect=NanlanPhysical.rect(o,state());if(rect){if(!NanlanPhysical.contains(rect,x,y,clearance))continue;if(!NanlanPhysical.contains(rect,fromX,fromY,clearance)||NanlanPhysical.depth(rect,x,y,clearance)>=NanlanPhysical.depth(rect,fromX,fromY,clearance))return true;continue;}
+    const rect=NanlanPhysical.rect(o,state());if(rect){if(NanlanPhysical.blocksStep(rect,x,y,fromX,fromY,clearance))return true;continue;}
     const size=objectFootprint(o);if(!size||!insideObjectFootprint(o,x,y,clearance))continue;
     // Old saves may resume inside a newly-added footprint. They may walk outward, never farther in.
     if(!insideObjectFootprint(o,fromX,fromY,clearance))return true;
@@ -1748,41 +1823,46 @@ function npcPresentation(o,t){
  const phase=t/1000*(.65+seed%5*.08)+seed;
  return {role,flip,talking,lean:reduced?0:Math.sin(phase)*.006,breath:reduced?1:1+Math.sin(phase*.85)*.003};
 }
-function drawNaturalPerson(o,t){
-  if(o.role==='children'){drawPerson('children',o.x,o.y,62,false);return;}
+function drawNaturalPerson(o,t,brush=ctx,inCourtyard=false){
+  if(o.role==='children'){drawPerson('children',o.x,o.y,62,false,true,brush,inCourtyard);return;}
  const pose=npcPresentation(o,t),col=['grandfather','father','mother','cen'].indexOf(pose.role);
  const silk=window.NanlanProduction?.portrait(pose.role),sheet=images.npcIdle;
-  ctx.save();ctx.translate(o.x,o.y);ctx.rotate(pose.lean);ctx.scale(ACTOR_SCALE,ACTOR_SCALE*pose.breath);ctx.translate(-o.x,-o.y);
+  brush.save();brush.translate(o.x,o.y);brush.rotate(pose.lean);brush.scale(ACTOR_SCALE,ACTOR_SCALE*pose.breath);brush.translate(-o.x,-o.y);
  if(col>=0&&!silk&&sheet?.naturalWidth){
   const cw=sheet.naturalWidth/4,ch=sheet.naturalHeight/2;
-  ctx.save();ctx.translate(o.x,o.y);if(pose.flip)ctx.scale(-1,1);
-  ctx.filter='brightness('+(1-N.daylight(state()).darkness*.28)+')';
+  brush.save();brush.translate(o.x,o.y);if(pose.flip)brush.scale(-1,1);
+  if(!inCourtyard)brush.filter='brightness('+(1-N.daylight(state()).darkness*.28)+')';
   const ratio=npcHeight(pose.role)/84;
-  ctx.scale(ratio,ratio);ctx.drawImage(sheet,col*cw,pose.talking?ch:0,cw,ch,-34,-87,68,91);ctx.restore();
- }else drawPerson(pose.role,o.x,o.y,npcHeight(pose.role),pose.flip,false);
- ctx.restore();
+  brush.scale(ratio,ratio);brush.drawImage(sheet,col*cw,pose.talking?ch:0,cw,ch,-34,-87,68,91);brush.restore();
+ }else drawPerson(pose.role,o.x,o.y,npcHeight(pose.role),pose.flip,false,brush,inCourtyard);
+ brush.restore();
 }
-function drawPerson(role,x,y,height=84,flip=false,scaleActor=true){
+function drawPerson(role,x,y,height=84,flip=false,scaleActor=true,brush=ctx,inCourtyard=false){
   if(scaleActor)height*=ACTOR_SCALE;
   const costume=window.NanlanProduction?.portrait(role);if(costume&&!images[costume.asset])loadImage(costume.asset);
   const dressed=costume&&images[costume.asset]?.naturalWidth,im=dressed?images[costume.asset]:images['npc_'+role];if(!im?.naturalWidth){loadImage('npc_'+role);return;}
   const width=height*(dressed?costume.rect[2]/costume.rect[3]:im.naturalWidth/im.naturalHeight);
   // Soft contact shadow belongs to the actor, rather than a floating marker.
-  ctx.save();const shadow=ctx.createRadialGradient(x,y-1,1,x,y-1,16);shadow.addColorStop(0,'#26332255');shadow.addColorStop(1,'#26332200');ctx.fillStyle=shadow;ctx.beginPath();ctx.ellipse(x,y-1,17,5,0,0,Math.PI*2);ctx.fill();
-  ctx.translate(x,y);if(flip)ctx.scale(-1,1);
-  ctx.filter='brightness('+(1-N.daylight(state()).darkness*.28)+')';if(dressed)ctx.drawImage(im,...costume.rect,-width/2,-height,width,height);else ctx.drawImage(im,-width/2,-height,width,height);ctx.restore();
+  brush.save();
+  if(!inCourtyard){const shadow=brush.createRadialGradient(x,y-1,1,x,y-1,16);shadow.addColorStop(0,'#26332255');shadow.addColorStop(1,'#26332200');brush.fillStyle=shadow;brush.beginPath();brush.ellipse(x,y-1,17,5,0,0,Math.PI*2);brush.fill();}
+  brush.translate(x,y);if(flip)brush.scale(-1,1);
+  if(!inCourtyard)brush.filter='brightness('+(1-N.daylight(state()).darkness*.28)+')';
+  if(dressed)brush.drawImage(im,...costume.rect,-width/2,-height,width,height);
+  else brush.drawImage(im,-width/2,-height,width,height);
+  brush.restore();
 }
-function renderCharacter(){
+function renderCharacter(brush=ctx,inCourtyard=false){
   const s=state(),p=s.player,silk=s.actorState?.outfit==='nanlanSilk';
   const pose=NanlanLocomotion.pose(s.gender,silk,direction,walkFrame,moving&&active&&!transitioning);
   // Changing clothes in the current room can request a new sheet between scene loads.
   if(!images[pose.asset])loadImage(pose.asset);
   const im=images[pose.asset]||images[NanlanLocomotion.atlasKey(s.gender,!silk)];
-  if(!im?.naturalWidth){drawPerson(s.gender==='male'?'playerMale':'playerFemale',p.x,p.y,84,pose.flip);return;}
-  ctx.save();ctx.translate(p.x,p.y);ctx.scale(ACTOR_SCALE,ACTOR_SCALE);
-  const shadow=ctx.createRadialGradient(0,0,1,0,0,15);shadow.addColorStop(0,'#26332288');shadow.addColorStop(1,'#26332200');ctx.fillStyle=shadow;ctx.beginPath();ctx.ellipse(0,0,15,3.8,0,0,Math.PI*2);ctx.fill();
-  if(pose.flip)ctx.scale(-1,1);
-  ctx.filter='brightness('+(1-N.daylight(s).darkness*.28)+')';ctx.drawImage(im,...pose.source,...pose.destination);ctx.restore();
+  if(!im?.naturalWidth){drawPerson(s.gender==='male'?'playerMale':'playerFemale',p.x,p.y,84,pose.flip,true,brush,inCourtyard);return;}
+  brush.save();brush.translate(p.x,p.y);brush.scale(ACTOR_SCALE,ACTOR_SCALE);
+  if(!inCourtyard){const shadow=brush.createRadialGradient(0,0,1,0,0,15);shadow.addColorStop(0,'#26332288');shadow.addColorStop(1,'#26332200');brush.fillStyle=shadow;brush.beginPath();brush.ellipse(0,0,15,3.8,0,0,Math.PI*2);brush.fill();}
+  if(pose.flip)brush.scale(-1,1);
+  if(!inCourtyard)brush.filter='brightness('+(1-N.daylight(s).darkness*.28)+')';
+  brush.drawImage(im,...pose.source,...pose.destination);brush.restore();
 }
 function drawGatheredResource(im,o,size){
   const height=size*im.naturalHeight/im.naturalWidth,flat=['wood','stone','shell','clam','seaweed'].includes(o.type),ground=o.y+2;
@@ -1844,9 +1924,11 @@ function render(){
   const left=Math.max(8,-camera.ox/camera.scale+8),right=Math.min(W-8,(camera.vw-camera.ox)/camera.scale-8);
   const time=performance.now(),objective=localObjectiveObject(),destination=path[path.length-1]?.object;
   const people=visibleObjects().filter(o=>npcRole(o));
-  const actors=people.map(o=>({layer:40,y:o.y,draw:()=>drawNaturalPerson(o,time)}));
+  const lighting=s.scene==='yard'?NanlanCourtyard.frame(base===images[baseKey]?baseKey:world.yard.asset,images.courtyardMattes,N.daylight(s),window.NanlanWeather?.current(s),s.flags.stableLights):null;
+  const drawActor=(x,y,paint)=>lighting?NanlanCourtyard.drawPerson(ctx,x,y,lighting,paint):paint(ctx,false);
+  const actors=people.map(o=>({layer:40,y:o.y,draw:()=>drawActor(o.x,o.y,(brush,local)=>drawNaturalPerson(o,time,brush,local))}));
   if(s.scene==='yard'&&window.NanlanEstate.gifted(s))actors.push({layer:40,y:window.NanlanEstate.gift.y,draw:()=>window.NanlanEstateUI?.drawGift(ctx)});
-  if(started)actors.push({layer:40,y:s.player.y,draw:renderCharacter});
+  if(started)actors.push({layer:40,y:s.player.y,draw:()=>drawActor(s.player.x,s.player.y,renderCharacter)});
 
   for(const o of visibleObjects()){
     if(o.x<left-70||o.x>right+70)continue;
@@ -2023,7 +2105,7 @@ function showStartGuide(){
 }
 function finishOpeningIntro(){
   closeDialog(true);focusedObjectId='familyLuggage';
-  notice(deskText('母亲在门边招手。左上角「引路」可带你走近，也可以自己走过去。','Mother beckons by the gate. Use Guide in the top-left quest panel, or walk over yourself.'),true);
+  notice(deskText(...familyWords.M01.clue),true);
   
 }
 function goToArrival(action){
@@ -2048,7 +2130,7 @@ function playArrival(){
 async function restoreAutomaticBackup(){
   const raw=localStorage.getItem('nanlan_v20_previous');if(!raw){notice('目前没有可恢复的自动备份。',true);return;}
   const check=new N.Engine(storage,world);try{check.load(raw);}catch(e){notice('自动备份无法读取，当前进度没有改变。',true);return;}
-  const q=N.current(check.state);activity('恢复自动备份？','备份地点：'+world[check.state.scene].name+'\n备份进度：'+(q?N.titles[q]:'已完成的日常')+'\n家用：'+check.state.coins+' 文\n\n确认后会把当前进度另存一份，再恢复新旅程开始前的存档。','restore-backup');
+  const q=N.current(check.state);activity('恢复自动备份？','备份地点：'+world[check.state.scene].name+'\n备份进度：'+(q?N.titles[q]:N.pendingFamilyRequest(check.state)?nextHint(check.state):'已完成的日常')+'\n家用：'+check.state.coins+' 文\n\n确认后会把当前进度另存一份，再恢复新旅程开始前的存档。','restore-backup');
   button('确认恢复这份自动备份',async()=>{if(!await loadSceneAssets(check.state.scene,check.state)){notice('备份场景图片未能载入，当前进度没有改变。',true);return;}try{const current=started?JSON.stringify(state()):localStorage.getItem(N.SAVE_KEY);if(current)localStorage.setItem('nanlan_before_import',current);storage.setItem(N.SAVE_KEY,raw);applyRestoredSnapshot(check.state,raw);notice('自动备份已恢复。恢复前的进度仍可在行囊下载。');}catch(e){notice('恢复失败，当前进度没有改变。',true);}},'confirm-restore-auto');
   button('取消，保留当前进度',closeDialog,'cancel-restore-auto',true);
 }
@@ -2108,6 +2190,7 @@ $('cameraView').onclick=()=>{
 };
 
 $('questGuide').onclick=guideCurrentQuest;
+$('familyNote').onclick=showQuest;
 $('startGuide').onclick=showStartGuide;
 $('openingReplay').onclick=()=>window.NanlanOpening?.replay();
 $('clock').onclick=showTime;

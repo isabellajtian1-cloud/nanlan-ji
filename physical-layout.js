@@ -6,5 +6,9 @@
  function contains(r,x,y,pad=0){return x>r.x-pad&&x<r.x+r.w+pad&&y>r.y-pad&&y<r.y+r.h+pad;}
  function depth(r,x,y,pad=0){return Math.min(x-r.x+pad,r.x+r.w+pad-x,y-r.y+pad,r.y+r.h+pad-y);}
  function anchors(o,s){const r=rect(o,s);if(!r)return null;return [{x:o.x,y:r.y+r.h+24},{x:r.x-24,y:r.y+r.h-8},{x:r.x+r.w+24,y:r.y+r.h-8}];}
- return {rect,contains,depth,anchors,configure};
+ const courtyardBases=[{x:642,y:345,w:31,h:11},{x:601,y:329,w:26,h:14},{x:369,y:350,w:9,h:8},{x:755,y:310,w:9,h:8}];
+ function blocksStep(r,x,y,fromX,fromY,pad){
+   return contains(r,x,y,pad)&&(!contains(r,fromX,fromY,pad)||depth(r,x,y,pad)>=depth(r,fromX,fromY,pad));
+ }
+ return {rect,contains,depth,anchors,configure,courtyardBases,blocksStep};
 });

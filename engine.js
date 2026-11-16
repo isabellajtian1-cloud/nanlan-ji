@@ -24,6 +24,16 @@
     M19:'京中来信', M20:'岁末满庭'
   };
   const ORDER = Object.keys(titles).filter(id => !['M12','M18'].includes(id));
+  const familyRequests = {
+    M01:{scene:'gate',person:'familyLuggage'},
+    M02:{scene:'bed',person:'mother'},
+    M03:{scene:'hall',person:'father'},
+    M04:{scene:'hall',person:'motherHall'}
+  };
+  function pendingFamilyRequest(s){
+    if(s.mode!=='prologue')return null;
+    return Object.keys(familyRequests).find(id=>s.quests[id]?.status==='OFFERED')||null;
+  }
   const steps = {
     M01:[['handover','交接文书与行李'],['keyTaken','接过院门钥匙'],['gateOpen','亲手打开院门']],
     M02:[['windowInspected','检查卧房（东厢房）窗格'],['leakInspected','检查卧房（东厢房）漏雨处'],['firstRepair','选择先修窗或先补漏'],['bedReady','搬入床褥，安顿卧房（东厢房）']],
@@ -129,7 +139,7 @@
       rural:rural.fresh(),production:production.fresh(),actorState:production.freshActors(),seals:seals.fresh(),shop:storyV2.emptyShop(),story2:storyV2.emptyStory(),practice:{},pages:{},visits:{gate:true},familyTalks:{},order:null,transactions:[],journal:[],
       tideAnchor:null,tideTutorialUsed:false,stallUntil:null,featured:null,lastNotice:'先和家人完成门前交接。'
     };
-    for(const id of Object.keys(titles).filter(id=>!V3_ORDER.includes(id)&&!V4_ORDER.includes(id)&&!V5_ORDER.includes(id)&&!SEASON5_ORDER.includes(id)&&!V6_ORDER.includes(id))) s.quests[id]={status:V2_ORDER.includes(id)?'DEFERRED_V2':id==='M01'?'ACTIVE':'LOCKED'};
+    for(const id of Object.keys(titles).filter(id=>!V3_ORDER.includes(id)&&!V4_ORDER.includes(id)&&!V5_ORDER.includes(id)&&!SEASON5_ORDER.includes(id)&&!V6_ORDER.includes(id))) s.quests[id]={status:V2_ORDER.includes(id)?'DEFERRED_V2':id==='M01'?'OFFERED':'LOCKED'};
     s.calendar=climate.infer(s);s.chronicle=chronicle.fresh(s);
     return s;
   }
@@ -203,10 +213,10 @@
       if(id==='M04'){s.mode='daily';s.worldTick=1080;s.storyBeat='入夜';for(const g of [s.garden,...(s.extraPlots||[])])if(g.plantedAt!==null){g.plantedAt=1080;if(g.wateredAt!==undefined)g.wateredAt=1080;}}
       const order=id.startsWith('S5_')?SEASON5_ORDER:activeOrder(s);
       const next=order.slice(order.indexOf(id)+1).find(k=>!done(s,k));
-      if(next)s.quests[next].status='ACTIVE';
+      if(next)s.quests[next].status=familyRequests[next]?'OFFERED':'ACTIVE';
       id=current(s);
     }
-    if(s.mode==='prologue')s.storyBeat=reached(s,'M04')?'入夜':reached(s,'M02')?'傍晚':'抵达';
+    if(s.mode==='prologue')s.storyBeat=done(s,'M03')?'入夜':done(s,'M01')?'傍晚':'抵达';
     if(done(s,'M20'))s.flags.volumeComplete=true;
     if(s.flags.volume2Started&&!current(s))s.flags.volume2Complete=true;
   }
@@ -271,7 +281,11 @@
       requireThat(g.plantedAt===null||(Number.isFinite(g.plantedAt)&&g.plantedAt>=0&&g.plantedAt<=value.worldTick),'地块种植时间无效。');
       if(g.wateredAt!==undefined)requireThat(Number.isFinite(g.wateredAt)&&g.wateredAt>=0&&g.wateredAt<=value.worldTick,'地块浇水时间无效。');
     }
-    for(const id of ORDER)requireThat(['ACTIVE','LOCKED','COMPLETED'].includes(value.quests[id]?.status),'存档任务状态无效。');
+    if(value.quests.M01?.status==='ACTIVE'&&!value.flags.handover)value.quests.M01.status='OFFERED';
+    for(const id of ORDER){
+      const status=value.quests[id]?.status;
+      requireThat(['ACTIVE','LOCKED','COMPLETED'].includes(status)||(status==='OFFERED'&&familyRequests[id]&&value.mode==='prologue'),'存档任务状态无效。');
+    }
     recoverRecordedFinales(value);
     rural.normalise(value,requireThat);
     storyV2.normalise(value);
@@ -288,7 +302,10 @@
         requireThat(legacyLease||value.quests[id].status===(firstV2<0||i<firstV2?'COMPLETED':i===firstV2?'ACTIVE':'LOCKED'),'第二卷任务顺序无效。');});
     }
     const first=ORDER.findIndex(id=>value.quests[id].status!=='COMPLETED');
-    for(let n=0;n<ORDER.length;n++)requireThat(value.quests[ORDER[n]].status===(first<0||n<first?'COMPLETED':n===first?'ACTIVE':'LOCKED'),'存档任务顺序无效。');
+    for(let n=0;n<ORDER.length;n++){
+      const status=value.quests[ORDER[n]].status;
+      requireThat(n===first?['ACTIVE','OFFERED'].includes(status):status===(first<0||n<first?'COMPLETED':'LOCKED'),'存档任务顺序无效。');
+    }
     requireThat(Array.isArray(value.transactions)&&Array.isArray(value.journal)&&Array.isArray(value.keyring),'存档账目无效。');
     if(value.order)requireThat(products.includes(value.order.product)&&Number.isInteger(value.order.delivered)&&value.order.delivered>=0&&value.order.delivered<=2&&Number.isInteger(value.order.reserved)&&value.order.reserved>=0&&value.order.reserved<=2-value.order.delivered&&value.order.reserved<=quantity(value,value.order.product),'存档预留库存无效。');
     children.normalise(value,requireThat);
@@ -341,6 +358,16 @@
     act(name,p={}) {
       return this.commit(name,(s)=>{
         const f=s.flags, q=current(s), quest=id=>expectQuest(s,id);
+        if(name==='acceptFamilyRequest'||(name==='handover'&&s.quests.M01.status==='OFFERED')){
+          const id=name==='handover'?'M01':p.id,offer=familyRequests[id];
+          requireThat(id===pendingFamilyRequest(s)&&offer,'这件事眼下没有等你答复。');
+          requireThat(name==='handover'||id!=='M01','先回应门前的家人。');
+          requireScene(s,offer.scene);
+          const person=this.world[s.scene].objects.find(o=>o.id===offer.person);
+          requireThat(this.near(person),'请走到家人身边再答复。');
+          s.quests[id].status='ACTIVE';
+          if(name==='acceptFamilyRequest')return;
+        }
         if(name==='streetTalk'){
           const person=this.world[s.scene].objects.find(o=>o.id===p.object);
           requireThat(person&&Object.hasOwn(neighbors.residents,p.object)&&neighbors.present(s,p.object,children.camp(s))&&this.near(person),'请在街坊出门时走到对方身旁。');
@@ -542,7 +569,7 @@
       });
     }
   }
-  return {Engine,chapterEntries,voyage,V6_ORDER,season5,SEASON5_ORDER,v5,V5_ORDER,v4,V4_ORDER,children,scholar,v3,V3_ORDER,rural,initial,current,done,reached,sceneGate,clock,tide,crop,gardenPlot,quantity,available,saleAvailable,normaliseLoaded,
+  return {Engine,familyRequests,pendingFamilyRequest,chapterEntries,voyage,V6_ORDER,season5,SEASON5_ORDER,v5,V5_ORDER,v4,V4_ORDER,children,scholar,v3,V3_ORDER,rural,initial,current,done,reached,sceneGate,clock,tide,crop,gardenPlot,quantity,available,saleAvailable,normaliseLoaded,
     rareResources,resourceCooldown,resourceRequirement,daylight,SAVE_KEY,ORDER,V2_ORDER,shopPrice,shopCustomers,story2:storyV2,shopProducts:storyV2.products,titles,steps,rewards,itemNames,products,prices,supplyPrices,recipes};
 });
 

@@ -1,0 +1,35 @@
+#hud #tasks[hidden], #hud #tasks.family-note > :not(#familyNote) { display: none !important; }
+#hud #tasks.family-note {
+  padding: 0;
+  min-height: 0;
+  border: 0;
+  border-radius: 2px;
+  background: transparent;
+  box-shadow: none;
+  overflow: visible;
+  pointer-events: none;
+}
+#familyNote {
+  display: block;
+  width: fit-content;
+  max-width: 100%;
+  min-height: 44px;
+  padding: 8px 16px;
+  border: 0;
+  border-inline-start: 3px solid #9a6249;
+  border-radius: 2px;
+  background: #f1e4c8;
+  color: #433728;
+  box-shadow: 0 2px 6px #24180e40;
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.35;
+  text-align: start;
+  pointer-events: auto;
+}
+#familyNote[hidden] { display: none; }
+#familyNote:focus-visible { outline: 3px solid #85552d; outline-offset: 2px; }
+#mapObjective[hidden] { display: none !important; }
+@media (max-width: 700px), (max-width: 1200px) and (max-height: 600px) {
+  #familyNote { font-size: 13px; padding: 5px 10px; }
+}

@@ -17,6 +17,7 @@ world.village.objects.find(o=>o.id==='villagePantry').label='乡邻余粮 · 种
  labels['乡邻余粮 · 种子与补给']='Neighbor’s Pantry · Seeds and Supplies';
  labels['灶台 · 做饭']='Stove · Cook';labels['灶台']='Stove';
  Object.assign(labels,{
+  '南澜记可行走场景，可点地面前往，也可拖动或用方向键行走':'Walkable scene. Tap to go to a spot, drag to steer, or use the arrow keys.',
   '庭院水口':'Courtyard Drain','清理庭院水口':'Clear the Courtyard Drain','先清灶边和庭院水口。':'Clear the stove and courtyard drain first.',
   '清理庭院水口。池塘只是背景，不用修。':'Clear the courtyard drain. The pond is scenery and does not need repair.',
   '重试载入':'Retry Loading','零售主打':'Sell Featured Item','可售':'Available to sell','暂无可用库存':'No available stock','请先预约':'Book a stall first','先预约或续约摊布':'Book or Renew the Stall',
@@ -38,6 +39,7 @@ const storage={getItem:key=>localStorage.getItem(key),setItem:(key,value)=>local
 const engine=new N.Engine(storage,world);
 let active=false,started=false,gender='female',dialogKind=null,dialogObject=null;
 let path=[],keys={},moving=false,direction='down',walkFrame=0,lastFrame=0,lastHud=0,transitioning=false;
+let walkVelocity=0;
 let storedRaw=null,oldRaw=null,previousFocus=null,messageTimer=0,rewardTimer=0,lastAutosave=0;
 let pointerQuietUntil=0;
 function settlePointerInput(){pointerQuietUntil=performance.now()+450;}
@@ -61,6 +63,10 @@ DATA.assets.storePickups='store-pickups-v39.png';
 DATA.assets.walkFemale='player-female-walk-v39.png';
 DATA.assets.walkMale='player-male-walk-v39.png';
 DATA.assets.playerIdle='player-idle-v6911.png';
+Object.assign(DATA.assets, {
+  gaitFemale:'gait-female-plain.webp', gaitFemaleSilk:'gait-female-silk.webp',
+  gaitMale:'gait-male-plain.webp', gaitMaleSilk:'gait-male-silk.webp'
+});
 DATA.assets.inventoryHousehold='inventory-household-v392.png';
 DATA.assets.inventoryCrafts='inventory-crafts-v392.png';
 DATA.assets.gardenStages='garden-stages-v6914.png';
@@ -78,7 +84,7 @@ const artwork=window.NanlanAssetLoader({images,assets:DATA.assets,resolveKey:id=
 function loadImage(id,options){return artwork.load(id,options);}
 let currentSceneLoad=null;
 async function loadSceneAssets(scene,sceneState=state()){
-  const required=[scene,'playerIdle',sceneState.gender==='male'?'walkMale':'walkFemale'];
+  const required=[scene,NanlanLocomotion.atlasKey(sceneState.gender,sceneState.actorState?.outfit==='nanlanSilk')];
   if(scene==='prefTea')required.push('teaServings','teaExtras');
   if(globalThis.NanlanTown.rooms.includes(scene))required.push(...world[scene].objects.filter(o=>o.role).map(o=>'npc_'+o.role));
   if(scene==='backHall')required.push('backHallReady');
@@ -779,9 +785,13 @@ function showPeople(){
     }grid.append(p);
   });$('panelExtra').append(grid);
 }
+function walkingHelp(){
+  return deskText('点地面走到该处，点人物或物件会先走近互动。用 WASD 或方向键行走，同时按两键可斜走，按住 Shift 可快步。手机或平板上，按住地面向任意方向拖动即可行走，松手停步。',
+    'Click or tap the ground to walk there, or choose a person or object to approach it. Use WASD or the arrow keys to walk. Hold two directions to move diagonally, and Shift to walk faster. On a phone or tablet, drag anywhere on the ground to steer and lift your finger to stop.');
+}
 function showHelp(){
-  const s=started?state():null,sections=['眼前怎样行动\n点击地面行走；点击人物或物件会先靠近，再互动。电脑可用 WASD / 方向键移动，空格或 E 互动；B 打开行囊，再按 B 返回；J 看当前记录，M 看舆图。手机与平板可点「场景互动」。','放心尝试\n体力或材料不足时，游戏会告诉你还缺什么。休息、补料后可以再来，不会因为一次没做成而清空进度。'];
-  if(s)sections.push('沿路换景\n用 WASD 或方向键朝门口、路口走，进入出口范围便会前往下一处，无须打开舆图。尚未开放的道路会说明缘由。');
+  const s=started?state():null,sections=[deskText('眼前怎样行动','Getting around')+'\n'+walkingHelp()+'\n'+deskText('空格或 E 互动，B 开合行囊，J 看当前记录，M 看舆图。','Space or E interacts, B toggles the satchel, J opens the journal, and M opens the map.'),'放心尝试\n体力或材料不足时，游戏会告诉你还缺什么。休息、补料后可以再来，不会因为一次没做成而清空进度。'];
+  if(s)sections.push(deskText('沿路换景\n走到门口或路口后，选择「进入」前往下一处，也可以留在原地。','Taking an exit\nWalk up to a door or road exit, then choose Enter to travel or Stay to remain here.'));
   if(s&&N.reached(s,'M03'))sections.push('工具与整理\n数字键可选择工具栏。菜圃可在场景里直接劳作：选锄头点硬土、选种袋点空畦、选木桶点缺水作物；成熟后用双手或竹背篓点击采收。菜圃总览仍可查看全部地块。');
   if(s&&N.reached(s,'M04'))sections.push('时间与休息\n日常时钟会随游玩推进；对白、舆图和菜单中暂停。卧房床榻可以临时恢复体力，也可以睡到次日清晨。');
   if(s&&N.reached(s,'M07'))sections.push('种植与等待\n翻地、播种、浇水后，作物会随游戏时间生长。等待时可以探索、制作或回访已经认识的人。');
@@ -1453,9 +1463,9 @@ function blocked(x,y,clearance=0){
   if(baseBlocked(x,y,clearance))return true;
   return visibleObjects().some(o=>insideObjectFootprint(o,x,y,clearance));
 }
-function movementBlocked(x,y,fromX,fromY,clearance=0){
+function movementBlocked(x,y,fromX,fromY,clearance=0,obstacles=visibleObjects()){
   if(baseBlocked(x,y,clearance))return true;
-  for(const o of visibleObjects()){
+  for(const o of obstacles){
     const rect=NanlanPhysical.rect(o,state());if(rect){if(!NanlanPhysical.contains(rect,x,y,clearance))continue;if(!NanlanPhysical.contains(rect,fromX,fromY,clearance)||NanlanPhysical.depth(rect,x,y,clearance)>=NanlanPhysical.depth(rect,fromX,fromY,clearance))return true;continue;}
     const size=objectFootprint(o);if(!size||!insideObjectFootprint(o,x,y,clearance))continue;
     // Old saves may resume inside a newly-added footprint. They may walk outward, never farther in.
@@ -1465,25 +1475,48 @@ function movementBlocked(x,y,fromX,fromY,clearance=0){
   }
   return false;
 }
+function clearWalkLine(from,to,clearance,obstacles){
+  const dx=to.x-from.x,dy=to.y-from.y,parts=Math.max(1,Math.ceil(Math.hypot(dx,dy)/4));
+  let x=from.x,y=from.y;
+  for(let i=1;i<=parts;i++){
+    const nx=from.x+dx*i/parts,ny=from.y+dy*i/parts;
+    if(movementBlocked(nx,ny,x,y,clearance,obstacles))return false;
+    if(dx&&dy&&(movementBlocked(nx,y,x,y,clearance,obstacles)||movementBlocked(x,ny,x,y,clearance,obstacles)))return false;
+    x=nx;y=ny;
+  }
+  return true;
+}
 function findPath(target){
   const s=state(),step=14,b=world[s.scene].bounds,cols=Math.ceil((b[2]-b[0])/step)+1,rows=Math.ceil((b[3]-b[1])/step)+1;
+  const obstacles=visibleObjects(),point=target.object?interactionPoint(target.object):null;
+  if(!target.object&&clearWalkLine(s.player,target,10,obstacles))return [{x:target.x,y:target.y}];
   const cell=(x,y)=>[Math.max(0,Math.min(cols-1,Math.round((x-b[0])/step))),Math.max(0,Math.min(rows-1,Math.round((y-b[1])/step)))];
   const xy=(x,y)=>({x:b[0]+x*step,y:b[1]+y*step}),start=cell(s.player.x,s.player.y),end=cell(target.x,target.y),key=(x,y)=>x+','+y;
   const queue=[start],previous=new Map([[key(...start),null]]);
   let finish=null;
   for(let n=0;n<queue.length;n++){
     const [x,y]=queue[n],p=n===0?s.player:xy(x,y);
-    const point=target.object?interactionPoint(target.object):null;
     if((target.object&&Math.hypot(p.x-point.x,p.y-point.y)<=(target.object.type==='door'?16:point!==target.object?18:64)&&!blocked(p.x,p.y))||(!target.object&&Math.hypot(x-end[0],y-end[1])<=.1)){finish=[x,y];break;}
     for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]]){
-      const nx=x+dx,ny=y+dy,k=key(nx,ny),np=xy(nx,ny);if(nx<0||ny<0||nx>=cols||ny>=rows||previous.has(k)||movementBlocked(np.x,np.y,p.x,p.y,10))continue;
-      if(dx&&dy&&(movementBlocked(p.x,np.y,p.x,p.y,10)||movementBlocked(np.x,p.y,p.x,p.y,10)))continue;
+      const nx=x+dx,ny=y+dy,k=key(nx,ny),np=xy(nx,ny);if(nx<0||ny<0||nx>=cols||ny>=rows||previous.has(k)||movementBlocked(np.x,np.y,p.x,p.y,10,obstacles))continue;
+      if(dx&&dy&&(movementBlocked(p.x,np.y,p.x,p.y,10,obstacles)||movementBlocked(np.x,p.y,p.x,p.y,10,obstacles)))continue;
       previous.set(k,[x,y]);queue.push([nx,ny]);
     }
   }
   if(!finish)return null;const points=[];for(let at=finish;at;at=previous.get(key(...at)))points.unshift(xy(...at));
-  points.shift();if(points.length)points[points.length-1].object=target.object;
-  else points.push({x:s.player.x,y:s.player.y,object:target.object});return points;
+  points.shift();
+  if(!target.object&&clearWalkLine(points.at(-1)||s.player,target,0,obstacles))points.push({x:target.x,y:target.y});
+  if(!points.length)return [{x:s.player.x,y:s.player.y,object:target.object}];
+  // Keep turns around solid scenery, and join open sections in a single straight line.
+  const route=[];
+  let anchor=s.player;
+  for(let i=0;i<points.length;i++){
+    let far=points.length-1;
+    while(far>i&&!clearWalkLine(anchor,points[far],10,obstacles))far--;
+    anchor=points[far];route.push(anchor);i=far;
+  }
+  if(target.object)route.at(-1).object=target.object;
+  return route;
 }
 function approach(o){
   const target=findPath({x:o.x,y:o.y,object:o});
@@ -1517,33 +1550,84 @@ function resolveHit(p){
   const distance=h=>Math.hypot((h.o.visualX??h.o.x)-p.x,(h.o.visualY!==undefined?h.o.visualY-8:h.o.y)-p.y);
   return hitTargets.find(h=>within(p,h.rect))?.o||hitTargets.filter(h=>h.polygon?NanlanGardenLayout.contains(p,h.polygon):within(p,h.anchor)).sort((a,b)=>distance(a)-distance(b))[0]?.o;
 }
-canvas.addEventListener('pointerdown',e=>{
-  if(!active||transitioning)return;cancelNavigation();const p=worldPoint(e),o=resolveHit(p);
+function canWalk(){
+  return active&&started&&$('start').hidden&&!transitioning&&!document.hidden&&(!document.hasFocus||document.hasFocus())&&$('dialog').hidden&&$('worldMap').hidden&&$('gallery').hidden&&!window.NanlanMobile?.isOverview();
+}
+function pickWalkTarget(p){
+  cancelNavigation();const o=resolveHit(p);
   if(o){approach(o);return;}focusedObjectId=null;if(blocked(p.x,p.y)){notice('请点击可走的道路或场景标记。');return;}
   path=findPath(p)||[];if(!path.length)notice('这里暂时走不到。可以从「场景互动」选择物件。');
+}
+const touchWalk=installTouchWalk(canvas,$('walkPad'),canWalk,()=>{
+  path=[];focusedObjectId=null;edgeExitAttempt=null;cancelNavigation();
+},pickWalkTarget,worldPoint);
+canvas.addEventListener('pointerdown',e=>{
+  if(e.pointerType!=='touch'&&e.button===0&&canWalk())pickWalkTarget(worldPoint(e));
 });
 canvas.addEventListener('pointermove',e=>{if(e.pointerType!=='touch')canvas.style.cursor=active&&!transitioning&&resolveHit(worldPoint(e))?'pointer':'default';});
 canvas.addEventListener('pointerleave',()=>{canvas.style.cursor='default';});
+function moveAlong(dx,dy,distance,obstacles){
+  // Small ground-space steps keep a slow frame from crossing a narrow obstruction.
+  const parts=Math.ceil(distance/4),sx=dx*distance/parts,sy=dy*distance/parts;
+  let travelled=0;
+  for(let i=0;i<parts;i++){
+    const {x,y}=state().player,nx=x+sx,ny=y+sy;
+    const freeX=sx!==0&&!movementBlocked(nx,y,x,y,0,obstacles);
+    const freeY=sy!==0&&!movementBlocked(x,ny,x,y,0,obstacles);
+    if(freeX&&freeY&&!movementBlocked(nx,ny,x,y,0,obstacles))engine.move(nx,ny);
+    else if(freeX&&(!freeY||Math.abs(sx)>=Math.abs(sy)))engine.move(nx,y);
+    else if(freeY)engine.move(x,ny);
+    else break;
+    travelled+=Math.hypot(state().player.x-x,state().player.y-y);
+  }
+  return travelled;
+}
 function update(dt){
-  if(window.NanlanMobile?.isOverview()||!active||!started||!$('start').hidden||transitioning||document.hidden||(document.hasFocus&&!document.hasFocus())||!$('dialog').hidden||!$('worldMap').hidden||!$('gallery').hidden)return;
-  const destination=path[path.length-1]?.object;
+  if(!canWalk()){touchWalk.cancel();moving=false;walkVelocity=0;return;}
+  if(dt<=0)return;
+  const s=state(),startX=s.player.x,startY=s.player.y,wasMoving=moving;
+  let dx=Number(!!(keys.d||keys.arrowright))-Number(!!(keys.a||keys.arrowleft));
+  let dy=Number(!!(keys.s||keys.arrowdown))-Number(!!(keys.w||keys.arrowup));
+  if(!dx&&!dy&&touchWalk.vector)({x:dx,y:dy}=touchWalk.vector);
+  const manualLength=Math.hypot(dx,dy);
+  if(manualLength){
+    dx/=manualLength;dy/=manualLength;
+    if(path.length||!wasMoving){path=[];cancelNavigation();}
+  }
+  const destination=path.at(-1)?.object;
   if(destination&&nearObject(destination)){path=[];moving=false;interact(destination);return;}
-  const wasMoving=moving;engine.tick(dt);let targetDistance=Infinity,dx=Number(!!(keys.d||keys.arrowright))-Number(!!(keys.a||keys.arrowleft)),dy=Number(!!(keys.s||keys.arrowdown))-Number(!!(keys.w||keys.arrowup));
-  const keyboardSteering=!!(dx||dy);if(keyboardSteering){path=[];cancelNavigation();}
-  else while(path.length){
-    const p=path[0],distance=Math.hypot(p.x-state().player.x,p.y-state().player.y);
-    if(distance<(p.object?.type==='door'?2:path.length===1?.75:7)){path.shift();if(p.object){moving=false;interact(p.object);return;}continue;}
-    targetDistance=distance;dx=(p.x-state().player.x)/distance;dy=(p.y-state().player.y)/distance;break;
+  engine.tick(dt);
+  if(!manualLength&&!path.length){moving=false;walkVelocity=0;return;}
+  const gait=NanlanLocomotion,pace=keys.shift?gait.briskSpeed:gait.walkSpeed;
+  const speed=gait.advanceSpeed(wasMoving?walkVelocity:0,pace,dt);
+  walkVelocity=speed.speed;
+  let budget=speed.distance*ACTOR_SCALE,travelled=0;
+  const obstacles=visibleObjects();
+  if(manualLength)travelled=moveAlong(dx,dy,budget,obstacles);
+  else while(path.length&&budget>0){
+    const next=path[0],rx=next.x-s.player.x,ry=next.y-s.player.y,distance=Math.hypot(rx,ry);
+    if(distance>.001){
+      const amount=Math.min(distance,budget);
+      const moved=moveAlong(rx/distance,ry/distance,amount,obstacles);
+      travelled+=moved;budget-=amount;
+      if(Math.hypot(next.x-s.player.x,next.y-s.player.y)>.001){
+        if(moved<.0001){path=[];cancelNavigation();}
+        break;
+      }
+    }
+    path.shift();
+    if(next.object){
+      moving=false;
+      if(nearObject(next.object))interact(next.object);
+      return;
+    }
   }
-  moving=!!(dx||dy);
+  moving=travelled>.0001;
   if(moving){
-    const s=state(),startX=s.player.x,startY=s.player.y,len=Math.hypot(dx,dy),step=Math.min(targetDistance,(keys.shift?175:112)*ACTOR_SCALE*dt),nx=startX+dx/len*step,ny=startY+dy/len*step;
-
-    if(!movementBlocked(nx,s.player.y,s.player.x,s.player.y))engine.move(nx,s.player.y);if(!movementBlocked(state().player.x,ny,state().player.x,s.player.y))engine.move(state().player.x,ny);
-    const travelledX=state().player.x-startX,travelledY=state().player.y-startY,travelled=Math.hypot(travelledX,travelledY);moving=travelled>.001;
-    if(moving){if(!wasMoving)walkFrame=0;walkFrame=(walkFrame+travelled/(40*ACTOR_SCALE)*Math.PI)%(Math.PI*2);const horizontal=['left','right'].includes(direction),preferX=horizontal?Math.abs(travelledX)*1.15>Math.abs(travelledY):Math.abs(travelledX)>Math.abs(travelledY)*1.15;direction=preferX?(travelledX>0?'right':'left'):(travelledY>0?'down':'up');}
-    if(keyboardSteering&&tryKeyboardExit(dx/len,dy/len,dt))return;
+    direction=gait.facing(s.player.x-startX,s.player.y-startY,direction);
+    walkFrame=((wasMoving?walkFrame:0)+travelled/(gait.stepLength*ACTOR_SCALE)*Math.PI)%(2*Math.PI);
   }
+  if(manualLength)tryKeyboardExit(dx,dy,dt);
 }
 function setupCamera(rect,now){
   const s=state(),dpr=Math.min(window.devicePixelRatio||1,3,Math.sqrt(12000000/Math.max(1,rect.width*rect.height)));
@@ -1683,14 +1767,13 @@ function drawPerson(role,x,y,height=84,flip=false,scaleActor=true){
   ctx.translate(x,y);if(flip)ctx.scale(-1,1);
   ctx.filter='brightness('+(1-N.daylight(state()).darkness*.28)+')';if(dressed)ctx.drawImage(im,...costume.rect,-width/2,-height,width,height);else ctx.drawImage(im,-width/2,-height,width,height);ctx.restore();
 }
-function renderCharacter(t){
-  const s=state(),p=s.player,oldKey=s.gender==='male'?'walkMale':'walkFemale',key=s.actorState?.outfit==='nanlanSilk'?oldKey+'Silk':oldKey;
-  const walking=moving&&active&&!transitioning;
-  if(!images[key])loadImage(key);if(!images.playerIdle)loadImage('playerIdle');
-  let pose=NanlanLocomotion.pose(s.gender,s.actorState?.outfit==='nanlanSilk',direction,walkFrame,walking);
-  if(pose.idle&&!images.playerIdle?.naturalWidth)pose=NanlanLocomotion.pose(s.gender,s.actorState?.outfit==='nanlanSilk',direction,0,true);
-  const im=pose.idle?images.playerIdle:images[key]||images[oldKey];
-  if(!im?.naturalWidth){drawPerson(s.gender==='male'?'playerMale':'playerFemale',p.x,p.y,84,direction==='left');return;}
+function renderCharacter(){
+  const s=state(),p=s.player,silk=s.actorState?.outfit==='nanlanSilk';
+  const pose=NanlanLocomotion.pose(s.gender,silk,direction,walkFrame,moving&&active&&!transitioning);
+  // Changing clothes in the current room can request a new sheet between scene loads.
+  if(!images[pose.asset])loadImage(pose.asset);
+  const im=images[pose.asset]||images[NanlanLocomotion.atlasKey(s.gender,!silk)];
+  if(!im?.naturalWidth){drawPerson(s.gender==='male'?'playerMale':'playerFemale',p.x,p.y,84,pose.flip);return;}
   ctx.save();ctx.translate(p.x,p.y);ctx.scale(ACTOR_SCALE,ACTOR_SCALE);
   const shadow=ctx.createRadialGradient(0,0,1,0,0,15);shadow.addColorStop(0,'#26332288');shadow.addColorStop(1,'#26332200');ctx.fillStyle=shadow;ctx.beginPath();ctx.ellipse(0,0,15,3.8,0,0,Math.PI*2);ctx.fill();
   if(pose.flip)ctx.scale(-1,1);
@@ -1758,7 +1841,7 @@ function render(){
   const people=visibleObjects().filter(o=>npcRole(o));
   const actors=people.map(o=>({layer:40,y:o.y,draw:()=>drawNaturalPerson(o,time)}));
   if(s.scene==='yard'&&window.NanlanEstate.gifted(s))actors.push({layer:40,y:window.NanlanEstate.gift.y,draw:()=>window.NanlanEstateUI?.drawGift(ctx)});
-  if(started)actors.push({layer:40,y:s.player.y,draw:()=>renderCharacter(time)});
+  if(started)actors.push({layer:40,y:s.player.y,draw:renderCharacter});
 
   for(const o of visibleObjects()){
     if(o.x<left-70||o.x>right+70)continue;
@@ -1931,7 +2014,7 @@ function download(name,text){
 function chooseGender(value){gender=value;for(const id of ['female','male'])$(id).setAttribute('aria-pressed',String(id===gender));$('selection').textContent='已选择'+(gender==='female'?'女主角':'男主角')+' · 将以这个身份走进南澜';}
 $('female').onclick=()=>chooseGender('female');$('male').onclick=()=>chooseGender('male');
 function showStartGuide(){
-  activity('启程前 · 怎样行动','点击地面行走，点击人物或物件互动。电脑可用 WASD / 方向键移动，空格或 E 互动；B 打开或收起行囊。\n\n不用预先记住所有系统。第一次遇到采集、修缮、种植或买卖时，游戏会在当时说明。');
+  activity('启程前 · 怎样行动',walkingHelp()+'\n\n'+deskText('空格或 E 互动，B 打开或收起行囊。第一次遇到采集、修缮、种植或买卖时，会有相应提示。','Space or E interacts, and B toggles the satchel. Gathering, repairs, planting and trading each have a guide when you first encounter them.'));
 }
 function finishOpeningIntro(){
   closeDialog(true);focusedObjectId='familyLuggage';
@@ -2029,7 +2112,7 @@ window.addEventListener('keydown',e=>{
   if(window.NanlanSettings?.isOpen())return;
   if(e.ctrlKey||e.metaKey||e.altKey||['INPUT','TEXTAREA','SELECT'].includes(e.target?.tagName))return;
   const k=e.key.toLowerCase();
-  if(k==='escape'){if(!$('gallery').hidden)$('galleryClose').click();else if(!$('worldMap').hidden)closeMap();else if(!$('dialog').hidden)closeDialog();else if(active){cancelNavigation();path=[];keys={};moving=false;focusedObjectId=null;clearSceneNotice();}return;}
+  if(k==='escape'){touchWalk.cancel();if(!$('gallery').hidden)$('galleryClose').click();else if(!$('worldMap').hidden)closeMap();else if(!$('dialog').hidden)closeDialog();else if(active){cancelNavigation();path=[];keys={};moving=false;focusedObjectId=null;clearSceneNotice();}return;}
   if(!$('dialog').hidden){
     const choices=[...$('choices').querySelectorAll('button:not([hidden]):not(:disabled)')];
     if(['arrowup','arrowleft','arrowdown','arrowright'].includes(k)&&choices.length){
@@ -2069,7 +2152,7 @@ window.addEventListener('storage',e=>{
 });
 window.addEventListener('beforeunload',()=>{if(started)engine.save();});
 // Keep first-load bandwidth for the entrance and actors; room props load when that room is needed.
-loadImage('gate');loadImage('playerIdle');loadImage('walkFemale');loadImage('walkMale');loadImage('yard');loadImage('npc_playerFemale');loadImage('npc_playerMale');refreshHud();requestAnimationFrame(frame);
+loadImage('gate');loadImage('yard');loadImage('npc_playerFemale');loadImage('npc_playerMale');refreshHud();requestAnimationFrame(frame);
 
 document.addEventListener('nanlanlanguagechange',()=>{if(started)refreshHud();});
 

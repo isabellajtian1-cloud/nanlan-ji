@@ -1,20 +1,52 @@
-/* Distances, poses and sole anchors share the same authored character scale. */
-(function(root,make){const api=make();if(typeof module==='object'&&module.exports)module.exports=api;else root.NanlanLocomotion=api;})(globalThis,()=>{
-'use strict';
-const idle=[[[198,18,350],[180,18,350],[154,18,350]],[[198,8,342],[179,10,342],[154,10,342]],[[198,14,346],[179,16,346],[152,16,346]],[[198,6,344],[180,10,344],[154,10,344]]];
-// [head center, top, grounded sole], measured independently for each painted frame.
-const walk=[
- [[[210,22,496],[181,20,491],[215,18,492]],[[208,10,480],[183,10,475],[205,12,475]]],
- [[[237,9,484],[203,9,485],[180,10,478]],[[222,3,473],[207,3,480],[186,5,461]]],
- [[[211,22,496],[181,21,493],[216,20,493]],[[208,10,484],[183,10,478],[209,10,480]]],
- [[[238,9,487],[202,9,487],[179,11,480]],[[222,1,475],[206,2,481],[186,4,465]]]
-];
-function pose(gender,silk,direction,phase,walking){
- const variant=(silk?2:0)+(gender==='male'?1:0),col=direction==='down'?0:direction==='up'?1:2;
- const cycle=((phase/(Math.PI*2))%1+1)%1,passing=walking&&((cycle>=.32&&cycle<.5)||cycle>=.82),rest=!walking||passing,row=cycle<.5?0:1;
- const [center,top,foot]=rest?idle[variant][col]:walk[variant][row][col],height=gender==='male'?88:84,scale=height/(foot-top);
- const cellHeight=gender==='male'?500:512;
- return {idle:rest,passing,flip:direction==='left',source:rest?[col*362,variant*362,362,362]:[col*384,row*cellHeight,384,cellHeight],destination:[-center*scale,-foot*scale,(rest?362:384)*scale,(rest?362:cellHeight)*scale],ground:0,height};
-}
-return {pose,walkSpeed:112,briskSpeed:175,stepLength:40};
+/* Player sprites share a foot anchor. Walking phase is measured in ground distance. */
+(function (root, make) {
+  const api = make();
+  if (typeof module === 'object' && module.exports) module.exports = api;
+  else root.NanlanLocomotion = api;
+})(globalThis, () => {
+  'use strict';
+  const directions = ['right', 'downRight', 'down', 'downLeft', 'left', 'upLeft', 'up', 'upRight'];
+  const spriteRows = [2, 1, 0, 1, 2, 3, 4, 3];
+  const sector = Math.PI / 4;
+  const walkSpeed = 112, briskSpeed = 175, stepLength = 40;
+  const acceleration = walkSpeed / 0.080;
+  const cellWidth = 160, cellHeight = 216, frames = 12;
+
+  function facing(dx, dy, previous) {
+    if (Math.hypot(dx, dy) < 0.0001) return previous;
+    const angle = Math.atan2(dy, dx);
+    const index = directions.indexOf(previous);
+    if (index >= 0) {
+      const delta = angle - index * sector;
+      const difference = Math.abs(Math.atan2(Math.sin(delta), Math.cos(delta)));
+      // Keep the facing stable when a finger or a route hovers at a sector boundary.
+      if (difference <= sector / 2 + Math.PI / 36) return previous;
+    }
+    return directions[(Math.round(angle / sector) + 8) % 8];
+  }
+
+  function advanceSpeed(speed, target, dt) {
+    const rampTime = Math.min(dt, Math.abs(target - speed) / acceleration);
+    const next = speed + Math.sign(target - speed) * acceleration * rampTime;
+    return { speed: next, distance: (speed + next) * rampTime / 2 + target * (dt - rampTime) };
+  }
+
+  function atlasKey(gender, silk) {
+    return 'gait' + (gender === 'male' ? 'Male' : 'Female') + (silk ? 'Silk' : '');
+  }
+
+  function pose(gender, silk, direction, phase, walking) {
+    const index = directions.indexOf(direction);
+    const row = index < 0 ? 0 : spriteRows[index];
+    const cycle = (phase / (2 * Math.PI) % 1 + 1) % 1;
+    const col = walking ? 1 + Math.floor(cycle * frames) : 0;
+    const height = gender === 'male' ? 88 : 84, scale = height / 196;
+    return {
+      asset: atlasKey(gender, silk), idle: !walking, flip: index >= 3 && index <= 5,
+      source: [col * cellWidth, row * cellHeight, cellWidth, cellHeight],
+      destination: [-80 * scale, -208 * scale, cellWidth * scale, cellHeight * scale],
+      height
+    };
+  }
+  return { facing, advanceSpeed, atlasKey, pose, walkSpeed, briskSpeed, stepLength };
 });

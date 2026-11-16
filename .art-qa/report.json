@@ -1,0 +1,1 @@
+{"ok": true, "url": "http://127.0.0.1:8765/", "depth": [{"d": -6, "hero": 1, "sorted": true, "shadowsFirst": true, "other": true}, {"d": 6, "hero": 1, "sorted": true, "shadowsFirst": true, "other": true}], "variants": [["female", false], ["female", true], ["male", false], ["male", true]], "scenes": ["gate", "hall", "yard", "banyanBrook"]}

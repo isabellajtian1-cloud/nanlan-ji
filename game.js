@@ -750,13 +750,18 @@ function itemSource(id){
     vegetable:'自家菜畦采收',hotMeal:'灶边消耗米、食材或菜蔬、枯枝与桶内水',feast:'M20 在灶边准备',
     narrowBasket:'第二卷仓房：竹材 ×2、草绳 ×1',driedHerb:'仓房：鲜草药 ×2',bambooWare:'仓房：竹材 ×1',shellCraft:'仓房：贝壳 ×2',receipt:'镇集真实买卖与交付留下',
     ledgerOriginal:'程婉的私人物件，获准代管',ledgerCopy:'M16 征得同意后誊写',bedroll:'安顿后搬进卧房，未被销毁'};
-  return m[id]||'在已开放地点实际拾取或完成对应动作获得';
+  if(m[id])return m[id];
+  if(id.startsWith('dish_')||Object.hasOwn(NanlanFood.goods,id))return NanlanFoodUI.source(id);
+  return '在已开放地点实际拾取或完成对应动作获得';
 }
 const inventorySheets=[
   {file:'inventory-household-v392.webp',rows:[0,414,805,1254],items:['yardKey','bedroll','repair','rice','ingredient','seed','vegetable','hotMeal','feast']},
   {file:'inventory-crafts-v392.webp',rows:[0,425,800,1254],items:['driedHerb','bambooWare','shellCraft','rope','ledgerOriginal','ledgerCopy','receipt','reply','narrowBasket']}
 ];
 function inventoryArt(id){
+  if(typeof id!=='string')return '';
+  if(id.startsWith('dish_')){const dish=NanlanFood.recipes[id.slice(5)];if(dish)return '<span class="food-mini '+dish.group+'" aria-hidden="true"></span>';}
+
   if(Object.hasOwn(NanlanHearth.pantry,id)||id==='hearthServing')return '<span class="hearth-art hearth-art-'+id+'" aria-hidden="true"></span>';
   if(NanlanNeighbors.goods[id])return '<span aria-hidden="true" class="ware-mini" style="'+window.NanlanStreetTalk.goodsStyle(id)+'"></span>';
   if(id==='townNotebook')return inventoryArt('ledgerCopy');
@@ -808,7 +813,7 @@ function showBag(){
     row.innerHTML=inventoryArt(id)+'<div><strong>'+N.itemNames[id]+' ×'+N.quantity(s,id)+(required[id]?'<em>任务需要 '+required[id]+'</em>':'')+(N.available(s,id)!==N.quantity(s,id)?'（预留 '+(N.quantity(s,id)-N.available(s,id))+'）':'')+'</strong><small>'+itemSource(id)+'</small><small class="inventory-record-note">'+clean(window.NanlanContinuityModel.documentNote(s,id,window.NanlanI18n?.language==='en'))+'</small></div>';grid.append(row);
   }$('panelExtra').append(grid);
   if(s.flags.volume2Started||N.done(s,'M20')){navButton(deskText('铺讯与手记','Shop Notice & Notes'),()=>window.NanlanContinuity.handbook(),'bag-papers');navButton(deskText('账房 · 租约与押金','Accounts · Lease & Deposit'),()=>window.NanlanContinuity.lease(),'bag-contract');}
-  if(N.done(s,'M04'))NanlanHearthUI.bagLink();
+  if(N.done(s,'M04')){NanlanHearthUI.bagLink();NanlanFoodUI.bag();}
   window.NanlanRecords?.links();
   if(!keys.length){const empty=document.createElement('p');empty.textContent='行囊暂时没有物资，采集所得会显示在这里。';$('panelExtra').append(empty);}
   if(s.season5)navButton('岁序长青 · 查看共事与试样',()=>window.NanlanSeasons.ledger(),'bag-seasons');
@@ -847,6 +852,7 @@ function showPantry(){
   const seedNote=document.createElement('p');seedNote.className='prerequisite-note';seedNote.dataset.noLocalize='';
   seedNote.textContent=L('乡邻这里常备种子，每份 '+N.supplyPrices.seed+' 文。一份可播一块地，青菜与药草共用，买好就放进行囊。','Seeds are always available here at '+N.supplyPrices.seed+' coins per packet. One packet plants one plot; the same seeds are used for vegetables and herbs. Purchased seeds go into your satchel.');
   $('panelExtra').append(seedNote);
+  if(N.done(s,'M04'))NanlanFoodUI.pantry();
   if(s.production.kit)window.NanlanVillage?.supplies();globalThis.NanlanV3?.supplies();
   const board=document.createElement('div');board.className='pantry-board';const controls=[];
   for(const item of ['seed',...Object.keys(N.supplyPrices).filter(id=>id!=='seed')]){
@@ -1139,7 +1145,7 @@ function showCook(){
     if(stage===0)window.NanlanAudio?.play('water');
     stage++;paint();
   };
-  if(N.done(s,'M04'))NanlanHearthUI.stoveLinks();
+  if(N.done(s,'M04')){NanlanFoodUI.stove();NanlanHearthUI.stoveLinks();}
   if(q==='M04'&&!s.flags.stoveClean)actButton('先把灶边清理干净','cleanStove',{},showCook);
   if(N.reached(s,'M04')){
     quick=button('直接煮好一锅热饭',finish,'cookMeal',true,false);
@@ -1357,7 +1363,7 @@ function visibleObjects(scene=state().scene,includeCooling=false){
   }).map(o=>window.NanlanHallWork?.position(s,window.NanlanStoreWork?.position(s,o)||o)||o);
 }
 function objectLabel(o){
-  const s=state();if(o.id==='silkPond'){const z=window.NanlanProductionModel.status(s);return !s.flags.volume2Started?'桑基鱼塘 · 第二卷开放':z.careOpen?'蚕匾 · 吐丝前可照料':z.wormReady||z.fishReady||z.mulberryReady?'桑基鱼塘 · 有产物可收':'桑基鱼塘 · 种桑、养蚕、喂鱼';}if(o.id==='v2Family')return s.flags.volume2Started?'家议 · 铺面与下一季':'新春家议 · 开启第二卷';if(['leaseEast','leaseWest'].includes(o.id)&&s.flags.v2Leased&&o.site===s.story2.site)return N.story2.shops[o.site].name+' · 已租用';if(o.id==='herbPlot'){const plots=Array.from({length:s.flags.fullGarden?6:4},(_,i)=>N.crop(s,i)),ready=plots.filter(c=>c.ready).length;return !s.flags.smallBed?'菜畦 · 待整理':ready?'菜圃药圃 · '+ready+' 块可收获':plots.some(c=>c.planted)?'菜圃药圃 · 照料作物':'菜圃药圃 · 可播种';}
+  const s=state();if(o.id==='silkPond'){const z=window.NanlanProductionModel.status(s);return !s.flags.volume2Started?(N.done(s,'M04')&&NanlanClimate.at(s).key==='summer'?deskText('池边 · 夏荷可采','Pond edge · Summer lotus leaves'):'桑基鱼塘 · 第二卷开放'):z.careOpen?'蚕匾 · 吐丝前可照料':z.wormReady||z.fishReady||z.mulberryReady?'桑基鱼塘 · 有产物可收':'桑基鱼塘 · 种桑、养蚕、喂鱼';}if(o.id==='v2Family')return s.flags.volume2Started?'家议 · 铺面与下一季':'新春家议 · 开启第二卷';if(['leaseEast','leaseWest'].includes(o.id)&&s.flags.v2Leased&&o.site===s.story2.site)return N.story2.shops[o.site].name+' · 已租用';if(o.id==='herbPlot'){const plots=Array.from({length:s.flags.fullGarden?6:4},(_,i)=>N.crop(s,i)),ready=plots.filter(c=>c.ready).length;return !s.flags.smallBed?'菜畦 · 待整理':ready?'菜圃药圃 · '+ready+' 块可收获':plots.some(c=>c.planted)?'菜圃药圃 · 照料作物':'菜圃药圃 · 可播种';}
   if(o.type==='door'&&objectGate(o))return o.label+' · 待开启';
   if(o.id==='window')return s.flags.windowPatched?'窗格 · 已修好':'松动窗格 · 查看';
   if(o.id==='leak')return s.flags.leakPatched?'屋顶 · 已补漏':'屋顶漏雨 · 查看';
@@ -1383,7 +1389,9 @@ function guideCurrentQuest(){
 async function interact(o){
   if(!o||transitioning)return;
   await interactCore(o);
-  if(dialogObject===o)window.NanlanDialogueScenes?.offer(o);
+  if(dialogObject===o){window.NanlanDialogueScenes?.offer(o);
+    if(o.id==='teahouseKeeper'&&!$('dialog').hidden&&state().flags.volume2Started)NanlanFoodUI.counterLink(()=>interact(o));
+  }
 }
 async function interactCore(o){
   if(!o||transitioning)return;

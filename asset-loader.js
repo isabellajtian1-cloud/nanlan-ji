@@ -3,7 +3,7 @@
   if (typeof module === 'object' && module.exports) module.exports = factory;
   else root.NanlanAssetLoader = factory;
 })(globalThis, function({images = {}, assets, resolveKey = id => id, ImageType = Image,
-    timeout = 30000, timers = {setTimeout, clearTimeout}}) {
+    timeout = 30000, timers = {setTimeout:(f,ms)=>setTimeout(f,ms), clearTimeout:id=>clearTimeout(id)}}) {
   const jobs = new Map();
   const failures = new Map();
   const useXHR = typeof location !== 'undefined' && /^https?:$/.test(location.protocol)

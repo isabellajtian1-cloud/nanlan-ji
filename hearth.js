@@ -186,5 +186,5 @@ window.NanlanHearthUI = (() => {
     ['菜名最多二十四字。','Choose a name of up to 24 characters.']
   ]) dict[zh]=en;
   window.NanlanI18n.configure(dict);
-  return {stoveLinks,bagLink,source};
+  return {stoveLinks,bagLink,source,draft};
 })();

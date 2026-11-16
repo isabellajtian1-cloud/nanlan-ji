@@ -28,8 +28,8 @@ const server=http.createServer((req,res)=>{
    async function pageFor(save,english=false){
      const c=await browser.newContext({viewport:{width:1024,height:768},hasTouch:true});
      const p=await c.newPage();p.setDefaultTimeout(20000);
-     p.on('pageerror',e=>errors.push(e.message));
-     p.on('console',m=>{if(m.type()==='error'&&m.text().includes('TypeError'))errors.push(m.text());});
+     p.on('pageerror',e=>{errors.push(e.message);console.log('Page exception',e.stack);});
+     p.on('console',m=>{if(m.type()==='error'&&!m.text().includes('Failed to load resource'))console.log('Console',m.text());});
      await p.addInitScript(({save,english})=>{localStorage.setItem('nanlan_sound','off');if(save)localStorage.setItem('nanlan_v20',save);if(english)localStorage.setItem('nanlan_language','en');},{save,english});
      await p.goto(url,{waitUntil:'domcontentloaded'});
      await p.waitForFunction(()=>document.getElementById('bootStatus').hidden);
@@ -39,7 +39,7 @@ const server=http.createServer((req,res)=>{
    let p=await pageFor(null);
    assert(history.some(x=>x.name==='engine.js'&&x.url.includes('retry=')));
    assert(!history.some(x=>['stove-v6914.webp','garden-stages-v6914.webp','npc-idle-v3911.webp'].includes(x.name)));
-   await p.click('#begin');await p.click('#characterConfirm');await p.waitForFunction(()=>started&&!!images.gate?.naturalWidth);
+   await p.click('#begin');await p.click('#characterConfirm');try{await p.waitForFunction(()=>started&&!!images.gate?.naturalWidth);}catch(e){console.log(await p.evaluate(()=>({started,transitioning,dialog:$('dialog').innerText,warning:$('loadWarning').innerText,loading:$('sceneLoading').innerText,form:$('characterCreate').hidden,characterError:$('characterError').innerText,keys:Object.keys(images)})),history.slice(-12));throw e;}
    await p.click('#openingSkip');await p.waitForFunction(()=>!NanlanOpening.running());
    let fixture=await p.evaluate(()=>JSON.parse(localStorage.getItem('nanlan_v20')));
    fixture.scene='yard';fixture.player={x:555,y:345};

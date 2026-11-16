@@ -1,0 +1,73 @@
+name: Package and verify published game
+on:
+  push:
+    branches: ['qa/loading-6104']
+    paths: ['.github/workflows/verify-published-6106.yml']
+permissions:
+  contents: write
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 40110e7a4cb7a06ce305b33dbee663c13de886a7
+      - name: Verify and publish the complete test build
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import hashlib, subprocess, zipfile
+          rows = subprocess.check_output(['git','ls-tree','-r','-z','HEAD']).split(b'\x00')
+          entries = {}
+          for row in filter(None, rows):
+              meta, name = row.split(b'\t', 1)
+              entries[name.decode()] = meta.split()[2].decode()
+          dest = Path('Nanlanji_V6.10.6_Full_Development.zip')
+          with zipfile.ZipFile(dest, 'w', zipfile.ZIP_DEFLATED, compresslevel=6) as z:
+              for name in sorted(entries): z.write(name, name)
+          with zipfile.ZipFile(dest) as z:
+              assert len(z.namelist()) == len(entries) and 'index.html' in entries
+              for name, expected in entries.items():
+                  buf = z.read(name)
+                  assert hashlib.sha1(b'blob '+str(len(buf)).encode()+b'\x00'+buf).hexdigest() == expected, name
+          print('Verified', len(entries), 'files and SHA256', hashlib.sha256(dest.read_bytes()).hexdigest())
+          PY
+          gh release create v6.10.6 Nanlanji_V6.10.6_Full_Development.zip --target 40110e7a4cb7a06ce305b33dbee663c13de886a7 --prerelease --title "V6.10.6 一路相续 · 整体开发试玩" --notes "六卷主线与番外。解压完整包后打开根目录的 index.html。网页版 https://isabellajtian1-cloud.github.io/nanlan-ji/?v=6106 。"
+  online:
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - name: Open the actual Pages site in Chrome
+        run: |
+          npm install --prefix "$RUNNER_TEMP/nanlan-live" playwright@1.55.0
+          NODE_PATH="$RUNNER_TEMP/nanlan-live/node_modules" node <<'JS'
+          const {chromium}=require('playwright'),assert=require('node:assert/strict');
+          (async()=>{
+            const b=await chromium.launch({executablePath:'/usr/bin/google-chrome',args:['--no-sandbox','--mute-audio']});
+            try{
+              const p=await b.newPage({viewport:{width:1024,height:768},hasTouch:true});
+              const url='https://isabellajtian1-cloud.github.io/nanlan-ji/?v=6106';
+              for(let i=0;i<30;i++){
+                await p.goto(url,{waitUntil:'domcontentloaded',timeout:30000});
+                if((await p.title()).includes('6.10.6'))break;
+                await p.waitForTimeout(8000);
+              }
+              assert.match(await p.title(),/6\.10\.6/);
+              const errors=[];p.on('pageerror',e=>errors.push(e.message));
+              await p.waitForFunction(()=>document.getElementById('bootStatus').hidden,{},{timeout:60000});
+              await p.click('#begin');await p.click('#characterConfirm');await p.waitForFunction(()=>started&&images.gate?.naturalWidth);
+              await p.click('#openingSkip');await p.waitForFunction(()=>!NanlanOpening.running());
+              await p.evaluate(()=>{
+                const person=world.gate.objects.find(o=>o.id==='familyLuggage');engine.move(person.x,person.y);
+                for(const [name,args] of [['handover',{choice:'grandfather'}],['takeKey',{}],['openGate',{}]]){
+                  const result=engine.act(name,args);if(!result.ok)throw Error(result.message);
+                }
+              });
+              await p.reload({waitUntil:'domcontentloaded'});await p.click('#continueGame');await p.waitForFunction(()=>started&&state().scene==='yard'&&images.stove?.naturalWidth&&images.waterJar?.naturalWidth);
+              assert.deepEqual(errors,[]);console.log('Public entry verified:',await p.title(),p.url(),await p.evaluate(()=>state().scene));
+            } finally {await b.close();}
+          })().catch(e=>{console.error(e);process.exitCode=1;});
+          JS

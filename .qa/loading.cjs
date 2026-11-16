@@ -90,9 +90,13 @@ const server=http.createServer((req,res)=>{
    await p.click('#continueGame');await p.waitForFunction(()=>!$('sceneLoading').hidden);await p.click('#sceneLoadCancel');
    await p.waitForFunction(()=>!transitioning&&$('sceneLoading').hidden);
    assert.equal(await p.evaluate(()=>localStorage.getItem('nanlan_v20')),save);assert.equal(await p.evaluate(()=>started),false);
-   mode='normal';await p.click('#continueGame');await p.waitForFunction(()=>started&&state().scene==='yard');
+   mode='normal';await p.waitForFunction(()=>performance.now()>=pointerQuietUntil);await p.click('#continueGame');await p.waitForFunction(()=>started&&state().scene==='yard');
    console.log('Cancellation preserved the original save and a second Continue succeeded.');
    await p.context().close();
+   mode='offline';p=await pageFor(save);
+   await p.click('#continueGame');await p.waitForFunction(()=>!$('sceneLoading').hidden&&!$('sceneLoadRetry').disabled);
+   mode='normal';await p.click('#sceneLoadRetry');await p.waitForFunction(()=>started&&state().scene==='yard');
+   console.log('Manual retry succeeded without restarting the page.');await p.context().close();
    const local=await browser.newPage();local.on('pageerror',e=>errors.push(e.message));
    await local.goto(require('node:url').pathToFileURL(path.join(root,'index.html')).href);
    await local.waitForFunction(()=>document.getElementById('bootStatus').hidden);

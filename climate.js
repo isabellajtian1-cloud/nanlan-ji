@@ -34,8 +34,8 @@ function sync(before,after){
  after.calendar={version:1,phase:key,anchorDay:travelDay(after),ordinal:nextSeason(from.ordinal,phaseSeason[key]),from:{year:from.year,index:from.index,day:from.day}};
 }
 function label(s,english=false){const c=at(s);return english?'Year '+c.year+' · '+c.en+' day '+c.day:'第 '+c.year+' 年 · '+c.zh+'第 '+c.day+' 日';}
-const outdoor=new Set(['gate','yard','village','market','county','foothill','mountain','mountainside','summit','bambooGrove','coast','tidalflat','wharf','oldTrail','qingxi','anchorage','qPier','qFair','qSalt','qBamboo','qBeacon','prefDock','prefMarket']);
-const gardens=new Set(['yard','village','foothill','mountain','mountainside','summit','bambooGrove','oldTrail','qBamboo']);
+const outdoor=new Set(['banyanBrook','gate','yard','village','market','county','foothill','mountain','mountainside','summit','bambooGrove','coast','tidalflat','wharf','oldTrail','qingxi','anchorage','qPier','qFair','qSalt','qBamboo','qBeacon','prefDock','prefMarket']);
+const gardens=new Set(['banyanBrook','yard','village','foothill','mountain','mountainside','summit','bambooGrove','oldTrail','qBamboo']);
 const cache=new Map();
 function picture(image,scene,s){
  if(!image?.naturalWidth||typeof document==='undefined')return image;

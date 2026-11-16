@@ -231,7 +231,7 @@
     if(!s.flags.gateOpen)return '先在门前完成交接、接过钥匙，再亲手打开院门。';
     if(['yard','hall','study','bed','store'].includes(to))return '';
     if(!done(s,'M04'))return '先安顿卧房、清理后院，再和家人吃第一顿热饭。M04 完成后可出村认路。';
-    if(to==='village')return '';
+    if(to==='village'||to==='banyanBrook')return '';
     if(['foothill','mountain','bambooGrove'].includes(to))return reached(s,'M06')?'':'先在南澜村认识陈伯与许青禾，完成 M05。';
     if(['mountainside','summit'].includes(to))return done(s,'M13')?'':'高地要等 M13 风雨准备完成，再由阿岑引路；眼下可去竹林采集。';
     if(['coast','tidalflat'].includes(to))return reached(s,'M09')?'':'先完成 M08 书箱任务，再请沈晚渔指路。';
@@ -343,7 +343,7 @@
         requireThat(this.world[to],'这个地点不存在。');
         if(to==='tidalflat')requireThat(tide(s).low,'潮水正在上涨。可以先在海边与沈晚渔交谈、整理笔记，低潮还会再来。');
         v3.shopVisit(s,s.scene,to);
-        const spawn=(to==='county'&&town.rooms.includes(s.scene)&&this.world[s.scene].returnAt)||this.world[to].spawn;
+        const spawn=this.world[to].arrivalFrom?.[s.scene]||(to==='county'&&town.rooms.includes(s.scene)&&this.world[s.scene].returnAt)||this.world[to].spawn;
         s.scene=to;s.player={x:spawn[0],y:spawn[1]};s.visits[to]=true;
         if(to==='coast'){s.flags.coastVisited=true;if(!s.tideTutorialUsed){s.tideAnchor=s.worldTick;s.tideTutorialUsed=true;}}
       });

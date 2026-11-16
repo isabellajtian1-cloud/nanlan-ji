@@ -3,6 +3,7 @@ const $=id=>document.getElementById(id);
 const N=NanlanEngine, DATA=window.NANLAN_DATA, world=DATA.world;
 NanlanNeighbors.install(DATA,window.NANLAN_EN);
 NanlanPhysical.configure(world);
+NanlanSceneScale.configure(world);
 // The painted garden extends slightly beyond the old walking limit; this lets the actor reach its edge without stepping on crops.
 world.yard.bounds[2]=970;
 // Extend the walkable approach onto the painted hall steps, not the surrounding roofs.
@@ -34,7 +35,7 @@ world.village.objects.find(o=>o.id==='villagePantry').label='乡邻余粮 · 种
 })();
 const canvas=$('game'),ctx=canvas.getContext('2d',{alpha:false}),W=1100,H=733;
 // Keep authored coordinates and old saves, while increasing world distances in actor-sized steps.
-const EXPLORATION_SCALE=1.3,ACTOR_SCALE=1/EXPLORATION_SCALE;
+function actorScale(y) { return NanlanSceneScale.actor(state().scene,y); }
 const storage={getItem:key=>localStorage.getItem(key),setItem:(key,value)=>localStorage.setItem(key,value)};
 const engine=new N.Engine(storage,world);
 let active=false,started=false,gender='female',dialogKind=null,dialogObject=null;
@@ -288,7 +289,7 @@ function closeDialog(force=false){
 }
 $('skip').onclick=closeDialog;
 const DOOR_REACH=18;
-function interactionPoint(o){const points=NanlanPhysical.anchors(o,state());return points?.find(p=>!blocked(p.x,p.y,10))||o;}
+function interactionPoint(o){if(o.scenic&&o.approach)return o.approach;const fitting=NanlanSceneScale.furnishing(state().scene,o);if(fitting)return {x:fitting.approach[0],y:fitting.approach[1]};const points=NanlanPhysical.anchors(o,state());return points?.find(p=>!blocked(p.x,p.y,10))||o;}
 function nearObject(o){if(!o)return true;const p=state().player,target=interactionPoint(o);return o.type==='door'?Math.hypot(o.x-p.x,o.y-p.y)<=DOOR_REACH:target!==o?Math.hypot(target.x-p.x,target.y-p.y)<=24&&!blocked(p.x,p.y):engine.near(o);}
 async function perform(name,p={},rerender){
   if(dialogObject&&!nearObject(dialogObject)){const failed={ok:false,message:'请先走到物件旁，再进行操作。'};closeDialog();notice(failed.message,true);return failed;}
@@ -1522,13 +1523,14 @@ async function switchScene(to){
   if(active)continueNavigation();
 }
 function objectFootprint(o){
+  if(o.scenic||NanlanSceneScale.furnishing(state().scene,o))return null;
   if(o.action==='crateMove'){const f=window.NanlanStoreWork.items.find(i=>i.id===o.item).foot;return [f[2]*W/1536,f[3]*H/1024];}
   if(o.action==='hallMove'){const f=window.NanlanHallWork.items.find(i=>i.id===o.item).foot;return [f[2]*W/1536,f[3]*H/1024];}
   if(o.type==='door'||resourceTypes.includes(o.type)||['window','leak','gutter','lamps','tide','waterMark'].includes(o.action))return null;
   const fixed={familyLuggage:[48,28],mealTable:[88,42],bedRest:[66,31],workbench:[75,35],bookBox:[28,18],goodsCrates:[62,32],silkPond:[76,44],herbPlot:[67,36],waterJar:[24,14],stove:[42,25],shelter:[55,28],generalStoreKeeper:[62,27],v2Shelf:[48,25],villageLetter:[23,10]};
   if(fixed[o.id])return fixed[o.id];
   if(fruitTypes.includes(o.type))return [38,22];
-  if(npcRole(o)||o.type==='npc')return [22*ACTOR_SCALE,14*ACTOR_SCALE];
+  if(npcRole(o)||o.type==='npc')return [18*actorScale(o.y),10*actorScale(o.y)];
   if(['activity','locked','property','view','read'].includes(o.type))return [27,18];
   return null;
 }
@@ -1538,7 +1540,10 @@ function insideObjectFootprint(o,x,y,clearance=0){
   return ((x-o.x)/(rx+clearance))**2+((y-o.y)/(ry+clearance))**2<1;
 }
 function baseBlocked(x,y,clearance=0){
-  const b=world[state().scene].bounds;if(x<b[0]||x>b[2]||y<b[1]||y>b[3])return true;
+  const scene=state().scene,w=world[scene],b=w.bounds;
+  if(NanlanSceneScale.outside(scene,w,x,y))return true;
+  if(w.walkCorridor&&!w.walkCorridor(x,y,clearance))return true;
+  if(x<b[0]||x>b[2]||y<b[1]||y>b[3])return true;
   if(state().scene==='yard'&&window.NanlanEstate.gifted(state())&&window.NanlanEstate.giftBlocks(x,y,clearance))return true;
   for(const [a,c,w,h] of world[state().scene].collisions||[])if(x>a-6-clearance&&x<a+w+6+clearance&&y>c-6-clearance&&y<c+h+6+clearance)return true;
   if(state().scene==='yard')for(const o of world.yard.objects.filter(v=>v.type==='weed'&&!state().collected[v.id]))if(Math.hypot(x-o.x,y-o.y)<22+clearance)return true;
@@ -1546,11 +1551,13 @@ function baseBlocked(x,y,clearance=0){
 }
 function blocked(x,y,clearance=0){
   if(baseBlocked(x,y,clearance))return true;
+  if(NanlanSceneScale.solids(state().scene).some(r=>NanlanPhysical.contains(r,x,y,clearance)))return true;
   if(state().scene==='yard'&&NanlanPhysical.courtyardBases.some(r=>NanlanPhysical.contains(r,x,y,clearance)))return true;
   return visibleObjects().some(o=>insideObjectFootprint(o,x,y,clearance));
 }
 function movementBlocked(x,y,fromX,fromY,clearance=0,obstacles=visibleObjects()){
   if(baseBlocked(x,y,clearance))return true;
+  if(NanlanSceneScale.solids(state().scene).some(r=>NanlanPhysical.blocksStep(r,x,y,fromX,fromY,clearance)))return true;
   if(state().scene==='yard'&&NanlanPhysical.courtyardBases.some(r=>NanlanPhysical.blocksStep(r,x,y,fromX,fromY,clearance)))return true;
   for(const o of obstacles){
     const rect=NanlanPhysical.rect(o,state());if(rect){if(NanlanPhysical.blocksStep(rect,x,y,fromX,fromY,clearance))return true;continue;}
@@ -1688,7 +1695,8 @@ function update(dt){
   const gait=NanlanLocomotion,pace=keys.shift?gait.briskSpeed:gait.walkSpeed;
   const speed=gait.advanceSpeed(wasMoving?walkVelocity:0,pace,dt);
   walkVelocity=speed.speed;
-  let budget=speed.distance*ACTOR_SCALE,travelled=0;
+  const strideScale=actorScale(s.player.y);
+  let budget=speed.distance*strideScale,travelled=0;
   const obstacles=visibleObjects();
   if(manualLength)travelled=moveAlong(dx,dy,budget,obstacles);
   else while(path.length&&budget>0){
@@ -1712,7 +1720,7 @@ function update(dt){
   moving=travelled>.0001;
   if(moving){
     direction=gait.facing(s.player.x-startX,s.player.y-startY,direction);
-    walkFrame=((wasMoving?walkFrame:0)+travelled/(gait.stepLength*ACTOR_SCALE)*Math.PI)%(2*Math.PI);
+    walkFrame=((wasMoving?walkFrame:0)+travelled/(gait.stepLength*strideScale)*Math.PI)%(2*Math.PI);
   }
   if(manualLength)tryKeyboardExit(dx,dy,dt);
 }
@@ -1725,18 +1733,19 @@ function setupCamera(rect,now){
   const fullScale=Math.min(vw/W,vh/H);
   const portraitScale=vh>vw?Math.max(fullScale,Math.min(vw/650,vh/H)):fullScale;
   const whole=!started||overviewCamera||now<cameraOverviewUntil;
-  const targetScale=whole?fullScale:portraitScale*(window.NanlanMobile?.compact()?1.05:1.2)*EXPLORATION_SCALE;
+  const zoom=NanlanSceneScale.zoom(s.scene);
+  const targetScale=whole?fullScale:portraitScale*zoom*(window.NanlanMobile?.compact() ? .89 : 1);
   const mobile=window.NanlanMobile?.compact(),safe=!whole&&mobile?window.NanlanMobile.safeFrame?.():null;
   const resized=camera.vw!==vw||camera.vh!==vh||camera.scene!==s.scene||camera.whole!==whole;
   let targetX=whole?W/2:s.player.x;
   // Frame the character's body above its feet without hiding the path ahead.
-  let targetY=whole?H/2:s.player.y-34;
+  let targetY=whole?H/2:s.player.y-43*actorScale(s.player.y);
   // A small walking window lets feet travel across the road before the camera follows.
   // Stop following immediately at rest; scenery must not slide under a planted actor.
-  if(mobile&&!whole&&!resized&&camera.focusX!==undefined){
+  if(!whole&&!resized&&camera.focusX!==undefined){
     const follow=(current,target,radius)=>current+Math.sign(target-current)*Math.max(0,Math.abs(target-current)-radius);
-    targetX=moving?follow(camera.focusX,targetX,Math.min(90,vw/targetScale*.16)):camera.focusX;
-    targetY=moving?follow(camera.focusY,targetY,Math.min(55,vh/targetScale*.09)):camera.focusY;
+    targetX=moving?follow(camera.focusX,targetX,Math.min(56,vw/targetScale*.09)):camera.focusX;
+    targetY=moving?follow(camera.focusY,targetY,Math.min(35,vh/targetScale*.065)):camera.focusY;
   }
   const resize=camera.vw!==vw||camera.vh!==vh||camera.dpr!==dpr;
   const snap=resize||camera.scene!==s.scene||camera.started!==started||reduceCameraMotion.matches;
@@ -1744,7 +1753,8 @@ function setupCamera(rect,now){
   const blend=snap?1:1-Math.exp(-dt/.19);
   const move=(current,target)=>current===undefined||Math.abs(current-target)<.02?target:current+(target-current)*blend;
   const scale=move(camera.scale,targetScale);
-  const focusX=move(camera.focusX,targetX),focusY=move(camera.focusY,targetY);
+  const resetFocus=snap||camera.whole!==whole;
+  const focusX=resetFocus?targetX:move(camera.focusX,targetX),focusY=resetFocus?targetY:move(camera.focusY,targetY);
   const offset=(viewport,worldSize,focus,center=viewport/2)=>{
     const extent=worldSize*scale;
     if(extent<=viewport)return (viewport-extent)/2;
@@ -1834,7 +1844,7 @@ function drawNaturalPerson(o,t,brush=ctx,inCourtyard=false){
   if(o.role==='children'){drawPerson('children',o.x,o.y,62,false,true,brush,inCourtyard);return;}
  const pose=npcPresentation(o,t),col=['grandfather','father','mother','cen'].indexOf(pose.role);
  const silk=window.NanlanProduction?.portrait(pose.role),sheet=images.npcIdle;
-  brush.save();brush.translate(o.x,o.y);brush.rotate(pose.lean);brush.scale(ACTOR_SCALE,ACTOR_SCALE*pose.breath);brush.translate(-o.x,-o.y);
+  brush.save();brush.translate(o.x,o.y);brush.rotate(pose.lean);brush.scale(actorScale(o.y),actorScale(o.y)*pose.breath);brush.translate(-o.x,-o.y);
  if(col>=0&&!silk&&sheet?.naturalWidth){
   const cw=sheet.naturalWidth/4,ch=sheet.naturalHeight/2;
   brush.save();brush.translate(o.x,o.y);if(pose.flip)brush.scale(-1,1);
@@ -1845,7 +1855,7 @@ function drawNaturalPerson(o,t,brush=ctx,inCourtyard=false){
  brush.restore();
 }
 function drawPerson(role,x,y,height=84,flip=false,scaleActor=true,brush=ctx,inCourtyard=false){
-  if(scaleActor)height*=ACTOR_SCALE;
+  if(scaleActor)height*=actorScale(y);
   const costume=window.NanlanProduction?.portrait(role);if(costume&&!images[costume.asset])loadImage(costume.asset);
   const dressed=costume&&images[costume.asset]?.naturalWidth,im=dressed?images[costume.asset]:images['npc_'+role];if(!im?.naturalWidth){loadImage('npc_'+role);return;}
   const width=height*(dressed?costume.rect[2]/costume.rect[3]:im.naturalWidth/im.naturalHeight);
@@ -1865,7 +1875,7 @@ function renderCharacter(brush=ctx,inCourtyard=false){
   if(!images[pose.asset])loadImage(pose.asset);
   const im=images[pose.asset]||images[NanlanLocomotion.atlasKey(s.gender,!silk)];
   if(!im?.naturalWidth){drawPerson(s.gender==='male'?'playerMale':'playerFemale',p.x,p.y,84,pose.flip,true,brush,inCourtyard);return;}
-  brush.save();brush.translate(p.x,p.y);brush.scale(ACTOR_SCALE,ACTOR_SCALE);
+  brush.save();brush.translate(p.x,p.y);brush.scale(actorScale(p.y),actorScale(p.y));
   if(!inCourtyard){const shadow=brush.createRadialGradient(0,0,1,0,0,15);shadow.addColorStop(0,'#26332288');shadow.addColorStop(1,'#26332200');brush.fillStyle=shadow;brush.beginPath();brush.ellipse(0,0,15,3.8,0,0,Math.PI*2);brush.fill();}
   if(pose.flip)brush.scale(-1,1);
   if(!inCourtyard)brush.filter='brightness('+(1-N.daylight(s).darkness*.28)+')';
@@ -1881,7 +1891,7 @@ function storePickup(o){return state().scene==='store'?({tools:0,bucket:1,axe:2}
 const adultHeights={grandfather:77,father:88,mother:80,chen:76,doctor:83,cen:82,yu:84,wan:79,qiu:87,lin:85,neighbor:81,boatman:89,xiaoman:78,tea:83,landlord:86,guard:91,children:62,cakeAunt:79,ferryPorter:91,netMender:73,youngWeaver:85,blueDyer:82,letterScribe:86,peddler:88};
 function npcHeight(role){return NanlanNeighbors.residents[role]?.height||adultHeights[role]||84;}
 function personBounds(role,x,y){
-  const im=images['npc_'+role],height=npcHeight(role)*ACTOR_SCALE,width=role==='playerMale'||role==='playerFemale'?68*ACTOR_SCALE:im?.naturalWidth?height*im.naturalWidth/im.naturalHeight:height*.76;
+  const im=images['npc_'+role],height=npcHeight(role)*actorScale(y),width=role==='playerMale'||role==='playerFemale'?68*actorScale(y):im?.naturalWidth?height*im.naturalWidth/im.naturalHeight:height*.76;
   return {x:x-width/2-6,y:y-height-8,w:width+12,h:height+18};
 }
 let sceneGuides=true;
@@ -1927,18 +1937,23 @@ function render(){
   const base=images[baseKey]||images[world[s.scene].asset];if(base?.naturalWidth)ctx.drawImage(NanlanClimate.picture(base,s.scene,s),0,0,W,H);
   NanlanClimate.atmosphere(ctx,s.scene,s,performance.now(),W,H);
   window.NanlanWeather?.atmosphere(ctx,s.scene,s,performance.now(),W,H);
+  if(s.scene==='banyanBrook')NanlanBrook.water(ctx,performance.now(),N.daylight(s).darkness);
   paintDifferenceLayers();hitTargets=[];
   const left=Math.max(8,-camera.ox/camera.scale+8),right=Math.min(W-8,(camera.vw-camera.ox)/camera.scale-8);
   const time=performance.now(),objective=localObjectiveObject(),destination=path[path.length-1]?.object;
   const people=visibleObjects().filter(o=>npcRole(o));
   const lighting=s.scene==='yard'?NanlanCourtyard.frame(base===images[baseKey]?baseKey:world.yard.asset,images.courtyardMattes,N.daylight(s),window.NanlanWeather?.current(s),s.flags.stableLights):null;
-  const drawActor=(x,y,paint)=>lighting?NanlanCourtyard.drawPerson(ctx,x,y,lighting,paint):paint(ctx,false);
+  const drawActor=(x,y,paint)=>{
+    if(lighting)NanlanCourtyard.drawPerson(ctx,x,y,lighting,paint);
+    else if(s.scene==='banyanBrook')NanlanBrook.actor(ctx,x,y,paint);
+    else paint(ctx,false);
+  };
   const actors=people.map(o=>({layer:40,y:o.y,draw:()=>drawActor(o.x,o.y,(brush,local)=>drawNaturalPerson(o,time,brush,local))}));
   if(s.scene==='yard'&&window.NanlanEstate.gifted(s))actors.push({layer:40,y:window.NanlanEstate.gift.y,draw:()=>window.NanlanEstateUI?.drawGift(ctx)});
   if(started)actors.push({layer:40,y:s.player.y,draw:()=>drawActor(s.player.x,s.player.y,renderCharacter)});
 
   for(const o of visibleObjects()){
-    if(o.x<left-70||o.x>right+70)continue;
+    if(o.x<left-150||o.x>right+150)continue;
     if(o.festival||o.tabletop)actors.push({layer:40,y:o.y,draw:()=>window.NanlanFestivalUI?.draw(ctx,s,o)});
     if(o.tabletop){const [x,y]=o.tabletop;hitTargets.push({o,rect:null,anchor:{x:x-45,y:y-30,w:90,h:65}});}
     if(o.festival)hitTargets.push({o,rect:null,anchor:{x:o.x-36,y:o.y-70,w:72,h:75}});
@@ -1981,7 +1996,7 @@ function render(){
     if(fruitTypes.includes(o.type)){
       const cooling=s.nodes[o.id]!==undefined&&s.worldTick-s.nodes[o.id]<N.resourceCooldown(o.type);
       const im=images[cooling?'fruitTreesPicked':'fruitTrees'],w=128,h=140;
-      if(im?.naturalWidth)ctx.drawImage(im,fruitTypes.indexOf(o.type)*512,0,512,560,o.x-w/2,o.y-h,w,h);
+      if(im?.naturalWidth)actors.push({y:o.y,draw:()=>ctx.drawImage(im,fruitTypes.indexOf(o.type)*512,0,512,560,o.x-w/2,o.y-h,w,h)});
       hitTargets.push({o,rect:null,anchor:{x:o.x-w/2,y:o.y-h,w,h}});
       if(selected){ctx.save();ctx.strokeStyle='#ecd69a';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(o.x,o.y-4,24,8,0,0,Math.PI*2);ctx.stroke();ctx.restore();}
       continue;
@@ -2001,23 +2016,27 @@ function render(){
       continue;
     }
     if(s.scene==='store'&&o.id==='bookBox'&&images.inventoryCrafts?.naturalWidth){
-      ctx.drawImage(images.inventoryCrafts,418,425,418,375,o.x-22,o.y-39,44,39);
+      const {width:w,height:h}=NanlanSceneScale.props.bookBox;
+      actors.push({y:o.y,draw:()=>ctx.drawImage(images.inventoryCrafts,418,425,418,375,o.x-w/2,o.y-h,w,h)});
+      hitTargets.push({o,rect:null,anchor:{x:o.x-w/2,y:o.y-h,w,h}});continue;
     }
     if(s.scene==='store'&&o.id==='workbench'&&images.workbench?.naturalWidth){
-      ctx.drawImage(images.workbench,o.x-80,o.y-106,160,107);
+      const {width:w,height:h}=NanlanSceneScale.props.workbench;
+      actors.push({y:o.y,draw:()=>ctx.drawImage(images.workbench,o.x-w/2,o.y-h,w,h)});
+      hitTargets.push({o,rect:null,anchor:{x:o.x-w/2,y:o.y-h,w,h}});continue;
     }
     if(s.scene==='store'&&o.id==='goodsCrates'&&!s.flags.cratesRaised&&N.current(s)!=='M14'&&images.inventoryHousehold?.naturalWidth){
       ctx.drawImage(images.inventoryHousehold,0,414,418,391,o.x-52,o.y-68,72,68);
       ctx.drawImage(images.inventoryHousehold,836,0,418,414,o.x-5,o.y-62,72,72);
     }
     if(s.scene==='yard'&&o.id==='stove'){
-      const w=74,h=60;
+      const {width:w,height:h}=NanlanSceneScale.props.stove;
       actors.push({layer:40,y:o.y,draw:()=>drawGroundedProp(images.stove,o.x,o.y,w,h)});
       hitTargets.push({o,rect:null,anchor:{x:o.x-w/2,y:o.y-h,w,h:h+6}});continue;
     }
     if(s.scene==='yard'&&o.id==='waterJar'){
       // The jar rests on the east-room paving, with the same depth order as people.
-      const im=images.waterJar,w=48,h=50;
+      const im=images.waterJar,{width:w,height:h}=NanlanSceneScale.props.waterJar;
       if(im?.naturalWidth)actors.push({layer:40,y:o.y,draw:()=>drawGroundedProp(im,o.x,o.y,w,h)});
       hitTargets.push({o,rect:null,anchor:{x:o.x-30,y:o.y-h,w:60,h:h+6}});
       continue;
@@ -2026,7 +2045,7 @@ function render(){
     if(selected||isObjective){ctx.save();ctx.strokeStyle=isObjective?'#9bc6b3':'#ebc66f';ctx.lineWidth=selected?2.4:1.5;ctx.globalAlpha=.72+.22*Math.sin(time/240);ctx.beginPath();ctx.ellipse(o.x,o.y,selected?25:20,selected?11:9,0,0,Math.PI*2);ctx.stroke();ctx.restore();}
     if(resourceTypes.includes(o.type)&&!(o.type==='weed'&&s.scene==='yard')){
       const im=resourceImage(o.type),size={herb:38,wood:48,stone:38,bamboo:49,mushroom:33,shoot:35,shell:28,seaweed:39,clam:27,weed:58,ginseng:43,agarwood:64,huali:68}[o.type];
-      if(im?.naturalWidth)drawGatheredResource(im,o,size);
+      if(im?.naturalWidth)actors.push({y:o.y,draw:()=>drawGatheredResource(im,o,size)});
     }
     // Resources have only physical hit areas; no floating nameplate or leader line.
     if(isGatherable(o)){
@@ -2041,6 +2060,9 @@ function render(){
       }
       continue;
     }
+    const fitting=NanlanSceneScale.furnishing(s.scene,o);
+    if(o.scenic){hitTargets.push({o,rect:null,anchor:o.hit});continue;}
+    if(fitting){hitTargets.push({o,rect:null,anchor:fitting.hit});continue;}
     // Keep the physical target clickable even when there is no safe space for its label.
     const target={o,rect:null,anchor:npcRole(o)?personBounds(npcRole(o),o.x,o.y):{x:o.x-26,y:o.y-42,w:52,h:48}};
     hitTargets.push(target);
@@ -2063,6 +2085,7 @@ function frame(t){
   requestAnimationFrame(frame);
 }
 function applyRestoredSnapshot(candidate,raw){
+  camera.scene=null;
   active=false;path=[];keys={};moving=false;cancelNavigation();
   engine.state=candidate;engine.loadedRaw=raw;storedRaw=raw;started=true;
   lastFrame=performance.now();lastAutosave=lastFrame;

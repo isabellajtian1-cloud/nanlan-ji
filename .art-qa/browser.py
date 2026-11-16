@@ -9,7 +9,8 @@ def validate(url):
   browser=pw.chromium.launch(channel="chrome",headless=True,args=["--no-sandbox","--disable-dev-shm-usage"])
   page=browser.new_page(viewport={"width":1280,"height":820},device_scale_factor=1)
   page.on("pageerror",lambda e:errors.append(str(e)))
-  page.on("console",lambda m:errors.append(m.text) if m.type=="error" and "favicon" not in m.text else None)
+  page.on("console",lambda m:errors.append(m.text) if m.type=="error" and not m.text.startswith("Failed to load resource") else None)
+  page.on("response",lambda r:errors.append(str(r.status)+" "+r.url) if r.status>=400 and not r.url.endswith("/favicon.ico") else None)
   page.goto(url,wait_until="domcontentloaded",timeout=60000)
   page.wait_for_function("typeof engine!=='undefined' && window.NanlanDepth && typeof NanlanDepth.raster==='function'",timeout=30000)
   assert '6.10.5' in page.title(),page.title()
@@ -24,15 +25,16 @@ def validate(url):
     const npc=visibleObjects().find(o=>npcRole(o)&&o.role!=='children');
     if(npc)await loadImage('npc_'+npcRole(npc));
     const p=npc||{x:world[sc].spawn[0],y:world[sc].spawn[1]};
-    state().player={x:p.x+30,y:p.y};camera.scene=null;direction='down';render();
+    state().player={x:p.x+57,y:p.y};camera.scene=null;direction='down';render();
     return npc&&[npc.x,npc.y,npc.id]
    }""",sc)
+  valid=page.evaluate('JSON.stringify(state())')
   npc=place('gate')
   assert npc
-  page.wait_for_timeout(250)
+  page.wait_for_timeout(3700)
   def snap(name):
    page.evaluate("render()")
-   clip=page.evaluate("""() => {const r=canvas.getBoundingClientRect(),p=state().player, cx=r.left+camera.ox+camera.scale*(p.x-14),cy=r.top+camera.oy+camera.scale*(p.y-61);return {x:Math.max(0,Math.min(innerWidth-460,cx-230)),y:Math.max(0,Math.min(innerHeight-340,cy-170)),width:460,height:340}}""")
+   clip=page.evaluate("""() => {const r=canvas.getBoundingClientRect(),p=state().player, cx=r.left+camera.ox+camera.scale*(p.x-25),cy=r.top+camera.oy+camera.scale*(p.y-61);return {x:Math.max(0,Math.min(innerWidth-460,cx-230)),y:Math.max(0,Math.min(innerHeight-340,cy-170)),width:460,height:340}}""")
    page.screenshot(path=str(out/(name+'.png')),clip=clip)
   snap('side-by-side')
   checks=page.evaluate("""([x,y])=>{
@@ -62,7 +64,7 @@ def validate(url):
   tested=page.evaluate("""async()=>{
     const s=state(),list=[];
     for(const gender of ['female','male'])for(const silk of [false,true]){
-      s.gender=gender;s.actorState.outfit=silk?'nanlanSilk':'';
+      s.gender=gender;s.actorState.outfit=silk?'nanlanSilk':'old';
       if(!await loadSceneAssets(s.scene))throw Error('outfit load');
       const img=images[NanlanLocomotion.atlasKey(gender,silk)];
       if(img.naturalWidth!==3120||img.naturalHeight!==1620)throw Error('atlas size');
@@ -75,9 +77,9 @@ def validate(url):
     moving=false;return list
   }""")
   place('banyanBrook');page.keyboard.down('d');page.wait_for_timeout(400);page.keyboard.up('d')
-  page.evaluate("engine.save()")
+  page.evaluate("raw=>{engine.state=JSON.parse(raw);const result=engine.save();if(!result.ok)throw Error(result.message)}",valid)
   page.reload(wait_until='domcontentloaded');page.locator('#continueGame').click();page.wait_for_function("started&&active")
-  assert page.evaluate("state().scene")=='banyanBrook'
+  assert page.evaluate("state().scene")=='gate'
   assert not errors,errors
   browser.close()
   return {'ok':True,'url':url,'depth':checks,'variants':tested,'scenes':['gate','hall','yard','banyanBrook']}

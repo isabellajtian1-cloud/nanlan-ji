@@ -15,6 +15,9 @@ jobs:
         id: browser
         run: |
           set -o pipefail
+          git fetch --depth=1 origin 04a2892718b5ad75cc8800485f84e9c9bcd9bbb3
+          mkdir -p .qa/previous
+          git archive 04a2892718b5ad75cc8800485f84e9c9bcd9bbb3 | tar -x -C .qa/previous
           npm install --prefix "$RUNNER_TEMP/nanlan-test" playwright@1.55.0
           NODE_PATH="$RUNNER_TEMP/nanlan-test/node_modules" timeout 240 node .qa/loading.cjs 2>&1 | tee /tmp/journey-loading-result
       - name: Record QA result on this test branch

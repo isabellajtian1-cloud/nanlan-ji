@@ -12,7 +12,7 @@ const server=http.createServer((req,res)=>{
   }
   const data=fs.readFileSync(file);
   res.writeHead(200,{'Content-Type':types[path.extname(name)]||'application/octet-stream','Content-Length':data.length,'Cache-Control':'no-store'});
-  if((mode==='slow'||mode==='cancel')&&name==='stove-v6914.webp'){
+  if(((mode==='slow'||mode==='cancel')&&name==='stove-v6914.webp')||(mode==='baseline'&&name.endsWith('/stove-v6914.png'))){
     let start=0;const chunk=Math.ceil(data.length/12);
     const next=()=>{res.write(data.subarray(start,start+chunk));start+=chunk;if(start>=data.length)res.end();};
     next();const timer=setInterval(next,1000);res.on('close',()=>clearInterval(timer));return;
@@ -33,7 +33,7 @@ const server=http.createServer((req,res)=>{
      await p.addInitScript(({save,english})=>{localStorage.setItem('nanlan_sound','off');if(save)localStorage.setItem('nanlan_v20',save);if(english)localStorage.setItem('nanlan_language','en');},{save,english});
      await p.goto(url,{waitUntil:'domcontentloaded'});
      await p.waitForFunction(()=>document.getElementById('bootStatus').hidden);
-     assert.match(await p.title(),/6\.10\.4/);
+     assert.match(await p.title(),/6\.10\.6/);
      return p;
    }
    let p=await pageFor(null);
@@ -41,11 +41,27 @@ const server=http.createServer((req,res)=>{
    assert(!history.some(x=>['stove-v6914.webp','garden-stages-v6914.webp','npc-idle-v3911.webp'].includes(x.name)));
    await p.click('#begin');await p.click('#characterConfirm');try{await p.waitForFunction(()=>started&&!!images.gate?.naturalWidth);}catch(e){console.log(await p.evaluate(()=>({started,transitioning,dialog:$('dialog').innerText,warning:$('loadWarning').innerText,loading:$('sceneLoading').innerText,form:$('characterCreate').hidden,characterError:$('characterError').innerText,keys:Object.keys(images)})),history.slice(-12));throw e;}
    await p.click('#openingSkip');await p.waitForFunction(()=>!NanlanOpening.running());
-   let fixture=await p.evaluate(()=>JSON.parse(localStorage.getItem('nanlan_v20')));
-   fixture.scene='yard';fixture.player={x:555,y:345};
+   const old=await browser.newPage();old.setDefaultTimeout(25000);
+   await old.goto(url+'.qa/previous/index.html');await old.click('#begin');await old.click('#characterConfirm');await old.waitForFunction(()=>started);
+   assert.match(await old.title(),/6\.10\.5/);
+   let fixture=await old.evaluate(()=>{
+     const actor=world.gate.objects.find(o=>o.id==='familyLuggage');engine.move(actor.x,actor.y);
+     for(const [name,args] of [['handover',{choice:'grandfather'}],['takeKey',{}],['openGate',{}]]){
+       const r=engine.act(name,args);if(!r.ok)throw Error(r.message);
+     }
+     return JSON.parse(localStorage.getItem(N.SAVE_KEY));
+   });
+   assert.equal(fixture.scene,'yard');await old.close();
    const save=JSON.stringify(fixture);
    console.log('New journey and opening passed. Title resumed at the failed script.');
    await p.context().close();
+   mode='baseline';
+   const prior=await browser.newPage();prior.setDefaultTimeout(30000);
+   await prior.addInitScript(save=>localStorage.setItem('nanlan_v20',save),save);
+   await prior.goto(url+'.qa/previous/index.html');await prior.click('#continueGame');
+   await prior.waitForFunction(()=>$('loadingHint').textContent.includes('连接未完成'),null,{timeout:35000});
+   assert.equal(await prior.evaluate(()=>started),false);await prior.close();
+   console.log('Reproduced original connection-incomplete message with a progressing courtyard download on V6.10.5.');
    mode='slow';p=await pageFor(save,true);assert.equal(await p.locator('html').getAttribute('lang'),'en');
    history=[];const t=Date.now();await p.click('#continueGame');await p.waitForFunction(()=>started&&state().scene==='yard'&&images.stove?.naturalWidth);
    const elapsed=Date.now()-t;

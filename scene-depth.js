@@ -168,43 +168,53 @@ window.NanlanDepth = (() => {
   function lightAt(f,x,y) {
     return {patch:beam(f.p.opening,x,y)*f.sun,ground:groundLight(f.map,x,y)};
   }
-  let body,shade;
-  function surface() {return document.createElement('canvas').getContext('2d');}
-  function prepare(g,pixels) {
-    if(g.canvas.height<pixels || g.canvas.width<pixels){g.canvas.width=g.canvas.height=pixels;}
-    g.setTransform(1,0,0,1,0,0);g.clearRect(0,0,pixels,pixels);
+  function surface(){return document.createElement('canvas').getContext('2d');}
+  function raster(view,x,y,w,h,ground){
+    const res=Math.min(ground?1:4,view.a);
+    const snap=(v,offset)=>(Math.floor(v*res+offset)-offset)/res;
+    const left=snap(x,view.e*res/view.a),top=snap(y,view.f*res/view.d);
+    return {res,left,top,w:Math.ceil((x+w-left)*res),h:Math.ceil((y+h-top)*res)};
   }
-  function actor(target,x,y,scale,f,paint) {
+  function prepare(g,r){
+    const w=Math.ceil(r.w/32)*32,h=Math.ceil(r.h/32)*32;
+    if(g.canvas.width<w)g.canvas.width=w;
+    if(g.canvas.height<h)g.canvas.height=h;
+    g.setTransform(1,0,0,1,0,0);g.clearRect(0,0,r.w,r.h);
+    g.imageSmoothingEnabled=true;g.imageSmoothingQuality='high';
+    g.setTransform(r.res,0,0,r.res,-r.left*r.res,-r.top*r.res);
+  }
+  let body,shade;
+  function actor(target,x,y,scale,f,paint,groundPass=false){
     const {p,sun,day}=f,view=target.getTransform();
     // Discard offscreen actors before doing the two small alpha composites.
     const half=76*scale,height=116*scale,size=2*half;
     if((x+half)*view.a+view.e<0||(x-half)*view.a+view.e>target.canvas.width||
        (y+24*scale)*view.d+view.f<0||(y-height)*view.d+view.f>target.canvas.height)return;
-    if(!body){body=surface();shade=surface();}
-    const res=Math.min(2,Math.max(1,view.a)),left=x-half,top=y-height;
-    // Discrete buffer sizes avoid reallocating while walking in perspective.
-    const bucket=Math.ceil(size*res/32)*32;
-    for(const g of [body,shade])prepare(g,bucket);
-    body.setTransform(res,0,0,res,-left*res,-top*res);
-    body.save();paint(body,true);body.restore();
-    const region=bucket/res,{patch,ground}=lightAt(f,x,y);
-    shade.drawImage(body.canvas,0,0,bucket,bucket,0,0,bucket,bucket);
-    shade.globalCompositeOperation='source-in';shade.fillStyle='#3b3935';shade.fillRect(0,0,bucket,bucket);
-    shade.globalCompositeOperation='source-over';
+    const brush=groundPass?(shade ||= surface()):(body ||= surface());
+    const r=raster(view,x-half,y-height,size,size,groundPass);
+    const {left,top}=r,w=r.w/r.res,h=r.h/r.res,region=Math.max(w,h);
+    prepare(brush,r);brush.save();paint(brush,true);brush.restore();
+    const {patch,ground}=lightAt(f,x,y);
     target.save();
     // Remove only figure/shadow pixels. The in-game plate and its repair state show through.
     for(const o of p.foreground){
       if(y>o.foot||x+half<o.left||x-half>o.right||y-height>o.bottom||y+10<o.top)continue;
       target.clip(o.outside,'evenodd');
     }
-    target.save();
-    target.translate(x,y);target.transform(1,0,-p.opening.slant*.76,-(.10+.13*sun),0,0);
-    target.globalAlpha=.045+sun*(.05+.13*ground+.09*patch);
-    target.drawImage(shade.canvas,0,0,bucket,bucket,-half,-height,region,region);target.restore();
-    target.save();target.translate(x,y);target.scale(1,.26);
-    const radius=17*scale,contact=target.createRadialGradient(0,0,0,0,0,radius);
-    contact.addColorStop(0,'rgba(39,36,32,.43)');contact.addColorStop(1,'rgba(39,36,32,0)');
-    target.fillStyle=contact;target.fillRect(-radius,-radius,2*radius,2*radius);target.restore();
+    if(groundPass){
+      shade.save();shade.globalCompositeOperation='source-in';shade.fillStyle='#3b3935';
+      shade.fillRect(left,top,w,h);shade.restore();
+      target.save();
+      target.translate(x,y);target.transform(1,0,-p.opening.slant*.76,-(.10+.13*sun),0,0);
+      target.globalAlpha=.045+sun*(.05+.13*ground+.09*patch);
+      target.drawImage(shade.canvas,0,0,r.w,r.h,left-x,top-y,w,h);target.restore();
+      target.save();target.translate(x,y);target.scale(1,.26);
+      const radius=17*scale,contact=target.createRadialGradient(0,0,0,0,0,radius);
+      contact.addColorStop(0,'rgba(39,36,32,.43)');contact.addColorStop(1,'rgba(39,36,32,0)');
+      target.fillStyle=contact;target.fillRect(-radius,-radius,2*radius,2*radius);target.restore();
+      target.restore();
+      return;
+    }
     body.save();body.globalCompositeOperation='source-atop';
     body.fillStyle=p.kind==='leaves'?'#344837':'#333e51';
     body.globalAlpha=.045+(1-ground)*.15+day.darkness*.40;
@@ -229,7 +239,7 @@ window.NanlanDepth = (() => {
       body.stroke();
     }
     body.restore();
-    target.drawImage(body.canvas,0,0,bucket,bucket,left,top,region,region);target.restore();
+    target.drawImage(body.canvas,0,0,r.w,r.h,left,top,w,h);target.restore();
   }
   function air(ctx,f,time,reduced) {
     if(reduced||f.sun<.03)return;
@@ -255,5 +265,5 @@ window.NanlanDepth = (() => {
     }
     ctx.restore();
   }
-  return {plates,framing,frame,actor,air,lightAt};
+  return {plates,framing,frame,actor,air,lightAt,raster,prepare};
 })();

@@ -66,8 +66,8 @@ DATA.assets.walkMale='player-male-walk-v39.png';
 DATA.assets.playerIdle='player-idle-v6911.png';
 Object.assign(DATA.assets, {
   courtyardMattes:'courtyard-mattes-6928.png',
-  gaitFemale:'gait-female-courtyard-6928.webp', gaitFemaleSilk:'gait-female-silk.webp',
-  gaitMale:'gait-male-plain.webp', gaitMaleSilk:'gait-male-silk.webp'
+  gaitFemale:'figure-female-plain-6105.webp', gaitFemaleSilk:'figure-female-silk-6105.webp',
+  gaitMale:'figure-male-plain-6105.webp', gaitMaleSilk:'figure-male-silk-6105.webp'
 });
 DATA.assets.inventoryHousehold='inventory-household-v392.webp';
 DATA.assets.inventoryCrafts='inventory-crafts-v392.webp';
@@ -2010,15 +2010,18 @@ function render(){
   const time=performance.now(),objective=localObjectiveObject(),destination=path[path.length-1]?.object;
   const people=visibleObjects().filter(o=>npcRole(o));
   const lighting=s.scene==='yard'?NanlanCourtyard.frame(base===images[baseKey]?baseKey:world.yard.asset,images.courtyardMattes,N.daylight(s),window.NanlanWeather?.current(s),s.flags.stableLights):null;
-  const drawActor=(x,y,paint)=>{
-    if(lighting)NanlanCourtyard.drawPerson(ctx,x,y,lighting,paint);
+  const drawActor=({x,y,paint},groundPass)=>{
+    if(lighting)NanlanCourtyard.drawPerson(ctx,x,y,lighting,paint,groundPass);
     else if(s.scene==='banyanBrook')NanlanBrook.actor(ctx,x,y,
-      () => NanlanDepth.actor(ctx,x,y,actorScale(y),depth,paint));
-    else NanlanDepth.actor(ctx,x,y,actorScale(y),depth,paint);
+      () => NanlanDepth.actor(ctx,x,y,actorScale(y),depth,paint,groundPass));
+    else NanlanDepth.actor(ctx,x,y,actorScale(y),depth,paint,groundPass);
   };
-  const actors=people.map(o=>({layer:40,y:o.y,draw:()=>drawActor(o.x,o.y,(brush,local)=>drawNaturalPerson(o,time,brush,local))}));
-  if(s.scene==='yard'&&window.NanlanEstate.gifted(s))actors.push({layer:40,y:window.NanlanEstate.gift.y,draw:()=>window.NanlanEstateUI?.drawGift(ctx)});
-  if(started)actors.push({layer:40,y:s.player.y,draw:()=>drawActor(s.player.x,s.player.y,renderCharacter)});
+  const figures=people.map(o=>({x:o.x,y:o.y,paint:(brush,local)=>drawNaturalPerson(o,time,brush,local)}));
+  if(started)figures.push({x:s.player.x,y:s.player.y,paint:renderCharacter});
+  // Ground shadows cannot tint another figure's face, clothes or shoes.
+  for(const figure of figures)drawActor(figure,true);
+  const actors=figures.map(figure=>({y:figure.y,draw:()=>drawActor(figure,false)}));
+  if(s.scene==='yard'&&window.NanlanEstate.gifted(s))actors.push({y:window.NanlanEstate.gift.y,draw:()=>window.NanlanEstateUI?.drawGift(ctx)});
 
   for(const o of visibleObjects()){
     if(o.x<left-150||o.x>right+150)continue;

@@ -1,0 +1,36 @@
+.hearth-board {color:#3f3529;font-size:15px;line-height:1.55;margin:8px 0;text-align:left}
+.hearth-methods,.hearth-basket,.hearth-pages {display:flex;flex-wrap:wrap;gap:7px}
+.hearth-board button.hearth-chip {display:inline-flex;align-items:center;justify-content:center;gap:5px;min-height:44px;padding:6px 12px;color:#463a2b;background:#f4ead1;border:1px solid #a49370;border-radius:5px;font:inherit;cursor:pointer}
+.hearth-board .hearth-chip[aria-pressed="true"] {background:#415342;color:#fff7df;border-color:#293e30;box-shadow:inset 0 -3px #c7ae72}
+.hearth-board .hearth-chip:disabled {opacity:.52;cursor:default}
+.hearth-board .hearth-chip:focus-visible,.hearth-name:focus-visible {outline:3px solid #986328;outline-offset:2px}
+.hearth-pot {display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;background:#ebe0c6;border-left:3px solid #756341;padding:9px 12px;margin:10px 0;}
+.hearth-icon {display:inline-flex;align-items:center;justify-content:center;width:32px;height:30px}
+.hearth-icon>* {width:100%!important;height:100%!important;object-fit:contain}
+.hearth-art {display:inline-block;flex-shrink:0;width:42px;height:42px;background-image:url('hearth-larder.webp');background-size:300% 200%;background-repeat:no-repeat}
+.hearth-art-ginger {background-position:0 0}.hearth-art-redBean {background-position:50% 0}.hearth-art-chestnut {background-position:100% 0}
+.hearth-art-fishDry {background-position:0 100%}.hearth-art-cane {background-position:50% 100%}.hearth-art-hearthServing {background-position:100% 100%}
+.hearth-pot {align-items:center}
+.hearth-pot::before {content:'';width:84px;height:56px;border-radius:3px;flex:none;background:url('kitchen-hearth-v3927.webp') 0 0/200% 200% no-repeat}
+.hearth-pot-items {display:inline-flex;gap:5px 9px;align-items:center;flex-wrap:wrap;flex:1 1 140px}
+.hearth-pot-food {display:inline-flex;align-items:center;gap:3px}
+.hearth-pot-food .hearth-icon {width:26px;height:25px}
+.hearth-page .hearth-art-hearthServing {float:right;margin:0 0 5px 8px;width:54px;height:54px}
+.hearth-sources {border-top:1px solid #c4b493;padding-top:7px;margin-top:10px}
+.hearth-sources summary {cursor:pointer;padding:5px 0;color:#4d5b47;font-weight:600}
+.hearth-sources ul {padding-inline-start:22px;columns:2;column-gap:22px}
+.hearth-sources li {break-inside:avoid;margin:3px 0}
+.hearth-picture {width:min(100%,335px);aspect-ratio:1.9;margin:4px auto 10px;border-radius:5px;background:#75664c url('kitchen-hearth-v3927.webp') left top/200% 200% no-repeat}
+.hearth-picture[data-frame="1"] {background-position:right top}
+.hearth-picture[data-frame="2"] {background-position:left bottom}
+.hearth-status {margin:7px 0;padding:4px 0}
+.hearth-page {padding:13px clamp(12px,4vw,28px);background:#f5ead0;border-left:3px double #947956;border-block:1px solid #c5b08a}
+.hearth-origin {font-size:.85em;letter-spacing:.08em;color:#79432e;font-weight:600}
+.hearth-page h3 {font-family:serif;font-size:1.55em;line-height:1.25;margin:5px 0;overflow-wrap:anywhere}
+.hearth-ingredients,.hearth-count,.hearth-citation {color:#514c40;font-size:.92em}
+.hearth-page p {margin:7px 0}
+.hearth-name {max-width:100%;box-sizing:border-box;background:#fff8e6;border:1px solid #96825b;padding:8px;font:inherit;color:#3d3224;margin:4px 7px 4px 0}
+.hearth-pages .hearth-chip {flex-direction:column;align-items:flex-start;text-align:left;overflow-wrap:anywhere;max-width:100%}
+.hearth-pages small {font-size:.8em}
+@media(max-width:520px){.hearth-sources ul{columns:1}.hearth-board button.hearth-chip{padding:5px 8px}.hearth-pot{gap:4px 8px}}
+@media(max-height:500px){.hearth-picture{max-width:190px}}

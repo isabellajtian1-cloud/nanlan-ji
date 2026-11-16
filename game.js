@@ -684,6 +684,8 @@ function showTextMap(){
   button('查看所有场景原画',showGallery,'map-gallery',true);
 }
 function itemSource(id){
+  if(Object.hasOwn(NanlanHearth.pantry,id))return NanlanHearthUI.source(id);
+  if(id==='hearthServing')return deskText('翻开灶边食谱簿，可查看每道菜并取食。','Open the kitchen notebook to inspect or eat a packed dish.');
   if(NanlanNeighbors.goods[id])return deskText('镇集货郎担 · ','Town market peddler · ')+deskText(...NanlanNeighbors.goods[id].detail);
   if(id==='townSwatch')return '在南街榕下布庄量布、选色后取得。';
   if(id==='townNotebook')return '在南街青简书坊选纸、折页、穿线后取得。';
@@ -711,6 +713,7 @@ const inventorySheets=[
   {file:'inventory-crafts-v392.png',rows:[0,425,800,1254],items:['driedHerb','bambooWare','shellCraft','rope','ledgerOriginal','ledgerCopy','receipt','reply','narrowBasket']}
 ];
 function inventoryArt(id){
+  if(Object.hasOwn(NanlanHearth.pantry,id)||id==='hearthServing')return '<span class="hearth-art hearth-art-'+id+'" aria-hidden="true"></span>';
   if(NanlanNeighbors.goods[id])return '<span aria-hidden="true" class="ware-mini" style="'+window.NanlanStreetTalk.goodsStyle(id)+'"></span>';
   if(id==='townNotebook')return inventoryArt('ledgerCopy');
   if(id==='townSwatch')return '<span class="town-swatch-art" aria-hidden="true"></span>';
@@ -761,6 +764,7 @@ function showBag(){
     row.innerHTML=inventoryArt(id)+'<div><strong>'+N.itemNames[id]+' ×'+N.quantity(s,id)+(required[id]?'<em>任务需要 '+required[id]+'</em>':'')+(N.available(s,id)!==N.quantity(s,id)?'（预留 '+(N.quantity(s,id)-N.available(s,id))+'）':'')+'</strong><small>'+itemSource(id)+'</small><small class="inventory-record-note">'+clean(window.NanlanContinuityModel.documentNote(s,id,window.NanlanI18n?.language==='en'))+'</small></div>';grid.append(row);
   }$('panelExtra').append(grid);
   if(s.flags.volume2Started||N.done(s,'M20')){navButton(deskText('铺讯与手记','Shop Notice & Notes'),()=>window.NanlanContinuity.handbook(),'bag-papers');navButton(deskText('账房 · 租约与押金','Accounts · Lease & Deposit'),()=>window.NanlanContinuity.lease(),'bag-contract');}
+  if(N.done(s,'M04'))NanlanHearthUI.bagLink();
   window.NanlanRecords?.links();
   if(!keys.length){const empty=document.createElement('p');empty.textContent='行囊暂时没有物资，采集所得会显示在这里。';$('panelExtra').append(empty);}
   if(s.season5)navButton('岁序长青 · 查看共事与试样',()=>window.NanlanSeasons.ledger(),'bag-seasons');
@@ -1091,6 +1095,7 @@ function showCook(){
     if(stage===0)window.NanlanAudio?.play('water');
     stage++;paint();
   };
+  if(N.done(s,'M04'))NanlanHearthUI.stoveLinks();
   if(q==='M04'&&!s.flags.stoveClean)actButton('先把灶边清理干净','cleanStove',{},showCook);
   if(N.reached(s,'M04')){
     quick=button('直接煮好一锅热饭',finish,'cookMeal',true,false);

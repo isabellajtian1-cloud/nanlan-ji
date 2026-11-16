@@ -13,6 +13,7 @@
   const neighbors=typeof module==='object'&&module.exports?require('./neighbors.js'):globalThis.NanlanNeighbors;
   const rural=typeof module==='object'&&module.exports?require('./rural-model.js'):globalThis.NanlanRural;
   const production=typeof module==='object'&&module.exports?require('./production-model.js'):globalThis.NanlanProductionModel;
+  const hearth=typeof module==='object'&&module.exports?require('./hearth-model.js'):globalThis.NanlanHearth;
   const seals=typeof module==='object'&&module.exports?require('./seals-model.js'):globalThis.NanlanSealsModel;
   const copy = value => JSON.parse(JSON.stringify(value));
   const titles = {
@@ -76,6 +77,9 @@
   const products = ['driedHerb','bambooWare','shellCraft'];
   const prices = {mulberryLeaf:1,pondFish:7,rawSilk:12,fineSilk:22,lychee:4,longan:4,mandarin:3,ginseng:28,agarwood:22,huali:26,driedHerb:14,bambooWare:12,shellCraft:10,rope:5,wood:2,herb:3,bamboo:4,stone:2,mushroom:3,shoot:3,shell:2,seaweed:2,clam:3,vegetable:3};
   const supplyPrices={rice:3,ingredient:3,seed:4,repair:5,rope:6};
+  Object.assign(supplyPrices,hearth.pantry);
+  for(const id of Object.keys(hearth.pantry)) itemNames[id]=hearth.ingredients[id][0];
+  itemNames.hearthServing='灶上饭菜';
   for(const [id,g]of Object.entries(neighbors.goods))itemNames[id]=g.name[0];
   const rareResources={ginseng:{cooldown:4320,stamina:5,tool:'hoe'},agarwood:{cooldown:2880,stamina:6,tool:'axe'},huali:{cooldown:4320,stamina:8,tool:'axe'}};
   const fruitResources=['lychee','longan','mandarin'];
@@ -136,7 +140,7 @@
       bag:{bedroll:1,repair:2,rice:2,ingredient:1,seed:1,wood:0,weed:0},
       tools:{hand:true},selected:'hand',keyring:[],flags:{},choices:{},collected:{},nodes:{},
       quests:{},claimed:{},actions:{},garden:{kind:null,plantedAt:null,watered:false,duration:120},
-      rural:rural.fresh(),production:production.fresh(),actorState:production.freshActors(),seals:seals.fresh(),shop:storyV2.emptyShop(),story2:storyV2.emptyStory(),practice:{},pages:{},visits:{gate:true},familyTalks:{},order:null,transactions:[],journal:[],
+      hearthBook:{},rural:rural.fresh(),production:production.fresh(),actorState:production.freshActors(),seals:seals.fresh(),shop:storyV2.emptyShop(),story2:storyV2.emptyStory(),practice:{},pages:{},visits:{gate:true},familyTalks:{},order:null,transactions:[],journal:[],
       tideAnchor:null,tideTutorialUsed:false,stallUntil:null,featured:null,lastNotice:'先和家人完成门前交接。'
     };
     for(const id of Object.keys(titles).filter(id=>!V3_ORDER.includes(id)&&!V4_ORDER.includes(id)&&!V5_ORDER.includes(id)&&!SEASON5_ORDER.includes(id)&&!V6_ORDER.includes(id))) s.quests[id]={status:V2_ORDER.includes(id)?'DEFERRED_V2':id==='M01'?'OFFERED':'LOCKED'};
@@ -308,6 +312,7 @@
     }
     requireThat(Array.isArray(value.transactions)&&Array.isArray(value.journal)&&Array.isArray(value.keyring),'存档账目无效。');
     if(value.order)requireThat(products.includes(value.order.product)&&Number.isInteger(value.order.delivered)&&value.order.delivered>=0&&value.order.delivered<=2&&Number.isInteger(value.order.reserved)&&value.order.reserved>=0&&value.order.reserved<=2-value.order.delivered&&value.order.reserved<=quantity(value,value.order.product),'存档预留库存无效。');
+    hearth.normalise(value,requireThat);
     children.normalise(value,requireThat);
     scholar.normalise(value,requireThat);
     v3.normalise(value,requireThat);
@@ -368,6 +373,7 @@
           s.quests[id].status='ACTIVE';
           if(name==='acceptFamilyRequest')return;
         }
+        if(name.startsWith('hearth'))return hearth.act(s,name,p,{requireThat,requireScene,spend,give,done,clock});
         if(name==='streetTalk'){
           const person=this.world[s.scene].objects.find(o=>o.id===p.object);
           requireThat(person&&Object.hasOwn(neighbors.residents,p.object)&&neighbors.present(s,p.object,children.camp(s))&&this.near(person),'请在街坊出门时走到对方身旁。');

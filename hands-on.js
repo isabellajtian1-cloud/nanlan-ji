@@ -34,6 +34,7 @@ function market(mode='trade'){
  const box=plate('market-desk',L('木摊上展开的蓝布，旁边是留位竹签与收条竹盘','Blue cloth spread on a wooden stall, with a tally and receipt tray'));
  const tag=el('div','stall-tag',booked?L('已留位 · '+Math.ceil(s.stallUntil-s.worldTick)+' 分钟后收摊','Reserved · '+Math.ceil(s.stallUntil-s.worldTick)+' min left'):L('尚未留位','Not reserved'));box.append(tag);box.classList.toggle('not-booked',!booked);
  const live=el('p','hands-instruction');live.setAttribute('role','status');$('panelExtra').append(live);
+ if(mode==='trade' && booked)NanlanFoodUI.counterLink(()=>market('trade'));
  if(mode==='book'){
   live.textContent=L('初次试摊可随时预约；以后镇集开市为 09:00—17:00。每次留位六小时，可免费重约。','The first trial may be booked at any time; later market hours are 09:00–17:00. Each booking lasts six hours and can be renewed free.');
   const reserve=control(L(booked?'抚平摊布 · 开始摆货':'放下留位竹签 · 预约摊布',booked?'Smooth the cloth · Arrange goods':'Place the tally · Reserve the cloth'),async()=>{if(booked){market();return;}reserve.disabled=true;const r=await perform('bookStall',{},()=>{});if(r.ok)market();else reserve.disabled=false;},'cloth-unfold');reserve.disabled=!booked&&(!(q==='M10'||s.flags.stallBooked)||(!open&&q!=='M10'));box.append(reserve);

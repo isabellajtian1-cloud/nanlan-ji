@@ -1,0 +1,23 @@
+failure
+New journey and opening passed. Title resumed at the failed script.
+page.click: Timeout 20000ms exceeded.
+Call log:
+  - waiting for locator('#continueGame')
+    - locator resolved to <button hidden="" id="continueGame" data-no-localize="">Continue · Volume I</button>
+  - attempting click action
+    2 × waiting for element to be visible, enabled and stable
+      - element is not visible
+    - retrying click action
+    - waiting 20ms
+    2 × waiting for element to be visible, enabled and stable
+      - element is not visible
+    - retrying click action
+      - waiting 100ms
+    37 × waiting for element to be visible, enabled and stable
+       - element is not visible
+     - retrying click action
+       - waiting 500ms
+
+    at /home/runner/work/nanlan-ji/nanlan-ji/.qa/loading.cjs:50:42 {
+  name: 'TimeoutError'
+}

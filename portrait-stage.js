@@ -2,8 +2,8 @@
 const NanlanPortraitStage = (() => {
   const originals = new Set(['mother','father','grandfather','guard','playerFemale','playerMale']);
   const silkFiles = {
-    mother:'family-silk-v399.png', father:'family-silk-v399.png', grandfather:'family-silk-v399.png',
-    playerFemale:'player-female-silk-v399.png', playerMale:'player-male-silk-v399.png'
+    mother:'family-silk-v399.webp', father:'family-silk-v399.webp', grandfather:'family-silk-v399.webp',
+    playerFemale:'player-female-silk-v399.webp', playerMale:'player-male-silk-v399.webp'
   };
   const windows = {
 "npc-cen-v30.webp":[

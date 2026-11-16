@@ -54,6 +54,6 @@ function boot(){try{const saved=localStorage.getItem(KEY);if(saved==='en'||saved
  observer=new MutationObserver(flush);setLanguage(language,false);
 }
 function rootSound(){if(typeof window!=='undefined')window.NanlanAudio?.play('click');}
-if(typeof document!=='undefined'){if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();}
+if(typeof document!=='undefined'){if(window.NanlanBoot)window.NanlanBoot.afterScripts=boot;else if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();}
 return {t,english,setLanguage,matches,configure,get language(){return language;},get missing(){return [...missing];},KEY};
 });

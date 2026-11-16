@@ -1,0 +1,29 @@
+name: Test journey loading in Chromium
+on:
+  push:
+    branches: ['qa/loading-6104']
+    paths: ['.qa/**', '.github/workflows/loading-browser-6104.yml']
+permissions:
+  contents: write
+jobs:
+  chromium:
+    timeout-minutes: 8
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Exercise normal gameplay entry points
+        id: browser
+        run: |
+          set -o pipefail
+          npm install --prefix "$RUNNER_TEMP/nanlan-test" playwright@1.55.0
+          NODE_PATH="$RUNNER_TEMP/nanlan-test/node_modules" timeout 240 node .qa/loading.cjs 2>&1 | tee /tmp/journey-loading-result
+      - name: Record QA result on this test branch
+        if: always()
+        env:
+          OUTCOME: ${{ steps.browser.outcome }}
+        run: |
+          mkdir -p .qa
+          { echo "$OUTCOME"; tail -c 4200 /tmp/journey-loading-result || true; } > .qa/result.txt
+          git add .qa/result.txt
+          git -c user.name=github-actions[bot] -c user.email=41898282+github-actions[bot]@users.noreply.github.com commit -m "Record browser loading regression: $OUTCOME"
+          git push origin HEAD:qa/loading-6104

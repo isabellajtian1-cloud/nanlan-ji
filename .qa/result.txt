@@ -1,10 +1,9 @@
-failure
+success
 New journey and opening passed. Title resumed at the failed script.
 Reproduced original connection-incomplete message with a progressing courtyard download on V6.10.5.
-Old courtyard save entered with one uninterrupted stove transfer in 11374 ms.
+Old courtyard save entered with one uninterrupted stove transfer in 11403 ms.
 Network recovery fetched only the missing artwork. Save remained unchanged until entry.
 All 42 scene manifests decoded.
-page.waitForFunction: Timeout 20000ms exceeded.
-    at /home/runner/work/nanlan-ji/nanlan-ji/.qa/loading.cjs:93:57 {
-  name: 'TimeoutError'
-}
+Cancellation preserved the original save and a second Continue succeeded.
+Manual retry succeeded without restarting the page.
+Direct file entry passed.

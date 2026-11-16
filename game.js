@@ -1733,7 +1733,10 @@ function setupCamera(rect,now){
   const fullScale=Math.min(vw/W,vh/H);
   const portraitScale=vh>vw?Math.max(fullScale,Math.min(vw/650,vh/H)):fullScale;
   const whole=!started||overviewCamera||now<cameraOverviewUntil;
-  const zoom=NanlanSceneScale.zoom(s.scene);
+  const compact=!!window.NanlanMobile?.compact();
+  const entry=NanlanDepth.framing(s.scene,camera.scene===s.scene && camera.started===started ? camera.entry : null,
+    s.player,moving,compact,reduceCameraMotion.matches);
+  const zoom=NanlanSceneScale.zoom(s.scene)*entry.zoom;
   const targetScale=whole?fullScale:portraitScale*zoom*(window.NanlanMobile?.compact() ? .89 : 1);
   const mobile=window.NanlanMobile?.compact(),safe=!whole&&mobile?window.NanlanMobile.safeFrame?.():null;
   const resized=camera.vw!==vw||camera.vh!==vh||camera.scene!==s.scene||camera.whole!==whole;
@@ -1752,7 +1755,9 @@ function setupCamera(rect,now){
   const dt=Math.max(0,Math.min(.05,(now-(camera.time??now))/1000));
   const blend=snap?1:1-Math.exp(-dt/.19);
   const move=(current,target)=>current===undefined||Math.abs(current-target)<.02?target:current+(target-current)*blend;
-  const scale=move(camera.scale,targetScale);
+  // Entry framing is tied directly to footsteps. A resting figure and the scenery stay still.
+  const returningFromOverview=!whole&&!snap&&(camera.whole||camera.returningFromOverview)&&Math.abs(camera.scale-targetScale)>.02;
+  const scale=whole||returningFromOverview ? move(camera.scale,targetScale) : targetScale;
   const resetFocus=snap||camera.whole!==whole;
   const focusX=resetFocus?targetX:move(camera.focusX,targetX),focusY=resetFocus?targetY:move(camera.focusY,targetY);
   const offset=(viewport,worldSize,focus,center=viewport/2)=>{
@@ -1760,7 +1765,7 @@ function setupCamera(rect,now){
     if(extent<=viewport)return (viewport-extent)/2;
     return Math.max(viewport-extent,Math.min(0,center-focus*scale));
   };
-  camera={scale,ox:offset(vw,W,focusX,safe?safe.left+safe.width/2:vw/2),oy:offset(vh,H,focusY,safe?(safe.top+safe.bottom)/2:vh/2),focusX,focusY,dpr,vw,vh,scene:s.scene,started,whole,time:now};
+  camera={entry,returningFromOverview,scale,ox:offset(vw,W,focusX,safe?safe.left+safe.width/2:vw/2),oy:offset(vh,H,focusY,safe?(safe.top+safe.bottom)/2:vh/2),focusX,focusY,dpr,vw,vh,scene:s.scene,started,whole,time:now};
 }
 function polygon(points,fill,stroke){
   ctx.beginPath();points.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));ctx.closePath();ctx.fillStyle=fill;ctx.fill();if(stroke){ctx.strokeStyle=stroke;ctx.stroke();}
@@ -1938,15 +1943,19 @@ function render(){
   NanlanClimate.atmosphere(ctx,s.scene,s,performance.now(),W,H);
   window.NanlanWeather?.atmosphere(ctx,s.scene,s,performance.now(),W,H);
   if(s.scene==='banyanBrook')NanlanBrook.water(ctx,performance.now(),N.daylight(s).darkness);
-  paintDifferenceLayers();hitTargets=[];
+  paintDifferenceLayers();
+  const depth=NanlanDepth.frame(s.scene,base,N.daylight(s),window.NanlanWeather?.current(s));
+  NanlanDepth.air(ctx,depth,performance.now(),reduceCameraMotion.matches);
+  hitTargets=[];
   const left=Math.max(8,-camera.ox/camera.scale+8),right=Math.min(W-8,(camera.vw-camera.ox)/camera.scale-8);
   const time=performance.now(),objective=localObjectiveObject(),destination=path[path.length-1]?.object;
   const people=visibleObjects().filter(o=>npcRole(o));
   const lighting=s.scene==='yard'?NanlanCourtyard.frame(base===images[baseKey]?baseKey:world.yard.asset,images.courtyardMattes,N.daylight(s),window.NanlanWeather?.current(s),s.flags.stableLights):null;
   const drawActor=(x,y,paint)=>{
     if(lighting)NanlanCourtyard.drawPerson(ctx,x,y,lighting,paint);
-    else if(s.scene==='banyanBrook')NanlanBrook.actor(ctx,x,y,paint);
-    else paint(ctx,false);
+    else if(s.scene==='banyanBrook')NanlanBrook.actor(ctx,x,y,
+      () => NanlanDepth.actor(ctx,x,y,actorScale(y),depth,paint));
+    else NanlanDepth.actor(ctx,x,y,actorScale(y),depth,paint);
   };
   const actors=people.map(o=>({layer:40,y:o.y,draw:()=>drawActor(o.x,o.y,(brush,local)=>drawNaturalPerson(o,time,brush,local))}));
   if(s.scene==='yard'&&window.NanlanEstate.gifted(s))actors.push({layer:40,y:window.NanlanEstate.gift.y,draw:()=>window.NanlanEstateUI?.drawGift(ctx)});

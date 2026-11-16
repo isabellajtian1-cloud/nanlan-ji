@@ -1,0 +1,20 @@
+name: Link gameplay verification
+on:
+  push:
+    branches: [check-published-figures-6106]
+permissions:
+  actions: read
+  statuses: write
+jobs:
+  link:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Link the browser run for this release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          run_id=$(gh api "repos/$GITHUB_REPOSITORY/actions/runs?branch=character-art-6105&head_sha=a1471dbbc4f6ad5b0fae68cfc3a109da9f06a41f" --jq '.workflow_runs[0].id')
+          test -n "$run_id"
+          gh api --method POST "repos/$GITHUB_REPOSITORY/statuses/$GITHUB_SHA" -f state=success -f context='Published game report' -f description="Browser verification run $run_id" -f target_url="https://github.com/$GITHUB_REPOSITORY/actions/runs/$run_id" --silent

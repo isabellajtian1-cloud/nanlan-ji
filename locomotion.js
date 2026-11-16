@@ -10,7 +10,7 @@
   const sector = Math.PI / 4;
   const walkSpeed = 112, briskSpeed = 175, stepLength = 40;
   const acceleration = walkSpeed / 0.080;
-  const cellWidth = 160, cellHeight = 216, frames = 12;
+  const cellWidth = 240, cellHeight = 324, frames = 12;
 
   function facing(dx, dy, previous) {
     if (Math.hypot(dx, dy) < 0.0001) return previous;
@@ -40,11 +40,11 @@
     const row = index < 0 ? 0 : spriteRows[index];
     const cycle = (phase / (2 * Math.PI) % 1 + 1) % 1;
     const col = walking ? 1 + Math.floor(cycle * frames) : 0;
-    const height = gender === 'male' ? 88 : 84, scale = height / 196;
+    const height = gender === 'male' ? 88 : 84, scale = height / 294;
     return {
       asset: atlasKey(gender, silk), idle: !walking, flip: index >= 3 && index <= 5,
       source: [col * cellWidth, row * cellHeight, cellWidth, cellHeight],
-      destination: [-80 * scale, -208 * scale, cellWidth * scale, cellHeight * scale],
+      destination: [-120 * scale, -312 * scale, cellWidth * scale, cellHeight * scale],
       height
     };
   }

@@ -134,9 +134,9 @@ function paint(retry=false){
  host.querySelector('.opening-landscape').replaceChildren(img,shade,status);
  img.onload=()=>{if(token!==paintToken||!running)return;clearTimeout(artTimer);imagePending=false;imageFailed=false;img.hidden=false;status.hidden=true;labels();};
  const failed=()=>{if(token!==paintToken||!running)return;clearTimeout(artTimer);imagePending=false;imageFailed=true;status.textContent=P(['本页绘景暂未载入。可继续阅读，也可重试绘景。','The artwork is unavailable. Continue reading or retry the illustration.']);labels();};
- img.onerror=failed;artTimer=setTimeout(failed,6000);artCleanup=()=>{img.onload=img.onerror=null;};
+ img.onerror=failed;artTimer=setTimeout(()=>{if(token===paintToken&&running&&imagePending){status.textContent=P(['绘景仍在载入，可先继续阅读。','The artwork is still loading. You can keep reading.']);}},6000);artCleanup=()=>{img.onload=img.onerror=null;};
  img.src=(s.image||A[s.asset]||A.gate)+'?v=6922'+(retry?'&retry='+Date.now():'');
- const next=shots[index+1];if(next){const preload=new Image();preload.src=(next.image||A[next.asset]||A.gate)+'?v=6922';}
+ const next=shots[index+1];if(next&&!navigator.connection?.saveData&&!/2g/.test(navigator.connection?.effectiveType||'')){const preload=new Image();preload.fetchPriority='low';preload.src=(next.image||A[next.asset]||A.gate)+'?v=6922';}
  const cast=host.querySelector('.opening-portraits');cast.replaceChildren();cast.style.animation='none';void cast.offsetWidth;cast.style.animation='';
  for(const role of s.roles){const portrait=document.createElement('img');portrait.src=A['npc_'+role];portrait.alt='';portrait.draggable=false;portrait.onerror=()=>{portrait.hidden=true;};cast.append(portrait);}
  host.querySelector('#openingTitle').textContent=P(s.title);const copy=host.querySelector('#openingLine');copy.textContent=P(s.line);

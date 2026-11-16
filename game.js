@@ -59,8 +59,8 @@ let completionFx=null;
 let gardenWorkFx=null;
 const pantryDraft={rice:0,ingredient:0,seed:0,repair:0,rope:0};
 const images={};
-DATA.assets.bedDamage='bed-damage-v39.png';
-DATA.assets.storePickups='store-pickups-v39.png';
+DATA.assets.bedDamage='bed-damage-v39.webp';
+DATA.assets.storePickups='store-pickups-v39.webp';
 DATA.assets.walkFemale='player-female-walk-v39.png';
 DATA.assets.walkMale='player-male-walk-v39.png';
 DATA.assets.playerIdle='player-idle-v6911.png';
@@ -69,15 +69,15 @@ Object.assign(DATA.assets, {
   gaitFemale:'figure-female-plain-6105.webp', gaitFemaleSilk:'figure-female-silk-6105.webp',
   gaitMale:'figure-male-plain-6105.webp', gaitMaleSilk:'figure-male-silk-6105.webp'
 });
-DATA.assets.inventoryHousehold='inventory-household-v392.png';
-DATA.assets.inventoryCrafts='inventory-crafts-v392.png';
-DATA.assets.gardenStages='garden-stages-v6914.png';
+DATA.assets.inventoryHousehold='inventory-household-v392.webp';
+DATA.assets.inventoryCrafts='inventory-crafts-v392.webp';
+DATA.assets.gardenStages='garden-stages-v6914.webp';
 DATA.assets.diningTable='hall-table-v394.png';
-DATA.assets.familyMealFemale='family-meal-female-v394.png';
-DATA.assets.familyMealMale='family-meal-male-v394.png';
+DATA.assets.familyMealFemale='family-meal-female-v394.webp';
+DATA.assets.familyMealMale='family-meal-male-v394.webp';
 DATA.assets.workbench='workbench-v3912.webp';
-DATA.assets.waterJar='water-jar-v6914.png';
-DATA.assets.stove='stove-v6914.png';
+DATA.assets.waterJar='water-jar-v6914.webp';
+DATA.assets.stove='stove-v6914.webp';
 DATA.assets.villageLetter='village-letter-v3915.webp';
 
 function state(){return engine.state;}
@@ -91,13 +91,15 @@ async function loadSceneAssets(scene,sceneState=state()){
   if(globalThis.NanlanTown.rooms.includes(scene))required.push(...world[scene].objects.filter(o=>o.role).map(o=>'npc_'+o.role));
   if(scene==='backHall')required.push('backHallReady');
   if(world[scene]?.objects?.some(o=>o.v3Art!=null))required.push('v3Props');
-  if(scene==='yard')required.push('courtyardMattes','yearLamp','gardenStages','productionStages','productionItems','waterJar','stove','weedPatch');
-  if(sceneState.actorState?.outfit==='nanlanSilk')required.push('familySilk',sceneState.gender==='male'?'walkMaleSilk':'walkFemaleSilk');
-  if(['mountain','coast'].includes(scene))required.push('seals');
+  if(scene==='yard'){
+    required.push('courtyardMattes','waterJar','stove');
+    if(sceneState.flags?.smallBed)required.push('gardenStages');
+    if(!sceneState.flags?.pathCleared)required.push('weedPatch');
+  }
   if(['foothill','mountain'].includes(scene))required.push('fruitTrees','fruitTreesPicked');
   if(scene==='store'){required.push('storePickups','inventoryHousehold','inventoryCrafts','workbench');if(N.current(sceneState)==='M14'||sceneState.flags.cratesRaised)required.push('storeBefore','storeAfter');}
   if(scene==='bed')required.push('bed','bedDamage','bedPatched');
-  if(scene==='hall'){required.push('diningTable','familyMealFemale','familyMealMale');if(N.current(sceneState)==='M14'||sceneState.flags.hallwayCleared)required.push('hallBefore','hallAfter');}
+  if(scene==='hall'&&(N.current(sceneState)==='M14'||sceneState.flags.hallwayCleared))required.push('hallBefore','hallAfter');
   if(scene==='village')required.push('villageLetter');
   const unique=[...new Set(required.map(id=>world[id]?.asset||id))];
   const signature=JSON.stringify([scene,unique]);
@@ -106,24 +108,66 @@ async function loadSceneAssets(scene,sceneState=state()){
   const request={signature},ready=new Set(unique.filter(id=>images[id]?.naturalWidth>0));
   currentSceneLoad=request;
   const overlay=$('sceneLoading'),previous=document.activeElement,retry=$('sceneLoadRetry'),cancel=$('sceneLoadCancel');
-  let generation=0,closed=false,slow;
+  let closed=false, running=false, slow, reconnected=false;
   $('loadingTitle').textContent=deskText('正在走进 · '+world[scene].name,'Entering · '+world[scene].name);
-  retry.textContent=deskText('重新连接并载入','Reconnect & Retry');cancel.textContent=deskText('暂不进入 · 保留进度','Cancel · Keep Progress');
-  overlay.hidden=false;overlay.focus({preventScroll:true});
-  request.promise=new Promise(resolve=>{
-    function finish(ok){if(closed)return;closed=true;generation++;clearTimeout(slow);if(!ok)unique.forEach(id=>artwork.cancel(id));currentSceneLoad=null;retry.onclick=cancel.onclick=null;overlay.hidden=true;settlePointerInput();if(previous?.isConnected)previous.focus({preventScroll:true});resolve(ok);}
-    async function run(restart=false){
-      artwork.cancelOther(unique);
-      const mine=++generation;clearTimeout(slow);
-      const progress=()=>{if(closed||mine!==generation)return;$('loadingProgress').max=unique.length;$('loadingProgress').value=ready.size;$('loadingCount').textContent=deskText('已备好 '+ready.size+' / '+unique.length,'Ready '+ready.size+' / '+unique.length);};
-      progress();$('loadingHint').textContent=deskText('正在备好场景与人物。可随时重新连接或返回。','Preparing artwork. You can reconnect or return at any time.');
-      slow=setTimeout(()=>{if(!closed&&mine===generation)$('loadingHint').textContent=deskText('连接较慢；本轮最多等候 16 秒。已载好的画面会保留。','The connection is slow. This attempt lasts at most 16 seconds; completed artwork is kept.');},5000);
-      const results=await Promise.all(unique.map(async id=>{const ok=await loadImage(id,{restart});if(ok&&!closed&&mine===generation){ready.add(id);progress();}return ok;}));
-      if(closed||mine!==generation)return;clearTimeout(slow);
-      if(results.every(Boolean))finish(true);else $('loadingHint').textContent=deskText('连接未完成，请重新连接，或暂不进入。原存档没有改变。','Artwork could not finish loading. Reconnect or return; your save is unchanged.');
+  retry.textContent=deskText('继续载入','Resume loading');
+  cancel.textContent=deskText('暂不进入 · 保留进度','Cancel · Keep Progress');
+  function online(){if(running)reconnected=true;else run(true);}
+  function progress(bytes=0){
+    $('loadingProgress').max=unique.length;
+    $('loadingProgress').value=ready.size;
+    const count=ready.size+' / '+unique.length;
+    const amount=bytes?' · '+(bytes/1048576).toFixed(1)+' MiB':'';
+    $('loadingCount').textContent=deskText('已备好 '+count,'Ready '+count)+amount;
+  }
+  let resolve;
+  request.promise=new Promise(r=>{resolve=r;});
+  function finish(ok){
+    if(closed)return;
+    closed=true;clearTimeout(slow);window.removeEventListener('online',online);
+    if(!ok)unique.forEach(id=>artwork.cancel(id));
+    currentSceneLoad=null;retry.onclick=cancel.onclick=null;
+    overlay.hidden=true;settlePointerInput();
+    if(previous?.isConnected)previous.focus({preventScroll:true});
+    resolve(ok);
+  }
+  async function run(retrying=false){
+    if(closed||running)return;
+    running=true;reconnected=false;retry.disabled=true;
+    const pending=unique.filter(id=>!ready.has(id)),received=new Map();
+    let cursor=0,lastPaint=0;
+    const countBytes=()=>[...received.values()].reduce((a,b)=>a+b,0);
+    function transfer(key,bytes){
+      if(closed)return;
+      received.set(key,bytes);
+      const now=performance.now();
+      if(now-lastPaint>=200){lastPaint=now;progress(countBytes());}
     }
-    retry.onclick=()=>run(true);request.cancel=cancel.onclick=()=>finish(false);run();
-  });
+    async function worker(){
+      while(!closed&&cursor<pending.length){
+        const id=pending[cursor++];
+        if(await loadImage(id,{retry:retrying,onProgress:transfer})){
+          if(closed)return;
+          ready.add(id);progress(countBytes());
+        }
+      }
+    }
+    artwork.cancelOther(unique);progress();
+    $('loadingHint').textContent=deskText('正在备好场景与人物。','Preparing the scene and characters.');
+    slow=setTimeout(()=>{$('loadingHint').textContent=deskText('正在等候画面。网络恢复后可继续载入，也可以先返回。','Waiting for artwork. You can return or resume when the connection recovers.');},6000);
+    await Promise.all(Array.from({length:Math.min(4,pending.length)},worker));
+    if(closed)return;
+    clearTimeout(slow);running=false;
+    if(ready.size===unique.length){finish(true);return;}
+    retry.disabled=false;
+    $('loadingHint').textContent=deskText('还有画面没有到齐。点「继续载入」补齐缺图，已完成的画面会保留。','Some artwork is missing. Resume to load the remaining files.');
+    if(reconnected)run(true);
+  }
+  request.cancel=cancel.onclick=()=>finish(false);
+  retry.onclick=()=>run(true);
+  window.addEventListener('online',online);
+  overlay.hidden=false;overlay.focus({preventScroll:true});
+  run();
   return request.promise;
 }
 // Loading is a temporary modal: keyboard shortcuts cannot change the save or open another panel underneath it.
@@ -711,8 +755,8 @@ function itemSource(id){
   return '在已开放地点实际拾取或完成对应动作获得';
 }
 const inventorySheets=[
-  {file:'inventory-household-v392.png',rows:[0,414,805,1254],items:['yardKey','bedroll','repair','rice','ingredient','seed','vegetable','hotMeal','feast']},
-  {file:'inventory-crafts-v392.png',rows:[0,425,800,1254],items:['driedHerb','bambooWare','shellCraft','rope','ledgerOriginal','ledgerCopy','receipt','reply','narrowBasket']}
+  {file:'inventory-household-v392.webp',rows:[0,414,805,1254],items:['yardKey','bedroll','repair','rice','ingredient','seed','vegetable','hotMeal','feast']},
+  {file:'inventory-crafts-v392.webp',rows:[0,425,800,1254],items:['driedHerb','bambooWare','shellCraft','rope','ledgerOriginal','ledgerCopy','receipt','reply','narrowBasket']}
 ];
 function inventoryArt(id){
   if(typeof id!=='string')return '';
@@ -737,7 +781,7 @@ function inventoryArt(id){
 function toolbarArt(id){
   const ids=['hand','sickle','hoe','basket','water','axe','journal','map','rest'],index=ids.indexOf(id);
   if(index<0)return inventoryArt(id);
-  return '<svg viewBox="'+(index%3*418)+' '+(Math.floor(index/3)*418)+' 418 418" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><image href="toolbar-ming-v394.png" width="1254" height="1254"/></svg>';
+  return '<svg viewBox="'+(index%3*418)+' '+(Math.floor(index/3)*418)+' 418 418" aria-hidden="true" xmlns="http://www.w3.org/2000/svg"><image href="toolbar-ming-v394.webp" width="1254" height="1254"/></svg>';
 }
 function taskMaterials(s){
   const q=N.current(s),need={},add=(id,n=1)=>need[id]=Math.max(need[id]||0,n),f=s.flags;
@@ -1813,6 +1857,7 @@ function paintDifferenceLayers(){
   if(sc==='yard'){
     if(!f.pathCleared){const weed=images.weedPatch;world.yard.objects.filter(o=>o.type==='weed'&&!s.collected[o.id]).forEach((o,index)=>{if(!weed?.naturalWidth)return;ctx.save();ctx.translate(o.x,o.y);ctx.scale(index%2?-1:1,1);ctx.drawImage(weed,-53,-58,106,70);ctx.restore();});}
     // The edited base art places the plot on the far-right ground. Only growth is painted here.
+    if(f.smallBed&&!images.gardenStages)loadImage('gardenStages',{passive:true});
     if(f.smallBed&&images.gardenStages?.naturalWidth){
       for(let i=0;i<(f.fullGarden?6:4);i++){
         if(i>0&&!N.gardenPlot(s,i).tilled)continue;
@@ -1844,7 +1889,7 @@ function npcRole(o){
 // Per-object orientation and breathing remain transient presentation state.
 const npcFacing=new Map();
 const npcHomeFacing={grandfather:false,father:false,mother:true,motherHall:true,villager:false,doctor:true,aCen:false,shenYu:true,shenYuCoast:true,chengWan:true,qiu:true,v2MotherCounter:true,v2FatherCounter:false,keyHandover:true,familyLuggage:false};
-DATA.assets.npcIdle='npc-idle-v3911.png';loadImage('npcIdle');
+DATA.assets.npcIdle='npc-idle-v3911.webp';
 function npcPresentation(o,t){
  const role=npcRole(o),s=state(),key=s.scene+':'+o.id,dx=s.player.x-o.x;
  const seed=[...o.id].reduce((n,c)=>n+c.charCodeAt(0),0);
@@ -1863,6 +1908,7 @@ function drawNaturalPerson(o,t,brush=ctx,inCourtyard=false){
  const pose=npcPresentation(o,t),col=['grandfather','father','mother','cen'].indexOf(pose.role);
  const silk=window.NanlanProduction?.portrait(pose.role),sheet=images.npcIdle;
   brush.save();brush.translate(o.x,o.y);brush.rotate(pose.lean);brush.scale(actorScale(o.y),actorScale(o.y)*pose.breath);brush.translate(-o.x,-o.y);
+ if(col>=0&&!silk&&!sheet)loadImage('npcIdle',{passive:true});
  if(col>=0&&!silk&&sheet?.naturalWidth){
   const cw=sheet.naturalWidth/4,ch=sheet.naturalHeight/2;
   brush.save();brush.translate(o.x,o.y);if(pose.flip)brush.scale(-1,1);
@@ -1874,8 +1920,8 @@ function drawNaturalPerson(o,t,brush=ctx,inCourtyard=false){
 }
 function drawPerson(role,x,y,height=84,flip=false,scaleActor=true,brush=ctx,inCourtyard=false){
   if(scaleActor)height*=actorScale(y);
-  const costume=window.NanlanProduction?.portrait(role);if(costume&&!images[costume.asset])loadImage(costume.asset);
-  const dressed=costume&&images[costume.asset]?.naturalWidth,im=dressed?images[costume.asset]:images['npc_'+role];if(!im?.naturalWidth){loadImage('npc_'+role);return;}
+  const costume=window.NanlanProduction?.portrait(role);if(costume&&!images[costume.asset])loadImage(costume.asset,{passive:true});
+  const dressed=costume&&images[costume.asset]?.naturalWidth,im=dressed?images[costume.asset]:images['npc_'+role];if(!im?.naturalWidth){loadImage('npc_'+role,{passive:true});return;}
   const width=height*(dressed?costume.rect[2]/costume.rect[3]:im.naturalWidth/im.naturalHeight);
   // Soft contact shadow belongs to the actor, rather than a floating marker.
   brush.save();
@@ -1890,7 +1936,7 @@ function renderCharacter(brush=ctx,inCourtyard=false){
   const s=state(),p=s.player,silk=s.actorState?.outfit==='nanlanSilk';
   const pose=NanlanLocomotion.pose(s.gender,silk,direction,walkFrame,moving&&active&&!transitioning);
   // Changing clothes in the current room can request a new sheet between scene loads.
-  if(!images[pose.asset])loadImage(pose.asset);
+  if(!images[pose.asset])loadImage(pose.asset,{passive:true});
   const im=images[pose.asset]||images[NanlanLocomotion.atlasKey(s.gender,!silk)];
   if(!im?.naturalWidth){drawPerson(s.gender==='male'?'playerMale':'playerFemale',p.x,p.y,84,pose.flip,true,brush,inCourtyard);return;}
   brush.save();brush.translate(p.x,p.y);brush.scale(actorScale(p.y),actorScale(p.y));
@@ -2102,7 +2148,7 @@ function render(){
 }
 function frame(t){
   const dt=Math.min(.1,(t-(lastFrame||t))/1000);lastFrame=t;
-  try{update(dt);if($('sceneLoading').hidden)render();if(t-lastHud>300){refreshHud();lastHud=t;}
+  try{update(dt);if(started&&$('sceneLoading').hidden)render();if(started&&$('sceneLoading').hidden&&t-lastHud>300){refreshHud();lastHud=t;}
     if(!window.NanlanSettings?.isOpen())void window.NanlanProduction?.maybeMorning();
     window.NanlanAudio?.setEnvironment(window.NanlanOpening?.environment()||state().scene,window.NanlanOpening?.running()?false:N.daylight(state()).darkness>.25,started&&active&&moving);
     if(started&&active&&t-lastAutosave>20000){const r=engine.save();$('saveState').textContent=r.ok?(engine.memoryOnly?'仅本次试玩':'已保存'):'自动保存失败 · 请手动保存';lastAutosave=t;}
@@ -2296,7 +2342,7 @@ window.addEventListener('storage',e=>{
 });
 window.addEventListener('beforeunload',()=>{if(started)engine.save();});
 // Keep first-load bandwidth for the entrance and actors; room props load when that room is needed.
-loadImage('gate');loadImage('yard');loadImage('npc_playerFemale');loadImage('npc_playerMale');refreshHud();requestAnimationFrame(frame);
+requestAnimationFrame(frame);
 
 document.addEventListener('nanlanlanguagechange',()=>{if(started)refreshHud();});
 

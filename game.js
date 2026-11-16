@@ -1013,7 +1013,14 @@ function showCraft(){
     if(id==='narrowBasket'&&!s.flags.volume2Started)continue;
     const ready=id==='rack'?N.reached(s,'M07'):id==='driedHerb'?N.done(s,'M07'):id==='shellCraft'?N.done(s,'M09'):N.done(s,'M06');
     if(!ready)continue;if(r.flag&&s.flags[r.flag])continue;
-    actButton(r.label+' · '+Object.entries(r.cost).map(([k,n])=>N.itemNames[k]+' ×'+n).join(' / '),'craft',{recipe:id},showCraft,'craft-'+id);
+    const label=r.label+' · '+Object.entries(r.cost).map(([k,n])=>N.itemNames[k]+' ×'+n).join(' / ');
+    if(id==='bambooWare'||id==='narrowBasket'){
+      button(label,()=>{
+        const missing=Object.entries(r.cost).find(([item,n])=>N.available(state(),item)<n);
+        if(missing){notice(deskText('还缺','Still needed: ')+NanlanI18n.t(N.itemNames[missing[0]])+' ×'+(missing[1]-N.available(state(),missing[0])),true);return;}
+        NanlanWorktable.weave(deskText('收边，放进行囊','Finish the rim and pack it'),()=>perform('craft',{recipe:id},showCraft),showCraft);
+      },'craft-'+id,false,false);
+    }else actButton(label,'craft',{recipe:id},showCraft,'craft-'+id);
   }
   if(!N.done(s,'M06'))button('配方随竹林与药圃任务逐步开放',showQuest,'craft-locked',true);
 }

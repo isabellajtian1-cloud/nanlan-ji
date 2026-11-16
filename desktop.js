@@ -34,10 +34,12 @@ window.addEventListener('keydown',e=>{
  if(!$('dialog').hidden&&(k===' '||k==='arrowdown'||k==='arrowup')){
   stop();if(e.repeat)return;
   if(k===' '&&dialogKind==='kitchen'&&e.target?.closest('summary')){e.target.closest('summary').click();return;}
-  if(k===' '&&['paper-reading','paper-work','market-work','hall-work','lantern-work','family-letter','kitchen'].includes(dialogKind)&&e.target?.closest('#dialog button')){e.target.closest('button').click();return;}
+  if(k===' '&&['v3-worktable','seal-draft','silk-care','paper-reading','paper-work','market-work','hall-work','lantern-work','family-letter','kitchen'].includes(dialogKind)&&e.target?.closest('#dialog button')){e.target.closest('button').click();return;}
   if(k===' '&&dialogKind==='arrival'){const choice=e.target?.closest('#choices button:not(:disabled)');if(choice)choice.click();else $('choices').querySelector('button:not(:disabled)')?.focus();return;}
   if(k===' '){if(!$('next').hidden&&$('next').getClientRects().length)$('next').click();else{const choices=[...$('choices').querySelectorAll('button:not(:disabled)')];if(!choices.length)closeDialog();else {choices[0].focus();notice('方向键选择，Enter 确认，Esc 返回。');}}return;}
-  const options=dialogKind==='kitchen'
+  const options=['v3-worktable','seal-draft','silk-care'].includes(dialogKind)
+    ? [...$('dialog').querySelectorAll('#panelExtra button:not(:disabled), #choices button:not(:disabled)')].filter(b=>b.getClientRects().length)
+    : dialogKind==='kitchen'
     ? [...$('dialog').querySelectorAll('.kitchen-action:not([hidden]):not(:disabled), #choices button:not(:disabled)')]
     : [...$('choices').querySelectorAll('button:not(:disabled)')];
   if($('choices').hidden||!options.length)return;let i=options.indexOf(document.activeElement);i=(i+(k==='arrowdown'?1:-1)+options.length)%options.length;options[i].focus();return;

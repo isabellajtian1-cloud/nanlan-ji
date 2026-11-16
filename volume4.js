@@ -130,7 +130,10 @@ function panel(o,stage=0,pick){
   note(r[3]);details(k);window.NanlanThreads.fourth(k,s);const parts=moments[k];
   const gesture=gestures[k];
   if(gesture&&pick!==undefined)sceneGesture(k,o,pick);
-  if(gesture&&stage===0){if(!V.waitUntil(s)||s.worldTick>=V.waitUntil(s))sceneGesture(k,o);}
+  if(k==='hold'&&s.worldTick>=t.due){
+    button(deskText('解捆，亲手查验篓耳','Unwrap and inspect the handle'),()=>NanlanWorktable.inspect('joint',deskText('封存这件待验货','Set the tagged piece aside'),()=>perform('v4Step',{key:k,sequence:state().revision},()=>outcome(o,k,i)),()=>panel(o)),'v4-inspect-piece',false,false);
+  }
+  else if(gesture&&stage===0){if(!V.waitUntil(s)||s.worldTick>=V.waitUntil(s))sceneGesture(k,o);}
   else if(!gesture&&parts&&stage<parts.length){if(k!=='hold'||s.worldTick>=t.due)button(parts[stage],()=>panel(o,stage+1),'v4-hands-'+stage,false,false);}
   else if(r.length>4){for(let c=0;c<r.length-4;c++)objectAction(r[c+4],'v4Step',{key:k,choice:c},()=>outcome(o,k,i));}
   else{const label=k==='resolve'?(t.ships.some(b=>!b.signed)?'核对另班回报并签收':V.remaining(t)?'装上另班余货，付本航船脚':'核清全航损耗和回执'):r[3];objectAction(label,'v4Step',{key:k},()=>outcome(o,k,i));}

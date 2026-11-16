@@ -12,7 +12,12 @@ async function job(name,p,again){
   if(again)again();
  });
 }
-function stepButton(label,c=0,extra={}){const r=V.first(state());button(label,()=>job('voyageStep',{i:r.i,j:r.j,choice:c,...extra},()=>panel()),'voyage-step-'+c);}
+function stepButton(label,c=0,extra={}){
+ const r=V.first(state()),commit=()=>job('voyageStep',{i:r.i,j:r.j,choice:c,...extra},panel);
+ if(r.i===6&&r.j===0){
+   button(label,()=>NanlanWorktable.sail(L('交船脚，按这条航路出发','Pay the fare and take this route'),commit,panel),'voyage-step-'+c,false,false);
+ }else button(label,commit,'voyage-step-'+c);
+}
 function ledger(){
  const s=state(),t=V.get(s);activity(L('春潮有信 · 旅途册','Letters on the Spring Tide · Travel Book'),t?L('往返、行囊与共同经历在这里逐项保留。','Passage, luggage and shared memories are recorded here.'):L('第五卷的来季安排落实以后，何行舟会带来青屿的邀请。','Once next season is arranged, Xingzhou will bring an invitation from Qingyu.'),'voyage-ledger');
  if(!t){if(V.canStart(s))button(L('和家人拆开春潮来信','Open the spring-tide letter together'),()=>job('voyageStart',{},ledger),'voyage-start');else note(L('请先完成岁序长青，并至少实际完成一项伙伴共事或有效交接。','Complete Enduring Seasons and record at least one shared task or verified handover first.'));return;}
@@ -40,7 +45,11 @@ function panel(){
   const type=document.createElement('select');[['生活清单','Daily essentials'],['样品清单','Sample kit'],['轻装清单，普通工具借用','Light kit; borrow ordinary tools']].forEach((a,i)=>{const o=document.createElement('option');o.value=i;o.textContent=P(a);type.append(o);});
   const sample=document.createElement('select'),none=document.createElement('option');none.value='';none.textContent=L('不带可售样品','No sale sample');sample.append(none);
   for(const id of ['bambooWare','narrowBasket','travelBox','driedHerb'])if(N.available(s,id)>0){const o=document.createElement('option');o.value=id;o.textContent=L(N.itemNames[id],({bambooWare:'Bamboo ware',narrowBasket:'Narrow basket',travelBox:'Travelling food box',driedHerb:'Dried herbs'})[id])+' ×1';sample.append(o);}
-  $('panelExtra').append(type,sample);button(L('核对并装进行囊','Check and pack'),()=>job('voyageStep',{i:r.i,j:r.j,choice:Number(type.value),sample:sample.value||null},panel),'voyage-pack');
+  type.setAttribute('aria-label',L('行囊清单','Packing list'));sample.setAttribute('aria-label',L('随身样品','Sample to carry'));
+  $('panelExtra').append(type,sample);button(L('核对并装进行囊','Check and pack'),()=>{
+    const plan={i:r.i,j:r.j,choice:Number(type.value),sample:sample.value||null};
+    NanlanWorktable.pack(plan.sample,L('束紧行囊，记下用料','Tie the bag and record supplies'),()=>job('voyageStep',plan,panel),panel);
+  },'voyage-pack',false,false);
  }
  else if(k==='4_0'){stepButton(L('张贴暂歇告示，不动铺货','Post a closure notice; leave all stock untouched'),0);stepButton(L('拨干药 ×1，付工钱二文，只售这一份','Assign one dried-herb parcel; pay two coins; sell only this parcel'),1);}
  else if(k==='6_0'){stepButton(L('选近岸停靠线 · 六文含回程，六十分钟','Near-shore stops · Six coins including return; sixty minutes'),0);stepButton(L('选认可的直达近岸线 · 六文含回程，四十五分钟','Approved direct coastal passage · Six coins including return; forty-five minutes'),1);}

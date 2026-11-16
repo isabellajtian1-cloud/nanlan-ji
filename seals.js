@@ -15,6 +15,7 @@ function prepare(name,p,label,again){const s=state(),z=s.seals||M.fresh(),serial
  $('panelExtra').append(paper);
  for(const k of ['wood','stone'])if(z[k]){const b=button((tier===k?'已选 · ':'改用 · ')+sealName(k),()=>{tier=k;draw();},'seal-select-'+k,true);b.setAttribute('aria-pressed',String(tier===k));}
  const b=button(tier?'在凭单上盖印，交货收款':'手写签收，交货收款',async()=>{if(serial!==draftSerial||dialogKind!=='seal-draft'||$('dialog').hidden)return;b.disabled=true;let success=false;await perform(name,{...p,...(tier?{seal:tier}:{})},()=>{success=true;draftSerial++;if(tier)receipt(state().seals.receipts.at(-1),again);else again();});if(!success&&b.isConnected){b.disabled=false;note('尚未结算。请返回柜台核对货物、营业日或更新后的凭单。');}},'seal-confirm');
+ if(tier){b.classList.add('wt-seal-stamp');paper.append(b);}
  button('暂不落印，回柜台',()=>{draftSerial++;again();},'seal-cancel',true);
  if(!tier)note('制印路线：阿岑问路 → 青岚山取坚木 → 南街柜架找林师傅。旧存档仍可照常营业。');
  };draw();}

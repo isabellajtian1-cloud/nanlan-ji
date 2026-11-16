@@ -45,6 +45,10 @@ function guide(){
    activity(L('生活手记','A Book of Daily Life'),L('选一项，沿熟悉的路去办。后来学会的手艺也会记在这里。','Choose an activity to follow its path. New crafts appear here as you learn them.'),'v3-guide');
    if(!s.flags.gateOpen)route(L('从门前交接开始','Start at the Household Gate'),'gate','familyLuggage');
    if(s.flags.gateOpen)route('仓房工作台','store','workbench');
+   if(s.scholar?.recipe)route(deskText('按饭方做笋香焖饭','Make bamboo-shoot rice'),'yard','stove');
+   if(s.flags.ledgerPermission&&!s.flags.pagesDried)route(deskText('在书房晾旧页','Air the old pages in the study'),'study','dryPages');
+   if(N.current(s)==='M14'&&!s.flags.hallwayCleared)route(deskText('收拾正厅的通道','Clear the hall passage'),'hall','hallMove-basket');
+   if(N.current(s)==='M20'&&!s.flags.festivalLamps)route(deskText('去檐下挂灯','Hang the eave lanterns'),'yard','festivalLantern');
    if(s.flags.stoveClean)route(L('回灶边亲手做饭','Cook at the Hearth'),'yard','stove');
    if(s.flags.smallBed)route(L('照看自家菜圃药圃','Tend the Kitchen and Herb Beds'),'yard','herbPlot');
    if(s.flags.stallBooked)route(L('去镇集摊布摆货','Set Out Goods at Market'),'market','playerStall');
@@ -90,7 +94,7 @@ function play(o,r,stage=0){
  
  if(pictures[k]!=null)prop(pictures[k]);note(r[3]);
  const memory={claim:'cord',herbal:'herb',mend:'mark',teach:'teach'}[k];if(memory)window.NanlanThreads.offer(memory);
- const ex=exercises[k];
+ const ex=['desk','trial'].includes(k)?null:exercises[k];
  if(['desk','handoff','audit','plan','capacity','contract','answer','ship','return'].includes(k))balances(k);
  if(k==='answer'){if(s.story3.remainder||s.story3.freight)route(L('去河埠清点分送余货','Settle the Split Load at the Wharf'),'wharf','v3Berth');if(s.story3.contract?.delivered<s.story3.contract?.q)route(L('找方掌柜核对交期','Confirm the Deadline with Fang'),'wharf','v3Fang');}
  if(k==='audit'&&!s.story3.shift?.returnedAtDusk){const [sc,id]=at(s,'outing');route(L('沿出行的路去等日落','Return to Your Outing Until Sunset'),sc,id);}
@@ -111,6 +115,17 @@ function play(o,r,stage=0){
      const choices=[L('左架 · 承重料','Left Rack · Load-Bearing Strips'),L('右架 · 内衬料','Right Rack · Lining Strips')];
      choices.forEach((label,j)=>button(label,()=>{if(j===stage)play(o,r,stage+1);else{play(o,r,stage);note(L('周成递来样篓，示意你摸摸篓耳和篓底，再试一次。','Zhou passes you the sample. Feel its handle and base, then try again.'));}},'v3-sort-'+j));}
    else button(ex[stage],()=>play(o,r,stage+1),'v3-hands-'+stage);
+ }
+ else if(['sample','trial','desk','handoff'].includes(k)){
+   const work=window.NanlanWorktable;
+   const labels=r.length>5?r.slice(5).map(pair=>window.NanlanI18n.language==='en'?pair[1]:pair[0]):[window.NanlanI18n.language==='en'?r[4]:r[3]];
+   labels.forEach((label,c)=>button(label,()=>{
+     const commit=()=>perform('v3Step',{key:k,choice:c,sequence:state().revision},()=>stepSuccess(o,k,i,c));
+     const back=()=>place(o);
+     if(k==='sample')work.weave(deskText('收好编成的试样','Finish the sample'),commit,back);
+     else if(k==='trial')work.inspect(s.story3.choices.sample===0?'joint':'rim',deskText('记下这处缺陷','Record this defect'),commit,back);
+     else work.shift(k==='handoff',deskText('签好这班交接单','Sign this shift'),commit,back);
+   },'v3-'+k+c,false,false));
  }
  else if(r.length>5){for(let c=0;c<r.length-5;c++)action(r[c+5][0],'v3Step',{key:k,choice:c},()=>stepSuccess(o,k,i,c));}
  else action(r[3],'v3Step',{key:k},()=>stepSuccess(o,k,i));

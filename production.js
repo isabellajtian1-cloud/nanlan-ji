@@ -42,7 +42,7 @@ function show(i=selected){selected=i;const s=state(),p=s.production,z=M.status(s
        if(p.worms.yield>1)button(L('留一份种茧，再温茧拾绪','Keep Seed Cocoons and Reel the Rest'),()=>reel(true),'silk-reel-keep',true);}
    }else if(z.careOpen){
      paragraph(L('母亲：「快上簇了。拿竹刮轻清匾底，把窗支开一道缝，莫让风直吹。」','Mother says, “They will spin soon. Clean the tray gently and crack the window, out of the draught.”'));
-     action(L('清匾支窗 · 照料这一次','Clean the Tray and Open the Shutter'),'silkCare');
+     button(L('清匾支窗 · 照料这一次','Clean the Tray and Open the Shutter'),care,'silk-silkCare',false,false);
    }else paragraph(p.worms.tended?'匾底清爽，窗边透进微凉。让它们安静吐丝吧。':'桑叶已备足，不必反复投喂。吐丝前再来清匾支窗。');
  }
  if(selected===2){

@@ -22,9 +22,11 @@ function card(item,ctx,chosen){
  b.onclick=()=>show(item.number);return b;
 }
 function refreshTitle(){
- const version=document.querySelector('.version-note'),release=version.textContent.match(/V[\d.]+/)?.[0]||'';
- document.title=L('南澜记 '+release+' · 一路相续','Nanlan Chronicles '+release+' · A Journey Resumed');
- version.textContent=L(release+' · 一路相续 · 六卷与番外开发试玩',release+' · A Journey Resumed · Six-volume development preview with epilogues');
+ const version=document.querySelector('.version-note');
+ const release=document.querySelector('.brand .version').textContent.trim();
+ const edition=release+' · '+L(version.dataset.releaseZh,version.dataset.releaseEn);
+ document.title=L('南澜记 ','Nanlan Chronicles ')+edition;
+ version.textContent=edition+L(' · 六卷与番外开发试玩',' · Six-volume development preview with epilogues');
  const host=$('startChapterList');if(!host)return;const ctx=context();host.replaceChildren();
  for(const item of C.entries(ctx.s))host.append(card(item,ctx));
  $('startChapterNote').textContent=ctx.invalid?L('存档暂时无法读取；这里只展示篇章目录，原数据保留。','The save cannot be read. This is a chapter preview; your data is preserved.'):L('按旅程依次开启 · 点卷名查看条件与去处','Unlock in story order · Select a volume for its conditions and starting place');

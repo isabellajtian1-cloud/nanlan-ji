@@ -1,6 +1,37 @@
 /* Painted Ming-era Lingnan entrance, with quiet looping atmosphere. */
 #start{isolation:isolate;min-height:100dvh;align-items:center;padding:clamp(22px,5vw,75px)}
-#start .start-art{background-image:url(opening-homecoming-v663.webp);background-position:62% center;filter:brightness(.69) saturate(.78);animation:ming-breathe 32s ease-in-out infinite alternate}
+.title-scroll {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  background: repeating-linear-gradient(0deg, transparent 0 3px, #e1cda00a 4px),
+              linear-gradient(105deg, #25382e, #53604b 65%, #826f50);
+}
+.title-scroll img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 62% center;
+  filter: brightness(.86) saturate(.9);
+}
+.title-roller {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 1%;
+  width: clamp(12px, 1.6vw, 24px);
+  transform: translateX(-50%);
+  background: linear-gradient(90deg, #523a24, #b59560 24%, #f0dbae 49%, #baa071 70%, #67492d);
+  box-shadow: 4px 0 15px #18271d80;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .title-scroll.unrolled img { animation: scroll-open 3.8s cubic-bezier(.22,.61,.32,1) both, ming-breathe 32s 3.8s ease-in-out infinite alternate; }
+  .title-scroll.unrolled .title-roller { animation: roller-open 3.8s cubic-bezier(.22,.61,.32,1) both; }
+  @keyframes scroll-open { from { clip-path: inset(0 0 0 91%); } to { clip-path: inset(0 0 0 1%); } }
+  @keyframes roller-open { from { left: 91%; } to { left: 1%; } }
+}
 #start .start-vignette{background:linear-gradient(90deg,#142b26ed 0%,#142b26c2 28%,#142b2633 64%,#142b2626),linear-gradient(0deg,#122a25a8,transparent 35%);animation:none}
 #start::before,#start::after{content:'';position:fixed;pointer-events:none;z-index:0;inset:0;background:radial-gradient(ellipse at 70% 90%,#eee6ce24,transparent 58%);animation:ming-mist 22s ease-in-out infinite alternate}
 #start::after{inset:0 0 0 42%;background:radial-gradient(circle at 70% 32%,#ffd59130,transparent 12%);animation:ming-glow 6s ease-in-out infinite alternate}
@@ -18,7 +49,18 @@
 #start .start-buttons button{min-height:51px;border:1px solid #c0a575;background:#e5d6b2;color:#274235;border-radius:2px;font-size:16px;letter-spacing:.14em;box-shadow:0 5px 24px #091d1733}
 #start .start-buttons #continueGame{background:#223e33aa;color:#e8d9b7}
 #start .start-buttons button:hover{background:#f0e2c3;color:#294436;transform:translateY(-1px)}
-#start #openingReplay{color:#d7c3a0;margin:15px 0;background:none;border:0;padding:8px 0}
+#start .start-buttons #openingReplay { color: #f4e7c7; background: #2e493b; border-color: #c1a777; }
+#start .start-buttons #openingReplay:hover { background: #3a5546; }
+#openingReplay::before { content: ''; display: inline-block; margin-right: .7em; border: .3em solid transparent; border-right: 0; border-left: .48em solid currentColor; vertical-align: .04em; }
+@media (max-height: 560px) and (orientation: landscape) {
+  #start { align-items: start; padding: 12px 4vw; }
+  #start .start-sheet { width: min(650px, 100%); }
+  #start .language-choice { margin-bottom: 5px; }
+  #start h1 { margin: 4px 0; font-size: 46px; }
+  #start .start-buttons { flex-flow: row wrap; max-width: none; margin-top: 12px; }
+  #start .start-buttons button { flex: 1 1 120px; font-size: 14px; min-height: 44px; }
+}
+@media (max-width: 650px) { .title-scroll img { object-position: 68% center; } }
 #start .start-more{border-top:1px solid #d0b88444;color:#c5b99d;font-size:12px;margin-top:16px;max-width:390px}
 #start .start-links button,#start #startSound{color:#dfcfac;background:#203e31;border:1px solid #b8a27766}
 #start #audioHint,#start #bootStatus,#start #languageStatus,#start .save-summary,#start .version-note{color:#c1baa1}

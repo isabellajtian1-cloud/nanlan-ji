@@ -119,6 +119,15 @@ function labels(){
  lastSeconds=-1;countdown();
 }
 function countdown(){
+ if(shots[index].detail && (imagePending || imageFailed)){
+  const status = imageFailed ? -3 : -2;
+  if(lastSeconds===status)return;
+  const hint = imageFailed ? ['可重试画卷，也可继续','Retry the painting or continue'] :
+    ['正在展开近景 · 可随时继续','Opening the close-up · Continue at any time'];
+  host.querySelector('#openingHint').textContent=P(hint);
+  lastSeconds=status;
+  return;
+ }
  const seconds=Math.max(0,Math.ceil((shots[index].duration-elapsed)/1000));if(seconds===lastSeconds)return;lastSeconds=seconds;
  host.querySelector('#openingHint').textContent=(playing?P(['本页还剩 '+seconds+' 秒','Next page in '+seconds+'s']):P(['自动播放已暂停','Autoplay paused']))+' · '+P(['可随时点继续 / 按空格','Continue / Space at any time']);
 }
@@ -126,6 +135,8 @@ function paint(retry=false){
  if(artCleanup)artCleanup();clearTimeout(artTimer);
  const s=shots[index],A=window.NANLAN_DATA.assets,token=++paintToken;host.dataset.shot=String(index);
  host.classList.toggle('opening-detail',s.detail===true);
+ host.classList.toggle('opening-arrival',shots===openingShots);
+ if(s.detail)host.style.setProperty('--opening-zoom','1.08');
  host.classList.toggle('opening-summary',s.summary===true);
  imagePending=true;imageFailed=false;
  const img=document.createElement('img');img.alt=P(s.title);img.draggable=false;img.hidden=true;
@@ -146,14 +157,17 @@ function paint(retry=false){
 function update(t){
  if(!running)return;
  const delta=last?Math.max(0,Math.min(100,t-last)):0;last=t;
- if(playing&&!document.hidden)elapsed+=delta;countdown();
+ const shot=shots[index];
+ if(playing && !document.hidden && !(shot.detail && (imagePending || imageFailed))) elapsed+=delta;
+ if(shot.detail)host.style.setProperty('--opening-zoom',String(1.08+.14*Math.min(1,elapsed/shot.duration)));
+ countdown();
  const prior=shots.slice(0,index).reduce((n,s)=>n+s.duration,0);
  host.querySelector('.opening-progress span').style.width=((prior+Math.min(elapsed,shots[index].duration))/total*100)+'%';
  if(elapsed>=shots[index].duration){if(index===shots.length-1){finish();return;}index++;elapsed=0;paint();}
  frame=requestAnimationFrame(update);
 }
 function advance(){
- if(!running||performance.now()-lastAdvance<250)return;
+ if(!running||performance.now()<firstReadyAt||performance.now()-lastAdvance<250)return;
  lastAdvance=performance.now();
  // Artwork never blocks reading or advances a different page when its request completes.
  if(index===shots.length-1){finish();return;}index++;elapsed=0;last=0;paint();
@@ -174,12 +188,12 @@ function start(done,options={}){
  index=0;elapsed=0;last=0;lastAdvance=-Infinity;playing=true;onFinish=done||null;focusBefore=document.activeElement;wasActive=active;
  active=false;keys={};path=[];moving=false;window.NanlanDesktop?.discard();
  const wrap=document.getElementById('wrap');oldInert=!!wrap?.inert;if(wrap)wrap.inert=true;
- running=true;host.hidden=false;paint();host.querySelector('#openingNext').focus();window.NanlanAudio?.setDialogue(false);void window.NanlanAudio?.unlock();
+ running=true;host.hidden=false;paint();host.tabIndex=-1;host.focus({preventScroll:true});window.NanlanAudio?.setDialogue(false);void window.NanlanAudio?.unlock();
  frame=requestAnimationFrame(update);return true;
 }
 window.addEventListener('keydown',e=>{
  if(!running||e.ctrlKey||e.metaKey||e.altKey)return;
- if(e.key==='Tab'){const controls=[...host.querySelectorAll('button')].filter(b=>!b.disabled),i=controls.indexOf(document.activeElement),next=e.shiftKey?(i<=0?controls.length-1:i-1):(i+1)%controls.length;e.preventDefault();e.stopImmediatePropagation();controls[next].focus();return;}
+ if(e.key==='Tab'){const controls=[...host.querySelectorAll('button')].filter(b=>!b.disabled&&!b.hidden),i=controls.indexOf(document.activeElement),next=e.shiftKey?(i<=0?controls.length-1:i-1):(i+1)%controls.length;e.preventDefault();e.stopImmediatePropagation();controls[next].focus();return;}
  e.preventDefault();e.stopImmediatePropagation();if(e.repeat)return;
  if(e.key==='Escape')finish();else if(e.key===' '||e.key==='Enter'){
   if(document.activeElement?.id==='openingAuto')host.querySelector('#openingAuto').click();
@@ -193,7 +207,7 @@ window.NanlanOpening={start,finish,replay:()=>start(null,{
 }),running:()=>running,environment:()=>running?shots[index].environment:null,duration:openingShots.reduce((n,s)=>n+s.duration,0),shots:openingShots,play:(options,done)=>start(done,options)};
 const dictionary=window.NANLAN_EN||(window.NANLAN_EN={});
 Object.assign(dictionary,{
- '回看开场':'Replay Opening','回看完整开场故事':'Watch the Full Opening Story',
+ '回看开场':'Replay Opening','回看完整开场故事':'Watch the Full Opening Story','观看开场画卷':'Watch the Opening Scroll',
  '门内有声':'A Sound Behind the Gate',
  '雨刚停，门里响了两下。':'The rain has just stopped. Two knocks sound from behind the gate.',
  '一家人的干铺盖还在箱里。这扇门后，有没有一处地方能让大家睡下？':'The family’s dry bedding is still in the trunk. Is there anywhere behind this gate where everyone can sleep?',

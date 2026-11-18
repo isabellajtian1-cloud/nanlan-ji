@@ -1,0 +1,100 @@
+/* A silk-mounted landscape occupies the title screen. The story has its own paintings. */
+#start.lingnan-title {
+  --paper: #ecdcbb;
+  --ink: #293e31;
+  --edge: clamp(10px, 1.4vw, 26px);
+  --mount: clamp(14px, 3.4vh, 42px);
+  background: repeating-linear-gradient(0deg, #59473208 0 1px, transparent 1px 4px), #c1ac82;
+  padding: max(26px, 5vh) clamp(34px, 6vw, 105px);
+}
+.lingnan-title .title-scroll {
+  inset: var(--mount) var(--edge);
+  background: repeating-linear-gradient(0deg, #9779520a 0 1px, transparent 1px 3px), var(--paper);
+  border-block: 3px double #9b8056;
+  box-shadow: 0 2px 8px #55412440;
+}
+.lingnan-title .scroll-window { position: absolute; inset: 0; overflow: hidden; }
+.lingnan-title .title-scroll img {
+  width: 110%;
+  max-width: none;
+  height: 100%;
+  object-fit: cover;
+  object-position: 75% 52%;
+  filter: none;
+}
+.lingnan-title .title-roller {
+  z-index: 1;
+  left: 0;
+  width: clamp(12px, 1.3vw, 24px);
+  background: linear-gradient(90deg, #4e3628, #a47e4d 19%, #ddc393 46%, #eed9af 57%, #b39869 80%, #664d33);
+}
+#start.lingnan-title::before, #start.lingnan-title::after { content: none; }
+#start.lingnan-title .start-vignette {
+  inset: var(--mount) var(--edge);
+  background: linear-gradient(90deg, #f2e6cfee 2%, #f2e6cfea 17%, #f2e6cfd9 27%, #f2e6cfab 33%, #f2e6cf00 53%);
+}
+#start.lingnan-title .start-sheet { color: var(--ink); width: min(410px, 100%); }
+#start.lingnan-title h1 {
+  color: #253a2e; text-shadow: 0 1px #fff6de;
+  font-family: 'STKaiti', 'KaiTi', 'Kaiti SC', 'Songti SC', 'SimSun', serif;
+  font-weight: 500; letter-spacing: .12em; line-height: 1.13;
+}
+#start.lingnan-title .language-choice { color: #584e3d; border-color: #826a4947; margin-bottom: 20px; }
+#start.lingnan-title .language-choice button { color: #3d4634; background: #f6eddaab; border-color: #8d7858; }
+#start.lingnan-title .language-choice button[aria-pressed="true"] { color: #f9f0dd; background: #415441; border-color: #415441; }
+#start.lingnan-title #languageStatus {
+  position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+}
+#start.lingnan-title .eyebrow { color: #784f36; border-color: #96472f; }
+#start.lingnan-title .tagline, #start.lingnan-title .premise { color: #444934; }
+#start.lingnan-title .start-buttons { margin-top: 24px; }
+#start.lingnan-title .start-buttons button {
+  background: #364f3d; color: #fff4dc; border-color: #344a37; box-shadow: 0 2px 7px #53402b23;
+}
+#start.lingnan-title .start-buttons #openingReplay {
+  background: #f6ead1ef; color: #364735; border-color: #877454;
+}
+#start.lingnan-title .start-buttons button:hover { background: #273e2e; }
+#start.lingnan-title .start-buttons #openingReplay:hover { background: #fff3d9; }
+#start.lingnan-title .start-more { color: #4b4a38; border-color: #74644477; }
+#start.lingnan-title .save-summary, #start.lingnan-title .version-note,
+#start.lingnan-title #audioHint, #start.lingnan-title #bootStatus { color: #4b4a39; opacity: 1; }
+#start.lingnan-title #loadWarning { color: #733c27; }
+#start.lingnan-title .start-links button, #start.lingnan-title #startSound { background: #42533e; color: #fbefd6; }
+@media (prefers-reduced-motion: no-preference) {
+  .lingnan-title .title-scroll.unrolled .scroll-window { animation: lingnan-unroll 4.8s cubic-bezier(.23,.65,.3,1) both; }
+  .lingnan-title .title-scroll.unrolled .title-roller { animation: lingnan-roller 4.8s cubic-bezier(.23,.65,.3,1) both; }
+  .lingnan-title .title-scroll.unrolled img { animation: lingnan-survey 36s 3s ease-in-out infinite alternate both; }
+  @keyframes lingnan-unroll { from { clip-path: inset(0 0 0 88%); } to { clip-path: inset(0); } }
+  @keyframes lingnan-roller { from { left: 88%; } to { left: 0; } }
+  @keyframes lingnan-survey { from { transform: translateX(-8.5%); } to { transform: translateX(0); } }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lingnan-title .title-scroll img { width: 100%; }
+}
+@media (max-width: 650px) and (orientation: portrait) {
+  #start.lingnan-title {
+    display: block; padding: 9px 10px max(15px, env(safe-area-inset-bottom)); background-color: var(--paper);
+  }
+  .lingnan-title .title-scroll {
+    position: relative; inset: auto; height: clamp(145px, 28svh, 290px); width: 100%;
+  }
+  .lingnan-title .title-scroll img { object-position: 82% 60%; }
+  #start.lingnan-title .start-vignette { display: none; }
+  #start.lingnan-title .start-layout { margin: 0 auto; }
+  #start.lingnan-title .start-sheet { margin: auto; padding: 18px 12px 6px; }
+  #start.lingnan-title .language-choice { margin-bottom: 12px; }
+  #start.lingnan-title h1 { font-size: clamp(44px, 12vw, 70px); margin: 9px 0; }
+  #start.lingnan-title .tagline, #start.lingnan-title .premise { margin: 6px 0; }
+  #start.lingnan-title .start-buttons { gap: 8px; margin-top: 14px; max-width: none; }
+  #start.lingnan-title .start-buttons button { min-height: 44px; }
+  #start.lingnan-title .start-more { margin-top: 10px; }
+  #start.lingnan-title .version-note { margin-top: 8px; }
+}
+@media (max-height: 560px) and (orientation: landscape) {
+  #start.lingnan-title { --mount: 7px; --edge: 6px; padding: 14px 4vw; }
+  #start.lingnan-title .start-sheet { width: min(650px, 100%); padding-block: 2px; }
+  #start.lingnan-title .language-choice { margin-bottom: 4px; }
+  #start.lingnan-title .start-buttons { margin-top: 8px; }
+  #start.lingnan-title .start-vignette { background: linear-gradient(90deg,#f2e6cff0 0%,#f2e6cfe0 32%,#f2e6cf00 82%); }
+}

@@ -1822,7 +1822,8 @@ function setupCamera(rect,now){
     if(extent<=viewport)return (viewport-extent)/2;
     return Math.max(viewport-extent,Math.min(0,center-focus*scale));
   };
-  camera={entry,returningFromOverview,scale,ox:offset(vw,W,focusX,safe?safe.left+safe.width/2:vw/2),oy:offset(vh,H,focusY,safe?(safe.top+safe.bottom)/2:vh/2),focusX,focusY,dpr,vw,vh,scene:s.scene,started,whole,time:now};
+  const pixel=n=>Math.round(n*dpr)/dpr;
+  camera={entry,returningFromOverview,scale,ox:pixel(offset(vw,W,focusX,safe?safe.left+safe.width/2:vw/2)),oy:pixel(offset(vh,H,focusY,safe?(safe.top+safe.bottom)/2:vh/2)),focusX,focusY,dpr,vw,vh,scene:s.scene,started,whole,time:now};
 }
 function polygon(points,fill,stroke){
   ctx.beginPath();points.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));ctx.closePath();ctx.fillStyle=fill;ctx.fill();if(stroke){ctx.strokeStyle=stroke;ctx.stroke();}
@@ -1841,8 +1842,9 @@ function paintDifferenceLayers(){
     if(damage?.naturalWidth&&clean?.naturalWidth){
       ctx.drawImage(NanlanClimate.picture(damage,sc,s),0,0,W,H);
       // Independently restore each repaired part, including old saves that repaired only one.
-      if(f.windowPatched)ctx.drawImage(clean,490,0,350,210,490/1536*W,0,350/1536*W,210/1024*H);
-      if(f.leakPatched)ctx.drawImage(clean,840,0,696,475,840/1536*W,0,696/1536*W,475/1024*H);
+      const repaired=NanlanClimate.picture(clean,sc,s),rx=repaired.width/1536,ry=repaired.height/1024;
+      if(f.windowPatched)ctx.drawImage(repaired,490*rx,0,350*rx,210*ry,490/1536*W,0,350/1536*W,210/1024*H);
+      if(f.leakPatched)ctx.drawImage(repaired,840*rx,0,696*rx,475*ry,840/1536*W,0,696/1536*W,475/1024*H);
       if(f.windowPatched&&f.leakPatched)ctx.drawImage(NanlanClimate.picture(clean,sc,s),0,0,W,H);
     }
     if(!f.leakPatched){
@@ -1998,7 +2000,8 @@ function render(){
   ctx.setTransform(scale*dpr,0,0,scale*dpr,ox*dpr,oy*dpr);ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
   const s=state(),fallback=s.scene==='backHall'&&s.flags.v4_room?'backHallReady':s.scene==='bed'&&s.flags.leakPatched?'bedPatched':world[s.scene].asset;
   const baseKey=window.NanlanEstateUI?.backdrop(s,s.scene,fallback)||fallback;
-  const base=images[baseKey]||images[world[s.scene].asset];if(base?.naturalWidth)ctx.drawImage(NanlanClimate.picture(base,s.scene,s),0,0,W,H);
+  const base=images[baseKey]||images[world[s.scene].asset];
+  if(base?.naturalWidth){NanlanClimate.setResolution(s.scene,W*scale*dpr/base.naturalWidth);ctx.drawImage(NanlanClimate.picture(base,s.scene,s),0,0,W,H);}
   NanlanClimate.atmosphere(ctx,s.scene,s,performance.now(),W,H);
   window.NanlanWeather?.atmosphere(ctx,s.scene,s,performance.now(),W,H);
   if(s.scene==='banyanBrook')NanlanBrook.water(ctx,performance.now(),N.daylight(s).darkness);

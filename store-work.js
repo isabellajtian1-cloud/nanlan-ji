@@ -5,7 +5,7 @@ DATA.assets.storeBefore='store-before-v6922.webp';DATA.assets.storeAfter='store-
 for(const i of items)world.store.objects.push({id:'crateMove-'+i.id,label:i.name+' · 架高存货',type:'activity',action:'crateMove',item:i.id,x:i.foot[0]*W/1536,y:i.foot[1]*H/1024});
 function active(s){return N.current(s)==='M14'&&!s.flags.cratesRaised;}
 function moved(s,i){return !!(s.flags.cratesRaised||s.flags['crateRaised:'+i.id]);}
-function patches(ctx,image,r){ctx.drawImage(image,...r,r[0]*W/1536,r[1]*H/1024,r[2]*W/1536,r[3]*H/1024);}
+function patches(ctx,image,r){const sx=image.width/1536,sy=image.height/1024;ctx.drawImage(image,r[0]*sx,r[1]*sy,r[2]*sx,r[3]*sy,r[0]*W/1536,r[1]*H/1024,r[2]*W/1536,r[3]*H/1024);}
 function draw(ctx,s){if(s.scene!=='store'||(!active(s)&&!s.flags.cratesRaised))return;const before=images.storeBefore,after=images.storeAfter;if(!before?.naturalWidth||!after?.naturalWidth)return;
  ctx.drawImage(NanlanClimate.picture(s.flags.cratesRaised?after:before,'store',s),0,0,W,H);
  if(!s.flags.cratesRaised)for(const i of items)if(moved(s,i)){const art=NanlanClimate.picture(after,'store',s);patches(ctx,art,i.rect);patches(ctx,art,i.dest);}

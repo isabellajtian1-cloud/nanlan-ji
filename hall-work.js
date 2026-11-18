@@ -5,7 +5,7 @@ DATA.assets.hallBefore='hall-before-v6922.webp';DATA.assets.hallAfter='hall-afte
 for(const i of items)world.hall.objects.push({id:'hallMove-'+i.id,label:i.name+' · 整理通道',type:'activity',action:'hallMove',item:i.id,x:i.foot[0]*W/1536,y:i.foot[1]*H/1024});
 function active(s){return N.current(s)==='M14'&&!s.flags.hallwayCleared;}
 function moved(s,i){return !!(s.flags.hallwayCleared||s.flags['hallMoved:'+i.id]);}
-function patches(ctx,image,r){ctx.drawImage(image,...r,r[0]*W/1536,r[1]*H/1024,r[2]*W/1536,r[3]*H/1024);}
+function patches(ctx,image,r){const sx=image.width/1536,sy=image.height/1024;ctx.drawImage(image,r[0]*sx,r[1]*sy,r[2]*sx,r[3]*sy,r[0]*W/1536,r[1]*H/1024,r[2]*W/1536,r[3]*H/1024);}
 function draw(ctx,s){if(s.scene!=='hall'||window.NanlanEstate?.furnished(s)||(!active(s)&&!s.flags.hallwayCleared))return;const before=images.hallBefore,after=images.hallAfter;if(!before?.naturalWidth||!after?.naturalWidth)return;
  ctx.drawImage(NanlanClimate.picture(s.flags.hallwayCleared?after:before,'hall',s),0,0,W,H);
  if(!s.flags.hallwayCleared)for(const i of items)if(moved(s,i)){const art=NanlanClimate.picture(after,'hall',s);patches(ctx,art,i.rect);patches(ctx,art,i.dest);}

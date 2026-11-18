@@ -36,24 +36,37 @@ function sync(before,after){
 function label(s,english=false){const c=at(s);return english?'Year '+c.year+' · '+c.en+' day '+c.day:'第 '+c.year+' 年 · '+c.zh+'第 '+c.day+' 日';}
 const outdoor=new Set(['banyanBrook','gate','yard','village','market','county','foothill','mountain','mountainside','summit','bambooGrove','coast','tidalflat','wharf','oldTrail','qingxi','anchorage','qPier','qFair','qSalt','qBamboo','qBeacon','prefDock','prefMarket']);
 const gardens=new Set(['banyanBrook','yard','village','foothill','mountain','mountainside','summit','bambooGrove','oldTrail','qBamboo']);
-const cache=new Map();
+const cache=new Map(),resolution=new Map();
+let cachedPixels=0;
+// Reconstruct magnified paintings once, rather than soften the same low resolution
+// image on every frame. A pixel budget bounds retained canvases on tablets.
+function setResolution(scene,ratio){resolution.set(scene,ratio>1.15?2:1);}
+function detail(canvas,factor){
+ const c=canvas.getContext('2d',{willReadFrequently:true});
+ const data=c.getImageData(0,0,canvas.width,canvas.height),p=data.data;
+ const w=canvas.width,h=canvas.height,luma=new Float32Array(w*h);
+ for(let i=0,j=0;i<p.length;i+=4,j++)luma[j]=p[i]*.2126+p[i+1]*.7152+p[i+2]*.0722;
+ const fine=factor,wide=4*factor;
+ for(let y=wide;y<h-wide;y++)for(let x=wide;x<w-wide;x++){
+  const j=y*w+x,i=j*4;if(p[i+3]<250)continue;
+  const a=luma[j]-(luma[j-fine]+luma[j+fine]+luma[j-fine*w]+luma[j+fine*w])*.25;
+  const b=luma[j]-(luma[j-wide]+luma[j+wide]+luma[j-wide*w]+luma[j+wide*w])*.25;
+  // Ignore near-flat paint and compression noise; bound the lift to avoid halos.
+  const delta=Math.max(-13,Math.min(13,(Math.abs(a)>1?a*.82:0)+b*.20));
+  for(let k=0;k<3;k++)p[i+k]+=delta;
+ }
+ c.putImageData(data,0,0);
+}
 function picture(image,scene,s){
  if(!image?.naturalWidth||typeof document==='undefined')return image;
- const season=at(s),key=image.src+'|'+scene+'|'+season.key;
+ const factor=(resolution.get(scene)||1)===2&&image.naturalWidth*image.naturalHeight<=3200000?2:1;
+ const season=at(s),key=image.src+'|'+scene+'|'+season.key+'|'+factor;
  if(cache.has(key)){const c=cache.get(key);cache.delete(key);cache.set(key,c);return c;}
  const canvas=document.createElement('canvas');canvas.width=image.naturalWidth;canvas.height=image.naturalHeight;
  const c=canvas.getContext('2d',{willReadFrequently:true});if(!c)return image;
  c.drawImage(image,0,0);
  try{
-  const data=c.getImageData(0,0,canvas.width,canvas.height),p=data.data,original=new Uint8ClampedArray(p),stride=canvas.width*4;
-  // Modest bounded detail contrast keeps every original scene readable without bright edge halos.
-  for(let y=1;y<canvas.height-1;y++)for(let x=1;x<canvas.width-1;x++){
-    const i=y*stride+x*4;
-    for(let channel=0;channel<3;channel++){
-      const j=i+channel,detail=original[j]-(original[j-4]+original[j+4]+original[j-stride]+original[j+stride])/4;
-      p[j]=original[j]+Math.max(-10,Math.min(10,detail*.42));
-    }
-  }
+  const data=c.getImageData(0,0,canvas.width,canvas.height),p=data.data;
   if(outdoor.has(scene)){
   for(let i=0;i<p.length;i+=4){
    const r=p[i],g=p[i+1],b=p[i+2],green=(gardens.has(scene)?1:0)*Math.max(0,Math.min(1,(g-b-6)/35))*Math.max(0,Math.min(1,(g-r+18)/45));
@@ -66,7 +79,19 @@ function picture(image,scene,s){
   c.putImageData(data,0,0);
  }catch{ /* A cross-origin image still renders; only the fine vegetation grading is skipped. */ }
  if(outdoor.has(scene)){c.fillStyle=['rgba(232,239,198,.02)','rgba(243,214,139,.015)','rgba(239,202,143,.025)','rgba(193,213,218,.04)'][season.index];c.fillRect(0,0,canvas.width,canvas.height);}
- cache.set(key,canvas);while(cache.size>8)cache.delete(cache.keys().next().value);return canvas;
+ let result=canvas;
+ if(factor===2){
+  result=document.createElement('canvas');result.width=canvas.width*2;result.height=canvas.height*2;
+  const expanded=result.getContext('2d',{willReadFrequently:true});
+  expanded.imageSmoothingEnabled=true;expanded.imageSmoothingQuality='high';
+  expanded.drawImage(canvas,0,0,result.width,result.height);
+ }
+ try{detail(result,factor);}catch{ /* Keep painting if pixel access is unavailable. */ }
+ const pixels=result.width*result.height;
+ while(cache.size&&(cache.size>=6||cachedPixels+pixels>26000000)){
+  const first=cache.keys().next().value,old=cache.get(first);cachedPixels-=old.width*old.height;cache.delete(first);
+ }
+ cache.set(key,result);cachedPixels+=pixels;return result;
 }
 function atmosphere(c,scene,s,time,w,h){
  if(!outdoor.has(scene)){
@@ -94,6 +119,6 @@ function preview(img,scene,s){
  raw.src=src;
  img.dataset.season=at(s).key;
 }
-return {at,label,normalise,sync,infer,picture,atmosphere,preview,note,length};
+return {at,label,normalise,sync,infer,picture,setResolution,atmosphere,preview,note,length};
 });
 

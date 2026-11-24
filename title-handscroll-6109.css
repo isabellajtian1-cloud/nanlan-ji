@@ -60,6 +60,23 @@
 #start.lingnan-title .save-summary, #start.lingnan-title .version-note,
 #start.lingnan-title #audioHint, #start.lingnan-title #bootStatus { color: #4b4a39; opacity: 1; }
 #start.lingnan-title #loadWarning { color: #733c27; }
+.lingnan-title .title-options {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px;
+  padding-bottom: 10px; margin-bottom: 16px; border-bottom: 1px solid #826a4947;
+}
+#start.lingnan-title .title-options .language-choice { margin: 0; padding: 0; border: 0; }
+#start.lingnan-title #titleMusic {
+  margin-left: auto; min-height: 44px; padding: 4px 10px; border: 1px solid #998361;
+  border-radius: 4px; background: #f6eddaab; color: #394936; font: inherit;
+  font-size: 13px; cursor: pointer;
+}
+#start.lingnan-title #titleMusic span:first-child { margin-right: 3px; }
+#start.lingnan-title #titleMusic[aria-pressed="true"] { background: #e0dfc6; }
+@media(max-width:420px) {
+  #start.lingnan-title .title-options { gap: 3px 6px; }
+  #start.lingnan-title .title-options .language-choice { gap: 5px; }
+  #start.lingnan-title .title-options .language-choice button { padding-inline: 9px; }
+}
 #start.lingnan-title .start-links button, #start.lingnan-title #startSound { background: #42533e; color: #fbefd6; }
 @media (prefers-reduced-motion: no-preference) {
   .lingnan-title .title-scroll.unrolled .scroll-window { animation: lingnan-unroll 4.8s cubic-bezier(.23,.65,.3,1) both; }

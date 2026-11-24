@@ -40,6 +40,31 @@
     store: [[426,599,665,676],[253,268,787,310]]
   };
   const original = new WeakMap();
+  // The east path bends back uphill behind the bamboo rail. Its centre and
+  // width follow the stones at each row, in the painting's world coordinates.
+  const eastLane = [[249,873,10],[260,899,12],[276,926,13],
+    [293,956,16],[311,978,19],[336,982,22],[358,975,24],[382,958,25]];
+  function onEastLane(x,y){
+    for(let i=1;i<eastLane.length;i++){
+      const [y0,x0,w0]=eastLane[i-1], [y1,x1,w1]=eastLane[i];
+      if(y<y0||y>y1)continue;
+      const t=(y-y0)/(y1-y0);
+      return Math.abs(x-(x0+t*(x1-x0)))<=w0+t*(w1-w0);
+    }
+    return false;
+  }
+  const laneMouth={x:982,y:336};
+  function laneRoute(from,to){
+    const centre=y=>{
+      const i=eastLane.findIndex(row=>row[0]>=y);
+      if(i<=0)return {x:eastLane[0][1],y};
+      const [a,x]=eastLane[i-1], [b,z]=eastLane[i];
+      return {x:x+(z-x)*(y-a)/(b-a),y};
+    };
+    const turns=eastLane.filter(([y])=>y>Math.min(from.y,to.y)&&y<Math.max(from.y,to.y));
+    if(from.y>to.y)turns.reverse();
+    return [centre(from.y),...turns.map(([y,x])=>({x,y})),centre(to.y),to];
+  }
   function configure(world) {
     for (const [id, lanes] of Object.entries(extensions)) {
       const w = world[id];
@@ -56,9 +81,18 @@
     }
   }
   const within = (r,x,y) => x >= r[0] && y >= r[1] && x <= r[2] && y <= r[3];
-  function outside(id, scene, x, y) {
+  function outside(id, scene, x, y, clearance=0) {
     const base = original.get(scene);
-    return !!base && !within(base,x,y) && !extensions[id].some(r => within(r,x,y));
+    if (!base) return false;
+    const onFloor=(px,py)=>within(base,px,py)||extensions[id].some(r=>within(r,px,py))||
+      (id==='village' && onEastLane(px,py));
+    if (!onFloor(x,y)) return true;
+    // A smoothed route must clear the inside corner even between sampled points.
+    if (id==='village' && x>835 && y<320 && clearance>0) {
+      const edge=Math.min(3,clearance);
+      return !onFloor(x-edge,y)||!onFloor(x+edge,y)||!onFloor(x,y-edge)||!onFloor(x,y+edge);
+    }
+    return false;
   }
 
   // These walls are visible in all four painted room states. The opening stays
@@ -90,5 +124,5 @@
     workbench:{width:167,height:112,foot:[-66,-53,132,55]},
     bookBox:{width:39,height:33,foot:[-17,-16,34,18]}
   };
-  return {profiles,actor,zoom,configure,outside,solids,furnishing,furniture,props};
+  return {profiles,actor,zoom,configure,outside,onEastLane,laneMouth,laneRoute,solids,furnishing,furniture,props};
 });

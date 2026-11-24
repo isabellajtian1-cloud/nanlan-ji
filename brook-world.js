@@ -28,9 +28,9 @@
       door('brookFoothill','过桥往青岚山脚','foothill',1050,326,[1,0]),
       {id:'brookBench',label:'溪亭长凳',x:239,y:218,type:'view',lines:benchText,scenic:true,approach:{x:252,y:228},hit:{x:196,y:170,w:87,h:53}},
       {id:'brookRail',label:'石栏听水',x:527,y:349,type:'view',lines:railText,scenic:true,approach:{x:527,y:331},hit:{x:444,y:333,w:160,h:33}}]};
-  world.village.objects.push(door('villageBrook',name,'banyanBrook',987,334,[1,0]));
+  world.village.objects.push(door('villageBrook',name,'banyanBrook',885,254,[-1,-1]));
   world.foothill.objects.push(door('foothillBrook',name,'banyanBrook',1012,435,[1,0]));
-  world.village.arrivalFrom={...world.village.arrivalFrom,banyanBrook:[932,339]};
+  world.village.arrivalFrom={...world.village.arrivalFrom,banyanBrook:[919,272]};
   world.foothill.arrivalFrom={...world.foothill.arrivalFrom,banyanBrook:[934,435]};
   Object.assign(window.NANLAN_EN,{
     '榕溪石径':'Banyan Brook Lane','沿溪回南澜村':'Follow the brook back to Nanlan Village',

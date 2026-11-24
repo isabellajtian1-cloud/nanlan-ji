@@ -1598,7 +1598,7 @@ function insideObjectFootprint(o,x,y,clearance=0){
 }
 function baseBlocked(x,y,clearance=0){
   const scene=state().scene,w=world[scene],b=w.bounds;
-  if(NanlanSceneScale.outside(scene,w,x,y))return true;
+  if(NanlanSceneScale.outside(scene,w,x,y,clearance))return true;
   if(w.walkCorridor&&!w.walkCorridor(x,y,clearance))return true;
   if(x<b[0]||x>b[2]||y<b[1]||y>b[3])return true;
   if(state().scene==='yard'&&window.NanlanEstate.gifted(state())&&window.NanlanEstate.giftBlocks(x,y,clearance))return true;
@@ -1638,15 +1638,35 @@ function clearWalkLine(from,to,clearance,obstacles){
   return true;
 }
 function findPath(target){
-  const s=state(),step=14,b=world[s.scene].bounds,cols=Math.ceil((b[2]-b[0])/step)+1,rows=Math.ceil((b[3]-b[1])/step)+1;
+  const s=state(),from=s.player,layout=NanlanSceneScale;
+  if(s.scene!=='village'||!layout.laneRoute)return findGridPath(target,from);
+  const uphill=p=>p.y<320&&layout.onEastLane(p.x,p.y);
+  const goingUp=uphill(target),comingDown=uphill(from);
+  if(!goingUp&&!comingDown)return findGridPath(target,from);
+  // The switchback is narrower than the village grid. Follow its painted centre,
+  // and use normal obstacle-aware routing between the foot of the lane and town.
+  const mouth=layout.laneMouth,obstacles=visibleObjects();
+  let origin=comingDown?from:mouth;
+  const lane=layout.laneRoute(origin,goingUp?target:mouth);
+  for(const step of lane){
+    if(!clearWalkLine(origin,step,0,obstacles))return null;
+    origin=step;
+  }
+  const before=comingDown?[]:findGridPath(mouth,from);
+  const after=goingUp?[]:findGridPath(target,mouth);
+  return before&&after?[...before,...lane,...after]:null;
+}
+function findGridPath(target,from){
+  const s=state(),b=world[s.scene].bounds,step=14;
+  const cols=Math.ceil((b[2]-b[0])/step)+1,rows=Math.ceil((b[3]-b[1])/step)+1;
   const obstacles=visibleObjects(),point=target.object?interactionPoint(target.object):null;
-  if(!target.object&&clearWalkLine(s.player,target,10,obstacles))return [{x:target.x,y:target.y}];
+  if(!target.object&&clearWalkLine(from,target,10,obstacles))return [{x:target.x,y:target.y}];
   const cell=(x,y)=>[Math.max(0,Math.min(cols-1,Math.round((x-b[0])/step))),Math.max(0,Math.min(rows-1,Math.round((y-b[1])/step)))];
-  const xy=(x,y)=>({x:b[0]+x*step,y:b[1]+y*step}),start=cell(s.player.x,s.player.y),end=cell(target.x,target.y),key=(x,y)=>x+','+y;
+  const xy=(x,y)=>({x:b[0]+x*step,y:b[1]+y*step}),start=cell(from.x,from.y),end=cell(target.x,target.y),key=(x,y)=>x+','+y;
   const queue=[start],previous=new Map([[key(...start),null]]);
   let finish=null;
   for(let n=0;n<queue.length;n++){
-    const [x,y]=queue[n],p=n===0?s.player:xy(x,y);
+    const [x,y]=queue[n],p=n===0?from:xy(x,y);
     if((target.object&&Math.hypot(p.x-point.x,p.y-point.y)<=(target.object.type==='door'?16:point!==target.object?18:64)&&!blocked(p.x,p.y))||(!target.object&&Math.hypot(x-end[0],y-end[1])<=.1)){finish=[x,y];break;}
     for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]]){
       const nx=x+dx,ny=y+dy,k=key(nx,ny),np=xy(nx,ny);if(nx<0||ny<0||nx>=cols||ny>=rows||previous.has(k)||movementBlocked(np.x,np.y,p.x,p.y,10,obstacles))continue;
@@ -1656,11 +1676,11 @@ function findPath(target){
   }
   if(!finish)return null;const points=[];for(let at=finish;at;at=previous.get(key(...at)))points.unshift(xy(...at));
   points.shift();
-  if(!target.object&&clearWalkLine(points.at(-1)||s.player,target,0,obstacles))points.push({x:target.x,y:target.y});
-  if(!points.length)return [{x:s.player.x,y:s.player.y,object:target.object}];
+  if(!target.object&&clearWalkLine(points.at(-1)||from,target,0,obstacles))points.push({x:target.x,y:target.y});
+  if(!points.length)return [{x:from.x,y:from.y,object:target.object}];
   // Keep turns around solid scenery, and join open sections in a single straight line.
   const route=[];
-  let anchor=s.player;
+  let anchor=from;
   for(let i=0;i<points.length;i++){
     let far=points.length-1;
     while(far>i&&!clearWalkLine(anchor,points[far],10,obstacles))far--;
@@ -1793,19 +1813,27 @@ function setupCamera(rect,now){
   const compact=!!window.NanlanMobile?.compact();
   const entry=NanlanDepth.framing(s.scene,camera.scene===s.scene && camera.started===started ? camera.entry : null,
     s.player,moving,compact,reduceCameraMotion.matches);
-  const zoom=NanlanSceneScale.zoom(s.scene)*entry.zoom;
+  const landscape=window.NanlanLandscape;
+  const walkingView=landscape?.views[s.scene];
+  const zoom=walkingView ? walkingView.zoom : NanlanSceneScale.zoom(s.scene)*entry.zoom;
   const targetScale=whole?fullScale:portraitScale*zoom*(window.NanlanMobile?.compact() ? .89 : 1);
   const mobile=window.NanlanMobile?.compact(),safe=!whole&&mobile?window.NanlanMobile.safeFrame?.():null;
   const resized=camera.vw!==vw||camera.vh!==vh||camera.scene!==s.scene||camera.whole!==whole;
   let targetX=whole?W/2:s.player.x;
   // Frame the character's body above its feet without hiding the path ahead.
   let targetY=whole?H/2:s.player.y-43*actorScale(s.player.y);
+  const walk=walkingView&&!whole ? landscape.walkingFrame(s.player,
+    resized?null:camera.walk,moving,reduceCameraMotion.matches,{width:vw/targetScale,height:vh/targetScale}) : null;
+  if(walk){
+    targetX+=walk.aheadX;
+    targetY+=walk.aheadY;
+  }
   // A small walking window lets feet travel across the road before the camera follows.
   // Stop following immediately at rest; scenery must not slide under a planted actor.
   if(!whole&&!resized&&camera.focusX!==undefined){
     const follow=(current,target,radius)=>current+Math.sign(target-current)*Math.max(0,Math.abs(target-current)-radius);
-    targetX=moving?follow(camera.focusX,targetX,Math.min(56,vw/targetScale*.09)):camera.focusX;
-    targetY=moving?follow(camera.focusY,targetY,Math.min(35,vh/targetScale*.065)):camera.focusY;
+    targetX=moving?follow(camera.focusX,targetX,Math.min(56,vw/targetScale*(walkingView ? .033 : .09))):camera.focusX;
+    targetY=moving?follow(camera.focusY,targetY,Math.min(35,vh/targetScale*(walkingView ? .045 : .065))):camera.focusY;
   }
   const resize=camera.vw!==vw||camera.vh!==vh||camera.dpr!==dpr;
   const snap=resize||camera.scene!==s.scene||camera.started!==started||reduceCameraMotion.matches;
@@ -1823,7 +1851,7 @@ function setupCamera(rect,now){
     return Math.max(viewport-extent,Math.min(0,center-focus*scale));
   };
   const pixel=n=>Math.round(n*dpr)/dpr;
-  camera={entry,returningFromOverview,scale,ox:pixel(offset(vw,W,focusX,safe?safe.left+safe.width/2:vw/2)),oy:pixel(offset(vh,H,focusY,safe?(safe.top+safe.bottom)/2:vh/2)),focusX,focusY,dpr,vw,vh,scene:s.scene,started,whole,time:now};
+  camera={entry,walk,returningFromOverview,scale,ox:pixel(offset(vw,W,focusX,safe?safe.left+safe.width/2:vw/2)),oy:pixel(offset(vh,H,focusY,safe?(safe.top+safe.bottom)/2:vh/2)),focusX,focusY,dpr,vw,vh,scene:s.scene,started,whole,time:now};
 }
 function polygon(points,fill,stroke){
   ctx.beginPath();points.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));ctx.closePath();ctx.fillStyle=fill;ctx.fill();if(stroke){ctx.strokeStyle=stroke;ctx.stroke();}
@@ -2001,7 +2029,13 @@ function render(){
   const s=state(),fallback=s.scene==='backHall'&&s.flags.v4_room?'backHallReady':s.scene==='bed'&&s.flags.leakPatched?'bedPatched':world[s.scene].asset;
   const baseKey=window.NanlanEstateUI?.backdrop(s,s.scene,fallback)||fallback;
   const base=images[baseKey]||images[world[s.scene].asset];
-  if(base?.naturalWidth){NanlanClimate.setResolution(s.scene,W*scale*dpr/base.naturalWidth);ctx.drawImage(NanlanClimate.picture(base,s.scene,s),0,0,W,H);}
+  let painting=null;
+  if(base?.naturalWidth){
+    NanlanClimate.setResolution(s.scene,W*scale*dpr/base.naturalWidth);
+    painting=NanlanClimate.picture(base,s.scene,s);
+    ctx.drawImage(painting,0,0,W,H);
+    window.NanlanLandscape?.paint(ctx,painting,s.scene,camera,false,reduceCameraMotion.matches,0);
+  }
   NanlanClimate.atmosphere(ctx,s.scene,s,performance.now(),W,H);
   window.NanlanWeather?.atmosphere(ctx,s.scene,s,performance.now(),W,H);
   if(s.scene==='banyanBrook')NanlanBrook.water(ctx,performance.now(),N.daylight(s).darkness);
@@ -2144,6 +2178,7 @@ function render(){
 
   }
   actors.sort((a,b)=>a.y-b.y).forEach(actor=>actor.draw());
+  window.NanlanLandscape?.paint(ctx,painting,s.scene,camera,true,reduceCameraMotion.matches,depth.day.darkness);
   drawEntranceSigns();
 
   renderGardenWorkFx(time);
@@ -2276,7 +2311,12 @@ $('continueGame').onclick=async()=>{
   try{
     if(!await loadSceneAssets(check.state.scene,check.state)){startLoadError(deskText('场景画面未能全部载入。请重试，原存档已保留。','Some scene artwork could not load. Retry; your save is safe.'),()=>$('continueGame').onclick());return;}
     if(localStorage.getItem(N.SAVE_KEY)!==resumeRaw){storedRaw=localStorage.getItem(N.SAVE_KEY);window.NanlanChapterMark?.refresh();startLoadError(deskText('另一页更新了进度，请核对时辰后再次继续。','Another page updated the save. Review the time and continue again.'),()=>$('continueGame').onclick());return;}
-    applyRestoredSnapshot(check.state,resumeRaw);notice(!state().flags.volume2Started&&N.done(state(),'M20')?(window.NanlanI18n?.language==='en'?'Progress restored. Volume II is available; open the South Street notice in your task panel.':'进度已恢复。第二卷已可开启，打开任务栏里的「南街铺讯」，到正厅与家人商议。'):deskText('进度已恢复 · '+timeText().short+'。左上角可查看当前任务。','Progress restored · '+timeText().short+'. Your current quest is at the top left.'));
+    applyRestoredSnapshot(check.state,resumeRaw);
+    if(window.NanlanWalkSample){
+      notice(deskText('沿竹篱往上走，点「榕溪石径」入溪，再向右过桥。此页单独试走。','Follow the bamboo fence uphill and tap Banyan Brook Lane. Cross the bridge to the right. This walk has its own session.'));
+    }else{
+      notice(!state().flags.volume2Started&&N.done(state(),'M20')?(window.NanlanI18n?.language==='en'?'Progress restored. Volume II is available; open the South Street notice in your task panel.':'进度已恢复。第二卷已可开启，打开任务栏里的「南街铺讯」，到正厅与家人商议。'):deskText('进度已恢复 · '+timeText().short+'。左上角可查看当前任务。','Progress restored · '+timeText().short+'. Your current quest is at the top left.'));
+    }
   }finally{transitioning=false;$('continueGame').disabled=false;$('continueGame').textContent=continueLabel;$('continueGame').removeAttribute('aria-busy');}
 };
 try{
@@ -2335,6 +2375,7 @@ function resumeAfterFocus(){lastFrame=performance.now();active=started&&$('start
 window.addEventListener('blur',()=>{keys={};path=[];moving=false;active=false;if(started)engine.save();});
 window.addEventListener('focus',resumeAfterFocus);
 window.addEventListener('storage',e=>{
+ if(window.NanlanWalkSample)return;
  if(e.key!==N.SAVE_KEY||e.newValue===engine.loadedRaw||localStorage.getItem(N.SAVE_KEY)===engine.loadedRaw)return;
  storedRaw=e.newValue;
  if(!started){$('continueGame').hidden=!storedRaw;window.NanlanChapterMark?.refresh();window.NanlanChapters?.refreshTitle();return;}

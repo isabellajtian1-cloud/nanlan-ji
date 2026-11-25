@@ -59,7 +59,7 @@ function show(i=selected){selected=i;const s=state(),p=s.production,z=M.status(s
          ];
          for(const [id,label,ready] of foods){
            const b=button(label,()=>NanlanPondFeeding.open(id,()=>show(2)),'pond-food-'+id,false,false);
-           b.disabled=!ready;
+           b.disabled=!ready;NanlanPondFeeding.bindChoice(b);
          }
          if(!foods.some(row=>row[2]))paragraph(L('可在乡邻补给摊买鱼食，也可用两份桑叶或一份蚕沙。','Buy feed at the village pantry, or bring two leaves or one share of silkworm litter.'));
        }else{

@@ -96,5 +96,19 @@
     };
     draw();
   }
-  window.NanlanPondFeeding={open};
+  function bindChoice(b){
+    // Some touch browsers release a focused button without dispatching a click.
+    // Keep native scrolling: only a short, stationary press on the same button selects food.
+    let press=null;
+    b.addEventListener('pointerdown',e=>{if(e.pointerType==='touch'&&e.isPrimary&&!b.disabled)press={id:e.pointerId,x:e.clientX,y:e.clientY};});
+    b.addEventListener('pointermove',e=>{if(press?.id===e.pointerId&&Math.hypot(e.clientX-press.x,e.clientY-press.y)>10)press=null;});
+    b.addEventListener('pointercancel',()=>{press=null;});
+    b.addEventListener('pointerup',e=>{
+      if(press?.id!==e.pointerId)return;
+      const p=press;press=null;
+      if(Math.hypot(e.clientX-p.x,e.clientY-p.y)>10||!b.contains(document.elementFromPoint(e.clientX,e.clientY)))return;
+      e.preventDefault();b.click();
+    });
+  }
+  window.NanlanPondFeeding={open,bindChoice};
 })();

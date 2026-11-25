@@ -166,7 +166,8 @@ window.NanlanDepth = (() => {
     const cloud=weather?.wet ? .29 : weather?.id==='fog' ? .45 : weather?.id==='cloud' ? .67 : 1;
     // An enlarged cache has more pixels, but its source still sets the painted detail scale.
     const width=sourceWidth||image?.naturalWidth||image?.width;
-    const density=width?Math.max(1.65,Math.min(4,width/1100*1.2)):4;
+    // Faces and woven patterns need finer sampling than a broad painted stroke.
+    const density=width?Math.max(2,Math.min(4,width/1100*1.85)):4;
     return {p:plates[scene],map:groundMap(image),density,day,sun:(1-day.darkness)*cloud};
   }
   function beam(opening,x,y) {
@@ -180,7 +181,9 @@ window.NanlanDepth = (() => {
   }
   function surface(){return document.createElement('canvas').getContext('2d');}
   function raster(view,x,y,w,h,ground,paintDensity=4){
-    const res=Math.min(ground?1:paintDensity,view.a);
+    // Keep device alignment near the native target. A second, nearly 1:1
+    // resample visibly softens the eyes without changing the silhouette.
+    const res=ground?Math.min(1,view.a):view.a<=paintDensity*1.12?view.a:paintDensity;
     const snap=(v,offset)=>(Math.floor(v*res+offset)-offset)/res;
     const left=snap(x,view.e*res/view.a),top=snap(y,view.f*res/view.d);
     return {res,left,top,w:Math.ceil((x+w-left)*res),h:Math.ceil((y+h-top)*res)};

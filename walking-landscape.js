@@ -25,8 +25,13 @@ window.NanlanLandscape = (() => {
   function makePlanes(picture,view){
     const [x,y,rx,ry]=view.distant;
     const valley=document.createElement('canvas');
-    valley.width=rx*2;valley.height=ry*2;
+    // Keep the same sampling density as the seasonally graded ground. A
+    // world-sized crop discards the small branches and rooflines before zoom.
+    valley.width=Math.ceil(rx*2*picture.width/1100);
+    valley.height=Math.ceil(ry*2*picture.height/733);
     const g=valley.getContext('2d');
+    g.scale(valley.width/(rx*2),valley.height/(ry*2));
+    g.imageSmoothingEnabled=true;g.imageSmoothingQuality='high';
     g.drawImage(picture,rx-x,ry-y,1100,733);
     g.save();g.scale(rx,ry);
     const fade=g.createRadialGradient(1,1,0,1,1,1);
@@ -60,14 +65,14 @@ window.NanlanLandscape = (() => {
     }
     const planes={valley,spray};cache.set(picture,planes);return planes;
   }
-  function paint(ctx,picture,scene,camera,front,reduced,darkness){
+  function paint(ctx,picture,scene,camera,front,reduced){
     const view=views[scene];if(!view||!picture||camera.whole)return;
     const {valley,spray}=cache.get(picture)||makePlanes(picture,view);
     const cx=(camera.vw*.5-camera.ox)/camera.scale;
     const cy=(camera.vh*.5-camera.oy)/camera.scale;
     const [x,y,rx,ry]=view.distant;
     if(!front){
-      if(!reduced)ctx.drawImage(valley,x-rx+(cx-550)*.032,y-ry+(cy-300)*.022);
+      if(!reduced)ctx.drawImage(valley,x-rx+(cx-550)*.032,y-ry+(cy-300)*.022,2*rx,2*ry);
       return;
     }
     for(const [anchor,tip,size,side] of view.branches){
@@ -75,7 +80,6 @@ window.NanlanLandscape = (() => {
       const top=Math.min(tip+dy-size*172,-camera.oy/camera.scale-4);
       ctx.save();ctx.translate(anchor+dx,top);ctx.scale(size*side,size);
       ctx.globalAlpha=.98;
-      if(darkness>.05)ctx.filter='brightness('+Math.max(.43,1-darkness*.56)+')';
       ctx.drawImage(spray,0,0,185,172);ctx.restore();
     }
   }

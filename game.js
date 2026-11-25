@@ -1898,7 +1898,10 @@ function paintDifferenceLayers(){
   }
   // Bedroom leak and repaired states are full painted variants, avoiding mismatched canvas patches.
   if(f.v2ShopLamp&&sc==='generalStore'){const glow=ctx.createRadialGradient(830,365,3,830,365,100);glow.addColorStop(0,'rgba(255,210,132,.35)');glow.addColorStop(1,'rgba(255,210,132,0)');ctx.fillStyle=glow;ctx.fillRect(730,265,200,200);}
-  const daylight=N.daylight(s);
+}
+// Grade the finished world once so the same light falls on the path, clothes and props.
+function paintWorldLight(s,daylight){
+  const f=s.flags,sc=s.scene;
   if(daylight.warmth){ctx.fillStyle='rgba(190,116,36,'+(daylight.warmth*.13)+')';ctx.fillRect(0,0,W,H);}
   if(daylight.morning){ctx.fillStyle='rgba(242,206,98,'+(daylight.morning*.12)+')';ctx.fillRect(0,0,W,H);}
   if(daylight.darkness){
@@ -1978,7 +1981,7 @@ function renderCharacter(brush=ctx,inCourtyard=false){
 function drawGatheredResource(im,o,size){
   const height=size*im.naturalHeight/im.naturalWidth,flat=['wood','stone','shell','clam','seaweed'].includes(o.type),ground=o.y+2;
   ctx.save();const shadow=ctx.createRadialGradient(o.x,ground,0,o.x,ground,size*.48);shadow.addColorStop(0,'#25302262');shadow.addColorStop(1,'#25302200');ctx.fillStyle=shadow;ctx.beginPath();ctx.ellipse(o.x,ground,size*.46,flat?size*.09:size*.12,0,0,Math.PI*2);ctx.fill();
-  ctx.filter='brightness('+(1-N.daylight(state()).darkness*.42)+') saturate(.86)';ctx.drawImage(im,o.x-size/2,ground-height,size,height);ctx.restore();
+  ctx.filter='saturate(.86)';ctx.drawImage(im,o.x-size/2,ground-height,size,height);ctx.restore();
 }
 function isGatherable(o){return resourceTypes.includes(o.type)||o.action==='garden';}
 function storePickup(o){return state().scene==='store'?({tools:0,bucket:1,axe:2}[o.action]):undefined;}
@@ -1998,7 +2001,7 @@ function drawGroundedProp(im,x,y,w,h){
   const shadow=ctx.createRadialGradient(x,groundY,1,x,groundY,w*.48);
   shadow.addColorStop(0,'#20291ee0');shadow.addColorStop(.45,'#26302170');shadow.addColorStop(1,'#26302100');
   ctx.fillStyle=shadow;ctx.beginPath();ctx.ellipse(x,groundY,w*.5,h*.12,0,0,Math.PI*2);ctx.fill();
-  ctx.filter='brightness('+(1-N.daylight(state()).darkness*.42)+') saturate(.88)';
+  ctx.filter='saturate(.88)';
   const crop=im===images.stove?[68,110,1106,1074]:[214,70,1008,1044];
   ctx.drawImage(im,...crop,x-w/2,y-h,w,h);ctx.restore();
 }
@@ -2034,21 +2037,19 @@ function render(){
     NanlanClimate.setResolution(s.scene,W*scale*dpr/base.naturalWidth);
     painting=NanlanClimate.picture(base,s.scene,s);
     ctx.drawImage(painting,0,0,W,H);
-    window.NanlanLandscape?.paint(ctx,painting,s.scene,camera,false,reduceCameraMotion.matches,0);
+    window.NanlanLandscape?.paint(ctx,painting,s.scene,camera,false,reduceCameraMotion.matches);
   }
-  NanlanClimate.atmosphere(ctx,s.scene,s,performance.now(),W,H);
-  window.NanlanWeather?.atmosphere(ctx,s.scene,s,performance.now(),W,H);
   if(s.scene==='banyanBrook')NanlanBrook.water(ctx,performance.now(),N.daylight(s).darkness);
   paintDifferenceLayers();
-  const depth=NanlanDepth.frame(s.scene,base,N.daylight(s),window.NanlanWeather?.current(s));
+  const depth=NanlanDepth.frame(s.scene,painting||base,N.daylight(s),window.NanlanWeather?.current(s),base?.naturalWidth);
   NanlanDepth.air(ctx,depth,performance.now(),reduceCameraMotion.matches);
   hitTargets=[];
   const left=Math.max(8,-camera.ox/camera.scale+8),right=Math.min(W-8,(camera.vw-camera.ox)/camera.scale-8);
   const time=performance.now(),objective=localObjectiveObject(),destination=path[path.length-1]?.object;
   const people=visibleObjects().filter(o=>npcRole(o));
-  const lighting=s.scene==='yard'?NanlanCourtyard.frame(base===images[baseKey]?baseKey:world.yard.asset,images.courtyardMattes,N.daylight(s),window.NanlanWeather?.current(s),s.flags.stableLights):null;
+  const lighting=s.scene==='yard'?NanlanCourtyard.frame(base===images[baseKey]?baseKey:world.yard.asset,images.courtyardMattes,depth.day,window.NanlanWeather?.current(s)):null;
   const drawActor=({x,y,paint},groundPass)=>{
-    if(lighting)NanlanCourtyard.drawPerson(ctx,x,y,lighting,paint,groundPass);
+    if(lighting)NanlanCourtyard.drawPerson(ctx,x,y,lighting,paint,groundPass,depth);
     else if(s.scene==='banyanBrook')NanlanBrook.actor(ctx,x,y,
       () => NanlanDepth.actor(ctx,x,y,actorScale(y),depth,paint,groundPass));
     else NanlanDepth.actor(ctx,x,y,actorScale(y),depth,paint,groundPass);
@@ -2178,7 +2179,10 @@ function render(){
 
   }
   actors.sort((a,b)=>a.y-b.y).forEach(actor=>actor.draw());
-  window.NanlanLandscape?.paint(ctx,painting,s.scene,camera,true,reduceCameraMotion.matches,depth.day.darkness);
+  window.NanlanLandscape?.paint(ctx,painting,s.scene,camera,true,reduceCameraMotion.matches);
+  NanlanClimate.atmosphere(ctx,s.scene,s,time,W,H);
+  window.NanlanWeather?.atmosphere(ctx,s.scene,s,time,W,H);
+  paintWorldLight(s,depth.day);
   drawEntranceSigns();
 
   renderGardenWorkFx(time);

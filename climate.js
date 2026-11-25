@@ -44,15 +44,26 @@ function setResolution(scene,ratio){resolution.set(scene,ratio>1.15?2:1);}
 function detail(canvas,factor){
  const c=canvas.getContext('2d',{willReadFrequently:true});
  const data=c.getImageData(0,0,canvas.width,canvas.height),p=data.data;
- const w=canvas.width,h=canvas.height,luma=new Float32Array(w*h);
+ const w=canvas.width,h=canvas.height,luma=new Uint8Array(w*h);
  for(let i=0,j=0;i<p.length;i+=4,j++)luma[j]=p[i]*.2126+p[i+1]*.7152+p[i+2]*.0722;
  const fine=factor,wide=4*factor;
  for(let y=wide;y<h-wide;y++)for(let x=wide;x<w-wide;x++){
   const j=y*w+x,i=j*4;if(p[i+3]<250)continue;
   const a=luma[j]-(luma[j-fine]+luma[j+fine]+luma[j-fine*w]+luma[j+fine*w])*.25;
   const b=luma[j]-(luma[j-wide]+luma[j+wide]+luma[j-wide*w]+luma[j+wide*w])*.25;
-  // Ignore near-flat paint and compression noise; bound the lift to avoid halos.
-  const delta=Math.max(-13,Math.min(13,(Math.abs(a)>1?a*.82:0)+b*.20));
+  // Tighten magnified strokes across their edge; retain the colour and the
+  // softer variations along the stroke. Flat washes receive no added grain.
+  const l=luma[j-fine],r=luma[j+fine],u=luma[j-fine*w],d=luma[j+fine*w];
+  const gx=Math.abs(r-l),gy=Math.abs(d-u),gradient=gx+gy;
+  if(gradient<5&&Math.abs(a)<2&&Math.abs(b)<4)continue;
+  const center=luma[j],axis=(gx-gy)/(gradient+12);
+  const normal=a+axis*(u+d-l-r)*.25;
+  const lift=factor===2?normal*1.55+b*.27:a*.82+b*.20;
+  const low=Math.min(l,r,u,d,luma[j-wide],luma[j+wide],luma[j-wide*w],luma[j+wide*w]);
+  const high=Math.max(l,r,u,d,luma[j-wide],luma[j+wide],luma[j-wide*w],luma[j+wide*w]);
+  const lower=Math.max(-18,Math.min(0,low-center)-3);
+  const upper=Math.min(18,Math.max(0,high-center)+3);
+  const delta=Math.max(lower,Math.min(upper,lift));
   for(let k=0;k<3;k++)p[i+k]+=delta;
  }
  c.putImageData(data,0,0);

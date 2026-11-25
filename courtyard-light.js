@@ -10,10 +10,10 @@ window.NanlanCourtyard = (() => {
   const limit = n => Math.max(0, Math.min(1, n));
   const pools=[{},{}];
   function surface(){return document.createElement("canvas").getContext("2d");}
-  function frame(baseKey, mattes, light, weather, stableLights) {
+  function frame(baseKey, mattes, light, weather) {
     const cloud = weather?.wet ? .22 : weather?.id === 'fog' ? .34 : weather?.id === 'cloud' ? .58 : 1;
     const sun = cloud * (1 - light.darkness) * (1 - light.morning * .36) * (1 - light.warmth * .21);
-    return {row: rows[baseKey] ?? 1, mattes, light, sun, stableLights};
+    return {row: rows[baseKey] ?? 1, mattes, sun};
   }
   function wash(c, color, opacity, x, y) {
     if (opacity <= 0) return;
@@ -22,13 +22,13 @@ window.NanlanCourtyard = (() => {
     c.fillRect(x + left, y + top, width, height);
     c.globalAlpha = 1;
   }
-  function drawPerson(target,x,y,lighting,paint,groundPass=false){
-    const r=NanlanDepth.raster(target.getTransform(),x+left,y+top,width,height,groundPass);
+  function drawPerson(target,x,y,lighting,paint,groundPass=false,depth){
+    const r=NanlanDepth.raster(target.getTransform(),x+left,y+top,width,height,groundPass,depth?.density);
     const {left:px,top:py}=r,w=r.w/r.res,h=r.h/r.res;
     const pool=pools[Number(groundPass)],body=pool.body ||= surface();
     const result=groundPass?(pool.shadow ||= surface()):body;
     NanlanDepth.prepare(body,r);
-    const {row,mattes,light,sun}=lighting;
+    const {row,mattes,sun}=lighting;
     body.save();paint(body,true);body.restore();
     if(groundPass){
       NanlanDepth.prepare(result,r);
@@ -57,8 +57,7 @@ window.NanlanCourtyard = (() => {
       body.save();
       body.globalCompositeOperation = 'source-atop';
       wash(body, '#78634c', row === 0 ? .16 : .045, x, y);
-      wash(body, '#ecb966', light.warmth * .14 + light.morning * .08, x, y);
-      wash(body, '#283a50', .06 * (1 - sun) + light.darkness * .40, x, y);
+      wash(body, '#283a50', .055 * (1 - sun), x, y);
       if (mattes?.naturalWidth && x > 475 && x < 708 && y > 235 && y < 405 && sun > .02) {
         body.save();
         // A point higher on the body intercepts light further to its right.
@@ -73,14 +72,8 @@ window.NanlanCourtyard = (() => {
       const across = limit((x - 743) / 22) * limit((906 - x) / 25);
       const awning = across * limit((339 - y + (x - 810) * -.09) / 43);
       wash(body, '#373947', awning * (.11 + .29 * sun), x, y);
-      if (lighting.stableLights && light.darkness > 0) {
-        let glow = 0;
-        for (const [lx, ly] of [[400,183],[570,160],[745,280]]) {
-          glow = Math.max(glow, limit(1 - Math.hypot(x - lx, y - 32 - ly) / 93));
-        }
-        wash(body, '#ffc77d', light.darkness * glow * .35, x, y);
-      }
       body.restore();
+      if(depth)NanlanDepth.bounce(body,NanlanDepth.lightAt(depth,x,y).color,x,y,width/2,74,sun);
     }
 
     // Erase only the actor's own pixels. Underneath are the original flowers,

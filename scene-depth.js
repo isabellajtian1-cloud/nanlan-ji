@@ -126,7 +126,7 @@ window.NanlanDepth = (() => {
   }
   const lightMaps=new WeakMap();
   function groundMap(image) {
-    if (!image?.naturalWidth) return null;
+    if (!(image?.naturalWidth || image?.width)) return null;
     if (lightMaps.has(image)) return lightMaps.get(image);
     const c=document.createElement('canvas');c.width=80;c.height=54;
     const g=c.getContext('2d',{willReadFrequently:true});
@@ -143,22 +143,31 @@ window.NanlanDepth = (() => {
         shade.data[offset+3]=Math.round(limit((177-map[i])/110)*255);
       }
       g.putImageData(shade,0,0);
-      map={values:map,canopy:c};
+      map={values:map,colors:rgb,canopy:c};
     } catch { /* Local file previews may restrict pixel reads. The mapped lights still work. */ }
     lightMaps.set(image,map);
     return map;
   }
-  function groundLight(map,x,y) {
-    if(!map)return .52;
+  function groundSample(map,x,y) {
+    if(!map)return {light:.52, color:null};
     const u=limit(x/1100)*78.99,v=limit(y/733)*52.99;
     const i=Math.floor(v)*80+Math.floor(u),fx=u%1,fy=v%1;
-    const values=map.values;
-    const a=values[i]*(1-fx)+values[i+1]*fx,b=values[i+80]*(1-fx)+values[i+81]*fx;
-    return limit(((a*(1-fy)+b*fy)-58)/145);
+    const sample=(values,stride,channel)=>{
+      const start=i*stride+channel;
+      const top=values[start]*(1-fx)+values[start+stride]*fx;
+      const bottom=values[start+80*stride]*(1-fx)+values[start+81*stride]*fx;
+      return top*(1-fy)+bottom*fy;
+    };
+    const light=limit((sample(map.values,1,0)-58)/145);
+    const rgb=[0,1,2].map(k=>Math.round(sample(map.colors,4,k)));
+    return {light,color:'rgb('+rgb.join(',')+')'};
   }
-  function frame(scene,image,day,weather) {
+  function frame(scene,image,day,weather,sourceWidth) {
     const cloud=weather?.wet ? .29 : weather?.id==='fog' ? .45 : weather?.id==='cloud' ? .67 : 1;
-    return {p:plates[scene],map:groundMap(image),day,sun:(1-day.darkness)*cloud};
+    // An enlarged cache has more pixels, but its source still sets the painted detail scale.
+    const width=sourceWidth||image?.naturalWidth||image?.width;
+    const density=width?Math.max(1.65,Math.min(4,width/1100*1.2)):4;
+    return {p:plates[scene],map:groundMap(image),density,day,sun:(1-day.darkness)*cloud};
   }
   function beam(opening,x,y) {
     const dy=(y-opening.y)/opening.ry;
@@ -166,11 +175,12 @@ window.NanlanDepth = (() => {
     return Math.exp(-2.1*(dx*dx+dy*dy));
   }
   function lightAt(f,x,y) {
-    return {patch:beam(f.p.opening,x,y)*f.sun,ground:groundLight(f.map,x,y)};
+    const sample=groundSample(f.map,x,y);
+    return {patch:beam(f.p.opening,x,y)*f.sun,ground:sample.light,color:sample.color};
   }
   function surface(){return document.createElement('canvas').getContext('2d');}
-  function raster(view,x,y,w,h,ground){
-    const res=Math.min(ground?1:4,view.a);
+  function raster(view,x,y,w,h,ground,paintDensity=4){
+    const res=Math.min(ground?1:paintDensity,view.a);
     const snap=(v,offset)=>(Math.floor(v*res+offset)-offset)/res;
     const left=snap(x,view.e*res/view.a),top=snap(y,view.f*res/view.d);
     return {res,left,top,w:Math.ceil((x+w-left)*res),h:Math.ceil((y+h-top)*res)};
@@ -183,18 +193,25 @@ window.NanlanDepth = (() => {
     g.imageSmoothingEnabled=true;g.imageSmoothingQuality='high';
     g.setTransform(r.res,0,0,r.res,-r.left*r.res,-r.top*r.res);
   }
+  function bounce(brush,color,x,y,radius,height,sun){
+    if(!color)return;
+    const fade=brush.createLinearGradient(x,y-height,x,y);
+    fade.addColorStop(0,'transparent');fade.addColorStop(1,color);
+    brush.save();brush.globalCompositeOperation='source-atop';
+    brush.globalAlpha=.12+.11*sun;brush.fillStyle=fade;
+    brush.fillRect(x-radius,y-height,2*radius,height+2);brush.restore();
+  }
   let body,shade;
   function actor(target,x,y,scale,f,paint,groundPass=false){
-    const {p,sun,day}=f,view=target.getTransform();
+    const {p,sun}=f,view=target.getTransform();
     // Discard offscreen actors before doing the two small alpha composites.
     const half=76*scale,height=116*scale,size=2*half;
     if((x+half)*view.a+view.e<0||(x-half)*view.a+view.e>target.canvas.width||
        (y+24*scale)*view.d+view.f<0||(y-height)*view.d+view.f>target.canvas.height)return;
     const brush=groundPass?(shade ||= surface()):(body ||= surface());
-    const r=raster(view,x-half,y-height,size,size,groundPass);
+    const r=raster(view,x-half,y-height,size,size,groundPass,f.density);
     const {left,top}=r,w=r.w/r.res,h=r.h/r.res,region=Math.max(w,h);
     prepare(brush,r);brush.save();paint(brush,true);brush.restore();
-    const {patch,ground}=lightAt(f,x,y);
     target.save();
     // Remove only figure/shadow pixels. The in-game plate and its repair state show through.
     for(const o of p.foreground){
@@ -202,6 +219,7 @@ window.NanlanDepth = (() => {
       target.clip(o.outside,'evenodd');
     }
     if(groundPass){
+      const {patch,ground}=lightAt(f,x,y);
       shade.save();shade.globalCompositeOperation='source-in';shade.fillStyle='#3b3935';
       shade.fillRect(left,top,w,h);shade.restore();
       target.save();
@@ -210,18 +228,19 @@ window.NanlanDepth = (() => {
       target.drawImage(shade.canvas,0,0,r.w,r.h,left-x,top-y,w,h);target.restore();
       target.save();target.translate(x,y);target.scale(1,.26);
       const radius=17*scale,contact=target.createRadialGradient(0,0,0,0,0,radius);
-      contact.addColorStop(0,'rgba(39,36,32,.43)');contact.addColorStop(1,'rgba(39,36,32,0)');
+      contact.addColorStop(0,'rgba(41,34,28,.61)');contact.addColorStop(.35,'rgba(48,40,32,.32)');contact.addColorStop(1,'rgba(48,40,32,0)');
       target.fillStyle=contact;target.fillRect(-radius,-radius,2*radius,2*radius);target.restore();
       target.restore();
       return;
     }
+    const {patch,ground,color}=lightAt(f,x,y);
     body.save();body.globalCompositeOperation='source-atop';
     body.fillStyle=p.kind==='leaves'?'#344837':'#333e51';
-    body.globalAlpha=.045+(1-ground)*.15+day.darkness*.40;
+    body.globalAlpha=.035+(1-ground)*.16;
     body.fillRect(left,top,region,region);
     const warm=body.createLinearGradient(x-half,top,x+half,y);
     warm.addColorStop(0,'rgba(255,230,175,.8)');warm.addColorStop(1,'rgba(253,207,126,.12)');
-    body.fillStyle=warm;body.globalAlpha=patch*.32+ground*sun*.09+day.warmth*.085;
+    body.fillStyle=warm;body.globalAlpha=patch*.23+ground*sun*.055;
     body.fillRect(left,top,region,region);
     if(f.map && sun>.04 && (p.kind==='leaves'||p.kind==='awning')) {
       // Lift the shade already painted on the road onto the walking silhouette.
@@ -239,6 +258,7 @@ window.NanlanDepth = (() => {
       body.stroke();
     }
     body.restore();
+    bounce(body,color,x,y,half,80*scale,sun);
     target.drawImage(body.canvas,0,0,r.w,r.h,left,top,w,h);target.restore();
   }
   function air(ctx,f,time,reduced) {
@@ -265,5 +285,5 @@ window.NanlanDepth = (() => {
     }
     ctx.restore();
   }
-  return {plates,framing,frame,actor,air,lightAt,raster,prepare};
+  return {plates,framing,frame,actor,air,lightAt,raster,prepare,bounce};
 })();

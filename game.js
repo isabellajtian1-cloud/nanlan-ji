@@ -664,7 +664,8 @@ function refreshToolbar(){
     note=weeds.length&&!weeds.some(o=>!s.collected[o.id])?deskText('此处杂草已清理。当前任务见左上角。','The weeds here are cleared. See the current quest at top left.'):
       deskText('靠近未清理的杂草后使用。','Use near uncleared weeds.');
   }
-  if(s.scene==='yard'&&['basket','water'].includes(s.selected)&&s.flags.smallBed)note=deskText('点或划过菜畦。站在田边可按住空格，用方向键逐畦操作。','Tap or sweep across beds. At the fence, hold Space and use the arrows.');
+  if(window.NanlanGardenView&&s.scene==='yard'&&['hoe','seed','basket','water'].includes(s.selected))note=deskText('点院子东边的竹篱菜圃，走到田边后查看各畦。','Select the fenced garden on the east side of the yard to look at the beds.');
+  else if(s.scene==='yard'&&['basket','water'].includes(s.selected)&&s.flags.smallBed)note=deskText('点或划过菜畦。站在田边可按住空格，用方向键逐畦操作。','Tap or sweep across beds. At the fence, hold Space and use the arrows.');
   $('toolInfo').textContent=deskText('工具说明 · ','Tool · ')+current[1]+'：'+note;
 }
 function selectTool(index){
@@ -1018,6 +1019,7 @@ function storyGardenPlot(){
   return [4,5,0,1,2,3].find(i=>{const g=N.gardenPlot(s,i);return g.kind==='herb'&&g.duration===240&&g.plantedAt!==null;})??4;
 }
 function showGarden(index=selectedPlot){
+  if(window.NanlanGardenView)return NanlanGardenView.show(index);
   selectedPlot=Number.isInteger(index)?index:0;
   const s=state(),f=s.flags,g=N.gardenPlot(s,selectedPlot),c=N.crop(s,selectedPlot),q=N.current(s);
   const timeNote=s.mode==='prologue'?'完成 M04 家宴后开始生长计时。':N.clock(s).minute>=1320?'夜已深，睡一夜可推进生长。':'离开此面板后，走动、外出和休息都会推进生长。';
@@ -1834,7 +1836,7 @@ function setupCamera(rect,now){
   // Frame the character's body above its feet without hiding the path ahead.
   let targetY=whole?H/2:s.player.y-43*actorScale(s.player.y);
   // Approach the fence with room in frame for all six painted beds above the toolbelt.
-  if(!whole&&s.scene==='yard'&&s.flags.smallBed&&window.NanlanFieldwork){
+  if(!whole&&s.scene==='yard'&&s.flags.smallBed&&(window.NanlanFieldwork||window.NanlanGardenView)){
     const edge=gardenTarget(0),distance=Math.hypot(s.player.x-edge.x,s.player.y-edge.y);
     const weight=Math.max(0,Math.min(1,(165-distance)/105));
     targetY+=weight*Math.max(0,gardenSpots[5][1]-vh/targetScale*.12-targetY);
@@ -1905,8 +1907,8 @@ function paintDifferenceLayers(){
   if(sc==='yard'){
     if(!f.pathCleared){const weed=images.weedPatch;world.yard.objects.filter(o=>o.type==='weed'&&!s.collected[o.id]).forEach((o,index)=>{if(!weed?.naturalWidth)return;ctx.save();ctx.translate(o.x,o.y);ctx.scale(index%2?-1:1,1);ctx.drawImage(weed,-53,-58,106,70);ctx.restore();});}
     // The edited base art places the plot on the far-right ground. Only growth is painted here.
-    if(f.smallBed&&!images.gardenStages)loadImage('gardenStages',{passive:true});
-    if(f.smallBed&&images.gardenStages?.naturalWidth){
+    if(!window.NanlanGardenView&&f.smallBed&&!images.gardenStages)loadImage('gardenStages',{passive:true});
+    if(!window.NanlanGardenView&&f.smallBed&&images.gardenStages?.naturalWidth){
       for(let i=0;i<(f.fullGarden?6:4);i++){
         if(i>0&&!N.gardenPlot(s,i).tilled)continue;
         const [col,row]=plotFrame(i),[x,y]=gardenSpots[i];
@@ -2119,6 +2121,10 @@ function render(){
       continue;
     }
     if(o.action==='garden'){
+      if(window.NanlanGardenView){
+        hitTargets.push({o,rect:null,polygon:NanlanGardenView.fence});
+        continue;
+      }
       const count=s.flags.fullGarden?6:4;
       for(let i=0;i<count;i++){const plot=gardenTarget(i),[x,y]=gardenSpots[i];hitTargets.push({o:plot,rect:null,anchor:NanlanGardenLayout.bounds(i),polygon:NanlanGardenLayout.beds[i]});if(plot.id===focusedObjectId){ctx.save();ctx.strokeStyle='#d3be88';ctx.lineWidth=1;ctx.beginPath();NanlanGardenLayout.beds[i].forEach(([px,py],j)=>j?ctx.lineTo(px,py):ctx.moveTo(px,py));ctx.closePath();ctx.stroke();ctx.restore();}}
       hitTargets.push({o,rect:null,anchor:{x:890,y:365,w:145,h:125}});continue;
@@ -2338,7 +2344,9 @@ $('continueGame').onclick=async()=>{
     if(localStorage.getItem(N.SAVE_KEY)!==resumeRaw){storedRaw=localStorage.getItem(N.SAVE_KEY);window.NanlanChapterMark?.refresh();startLoadError(deskText('另一页更新了进度，请核对时辰后再次继续。','Another page updated the save. Review the time and continue again.'),()=>$('continueGame').onclick());return;}
     applyRestoredSnapshot(check.state,resumeRaw);
     if(window.NanlanFarmSample){
-      if(window.NanlanFarmSample==='pond')NanlanProduction.show(2);else NanlanFieldwork.show();
+      if(window.NanlanFarmSample==='pond')NanlanProduction.show(2);
+      else if(window.NanlanGardenView){focusedObjectId='herbPlot';notice(deskText('点院子东边竹篱内的菜圃，或按空格进去看看。','Select the fenced garden to the east, or press Space to look inside.'));}
+      else NanlanFieldwork.show();
     }else if(window.NanlanWalkSample){
       notice(deskText('沿竹篱往上走，点「榕溪石径」入溪，再向右过桥。此页单独试走。','Follow the bamboo fence uphill and tap Banyan Brook Lane. Cross the bridge to the right. This walk has its own session.'));
     }else{

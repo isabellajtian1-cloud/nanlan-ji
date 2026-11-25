@@ -1,4 +1,10 @@
-# 南澜记 V6.10.6 · 一路相续
+# 南澜记 V6.10.17 · 四时天气签
+
+[打开六卷与番外开发试玩](https://isabellajtian1-cloud.github.io/nanlan-ji/play-6.10.17.html?play=full) · [从竹篱菜圃体验](https://isabellajtian1-cloud.github.io/nanlan-ji/play-6.10.17.html#farm-garden)
+
+解压完整包后打开 `index.html` 即可游玩。右上角纸签用春花、夏荷、秋稻、冬梅显示季节，旁边的图案和文字显示此刻天气。点击纸签或用键盘选中后按 Enter 打开日历。
+
+## V6.10.6 · 一路相续
 
 六卷主线与番外整体开发试玩。点击[网页版](https://isabellajtian1-cloud.github.io/nanlan-ji/?v=6106)游玩。
 

@@ -592,13 +592,8 @@ function refreshQuestBanner(s=state(),q=N.current(s)){
   const entry=N.chapterEntries(s).find(e=>!e.started&&e.ready),en=window.NanlanI18n?.language==='en';$('volume2Entry').hidden=!entry;
   if(entry){$('volume2Entry').textContent=en?'Volume '+entry.number+' · View Entrance':'第'+entry.number+'卷 · 查看开启入口';if(!q){$('questAct').textContent=en?'A New Beginning':'接下来的日子';$('questHeading').textContent=en?entry.en+' · Available':entry.title+' · 已可开启';}}
 }
-function refreshHud(){
-  const s=state(),q=N.current(s),t=timeText();
-  $('cameraView').textContent=overviewCamera?deskText('跟随主角','Follow Player'):deskText('看全景','Full Scene');
-  $('estateOpen').hidden=!started||!['yard','hall'].includes(s.scene);
-  $('where').textContent=s.scene==='generalStore'&&s.story2?.site?'南街 · '+(s.production?.shopName||N.story2.shops[s.story2.site].name):world[s.scene].name;$('roleName').dataset.noLocalize='';$('roleName').textContent=s.identity?NanlanCharacter.display(s.identity):(s.gender==='male'?'李家晚辈 · 男主角':'李家晚辈 · 女主角');
-  const familySeal=document.querySelector('#status .seal');if(familySeal){familySeal.dataset.noLocalize='';familySeal.textContent=s.identity?[...s.identity.surname][0]:'李';}
-  $('statusTime').textContent=t.short;$('clock').replaceChildren();
+function refreshClassicClock(s,t){
+  $('clock').replaceChildren();
   const text=document.createElement('div');text.style.whiteSpace='pre-line';text.textContent=t.full;
   const small=document.createElement('small');small.textContent=t.extra;$('clock').append(text,small);
   const festival=window.NanlanFestivalUI?.active(s);
@@ -606,6 +601,16 @@ function refreshHud(){
   const track=document.createElement('span'),sun=document.createElement('i'),hint=document.createElement('small');
   track.className='day-track';sun.style.left=(N.daylight(s).progress*100)+'%';sun.textContent=N.daylight(s).darkness>.5?'☾':'☀';track.append(sun);hint.className='clock-hint';hint.textContent='点此查看日历与生长';$('clock').append(track,hint);
   $('clock').setAttribute('aria-label','查看日期、昼夜与潮汐：'+t.short);
+}
+function refreshHud(){
+  const s=state(),q=N.current(s),t=timeText();
+  $('cameraView').textContent=overviewCamera?deskText('跟随主角','Follow Player'):deskText('看全景','Full Scene');
+  $('estateOpen').hidden=!started||!['yard','hall'].includes(s.scene);
+  $('where').textContent=s.scene==='generalStore'&&s.story2?.site?'南街 · '+(s.production?.shopName||N.story2.shops[s.story2.site].name):world[s.scene].name;$('roleName').dataset.noLocalize='';$('roleName').textContent=s.identity?NanlanCharacter.display(s.identity):(s.gender==='male'?'李家晚辈 · 男主角':'李家晚辈 · 女主角');
+  const familySeal=document.querySelector('#status .seal');if(familySeal){familySeal.dataset.noLocalize='';familySeal.textContent=s.identity?[...s.identity.surname][0]:'李';}
+  $('statusTime').textContent=t.short;
+  if(window.NanlanWeatherSlip) NanlanWeatherSlip.render($('clock'),s);
+  else refreshClassicClock(s,t);
   $('energy').textContent=Math.floor(s.stamina);$('energyBar').style.width=s.stamina+'%';$('coins').textContent=s.coins;
   refreshQuestBanner(s,q);$('nightNote').hidden=!(s.mode==='daily'&&N.clock(s).minute>=1320);
   $('nightNote').querySelector('strong').textContent=N.voyage.get(s)?.away?(window.NanlanI18n?.language==='en'?'Take me to the guest courtyard':'带我到宿院歇一夜'):(window.NanlanI18n?.language==='en'?'Take me to the bed in the East Wing':'带我回卧房（东厢房）床榻');

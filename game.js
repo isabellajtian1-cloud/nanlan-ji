@@ -1902,10 +1902,13 @@ function paintDifferenceLayers(){
 // Grade the finished world once so the same light falls on the path, clothes and props.
 function paintWorldLight(s,daylight){
   const f=s.flags,sc=s.scene;
-  if(daylight.warmth){ctx.fillStyle='rgba(190,116,36,'+(daylight.warmth*.13)+')';ctx.fillRect(0,0,W,H);}
-  if(daylight.morning){ctx.fillStyle='rgba(242,206,98,'+(daylight.morning*.12)+')';ctx.fillRect(0,0,W,H);}
+  // Soft light warms the paper while letting dark stone joints and hair show through.
+  ctx.save();ctx.globalCompositeOperation='soft-light';
+  if(daylight.warmth){ctx.fillStyle='rgba(211,139,63,'+(daylight.warmth*.23)+')';ctx.fillRect(0,0,W,H);}
+  if(daylight.morning){ctx.fillStyle='rgba(240,207,126,'+(daylight.morning*.20)+')';ctx.fillRect(0,0,W,H);}
+  ctx.restore();
   if(daylight.darkness){
-    ctx.fillStyle='rgba(18,37,56,'+(daylight.darkness*(f.stableLights?.35:.45))+')';ctx.fillRect(0,0,W,H);
+    ctx.fillStyle='rgba(18,37,56,'+(daylight.darkness*(f.stableLights?.30:.38))+')';ctx.fillRect(0,0,W,H);
     if(f.stableLights&&['yard','hall','bed','study','store'].includes(sc)){
       for(const [x,y] of sc==='yard'?[[400,183],[570,160],[745,280]]:[[350,255],[765,300]]){
         const g=ctx.createRadialGradient(x,y,2,x,y,93);g.addColorStop(0,'rgba(255,213,139,'+(daylight.darkness*.5)+')');g.addColorStop(1,'#ffc56a00');ctx.fillStyle=g;ctx.fillRect(x-93,y-93,186,186);

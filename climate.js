@@ -58,11 +58,15 @@ function detail(canvas,factor){
   if(gradient<5&&Math.abs(a)<2&&Math.abs(b)<4)continue;
   const center=luma[j],axis=(gx-gy)/(gradient+12);
   const normal=a+axis*(u+d-l-r)*.25;
-  const lift=factor===2?normal*1.55+b*.27:a*.82+b*.20;
-  const low=Math.min(l,r,u,d,luma[j-wide],luma[j+wide],luma[j-wide*w],luma[j+wide*w]);
-  const high=Math.max(l,r,u,d,luma[j-wide],luma[j+wide],luma[j-wide*w],luma[j+wide*w]);
-  const lower=Math.max(-18,Math.min(0,low-center)-3);
-  const upper=Math.min(18,Math.max(0,high-center)+3);
+  // Lighter paint on both sides identifies an existing ink line. A single hard edge
+  // gets the normal sharpening without a second outline alongside it.
+  const wl=luma[j-wide],wr=luma[j+wide],wu=luma[j-wide*w],wd=luma[j+wide*w];
+  const ink=Math.max(0,Math.min(wl,wr)-center,Math.min(wu,wd)-center);
+  const lift=(factor===2?normal*1.7:a*1.1)+b*.42-Math.min(19,ink*.63);
+  const low=Math.min(l,r,u,d,wl,wr,wu,wd);
+  const high=Math.max(l,r,u,d,wl,wr,wu,wd);
+  const lower=Math.max(-33,Math.min(0,low-center)-3-Math.min(13,ink*.42));
+  const upper=Math.min(13,Math.max(0,high-center)+3);
   const delta=Math.max(lower,Math.min(upper,lift));
   for(let k=0;k<3;k++)p[i+k]+=delta;
  }

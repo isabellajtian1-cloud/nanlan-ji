@@ -1,0 +1,38 @@
+/* The pad sits above the action row at every HUD size. */
+#steeringPad {
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 10px);
+  width: clamp(92px, 13vmin, 114px);
+  aspect-ratio: 1;
+  box-sizing: border-box;
+  border-radius: 50%;
+  border: 1px solid #dbc393b0;
+  background: radial-gradient(circle, #274239ca 0 25%, #233c31a8 26% 66%, #20372ed4 67%);
+  box-shadow: inset 0 0 0 3px #c2a47729, 0 2px 7px #0b201e40;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  cursor: pointer;
+}
+#steeringPad > * { position: absolute; pointer-events: none; }
+#steeringPad i {
+  width: 9%; height: 9%;
+  border: solid #f7e5bc;
+  border-width: 2px 2px 0 0;
+  box-sizing: border-box;
+}
+#steeringPad i:nth-child(1) { left: 45.5%; top: 14%; transform: rotate(-45deg); }
+#steeringPad i:nth-child(2) { right: 14%; top: 45.5%; transform: rotate(45deg); }
+#steeringPad i:nth-child(3) { left: 45.5%; bottom: 14%; transform: rotate(135deg); }
+#steeringPad i:nth-child(4) { left: 14%; top: 45.5%; transform: rotate(225deg); }
+#steeringPad span {
+  inset: 39%; border-radius: 50%; border: 1px solid #d0b07c;
+  background: #b8a67ec9; box-shadow: inset 0 0 0 3px #465442;
+}
+#steeringPad.steering-held { border-color: #f5dfb0; }
+#steeringPad.steering-held span { background: #f5dfb0; }
+#wrap:has(:is(#dialog,#worldMap,#gallery,#sceneLoading,#start):not([hidden])) #steeringPad,
+body:has(#settingsPanel:not([hidden])) #steeringPad,
+#hud.mobile-overview #steeringPad { display: none; }

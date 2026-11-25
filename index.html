@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#20382d">
   <meta name="description" content="南澜记：在明代岭南安顿家人、修整旧宅、采集种植，并与邻里共同过日子的叙事生活游戏。">
-  <title data-no-localize>南澜记 V6.10.13 · 清描石径</title>
+  <title data-no-localize>南澜记 V6.10.14 · 指间行旅</title>
   <link rel="stylesheet" href="style.css?v=6922">
   <link rel="stylesheet" href="map.css"><link rel="stylesheet" href="opening.css?v=6108"><link rel="stylesheet" href="chapter-mark.css?v=6922">
   <link rel="stylesheet" href="journey.css?v=6922"><link rel="stylesheet" href="town.css?v=6922"><link rel="stylesheet" href="festival.css?v=6922">
@@ -14,6 +14,7 @@
   </style>
 <link rel="stylesheet" href="seals.css?v=6922"><link rel="stylesheet" href="production.css?v=6922"><link rel="stylesheet" href="locale.css?v=6922"><style>html.large-read #dialog #line,html.large-read #dialog #choices button,html.large-read #dialog #panelExtra p{font-size:max(1.2rem,19px);line-height:1.65}html.large-read #dialog{max-height:92dvh;overflow-y:auto}</style><link rel="stylesheet" href="settings.css?v=6922"><link rel="stylesheet" href="continuity.css?v=6922">
 <link rel="stylesheet" href="mobile.css?v=6926"><link rel="stylesheet" href="records.css?v=6922"><link rel="stylesheet" href="hands-on.css?v=6922"><link rel="stylesheet" href="street-market.css?v=6923"><link rel="stylesheet" href="title-ming.css?v=6108"><link rel="stylesheet" href="portrait-stage.css?v=6927"><link rel="stylesheet" href="family-note.css?v=6929"><link rel="stylesheet" href="worktable.css?v=6930"><link rel="stylesheet" href="hearth.css?v=6102"><link rel="stylesheet" href="kitchen-folio.css?v=6103"><link rel="stylesheet" href="title-handscroll-6109.css?v=6110"><style>#game{filter:url("#paint-tones")}</style>
+<link rel="stylesheet" href="steering.css?v=6114">
 </head>
 <body>
 <svg width="0" height="0" aria-hidden="true" focusable="false" style="position:absolute;pointer-events:none">
@@ -30,7 +31,7 @@
   <div id="walkPad" hidden aria-hidden="true"><span></span></div>
   <div id="hud" hidden>
     <section class="panel" id="status" aria-label="角色状态">
-      <div class="brand"><span class="seal">李</span><div><strong>南澜记</strong><small id="roleName">李家晚辈</small></div><span class="version">V6.10.13</span></div>
+      <div class="brand"><span class="seal">李</span><div><strong>南澜记</strong><small id="roleName">李家晚辈</small></div><span class="version">V6.10.14</span></div>
       <div id="statusTime"></div>
       <div class="vitals"><span>体力 <b id="energy">100</b></span><span>家用 <b id="coins">80</b> 文</span></div>
       <div class="energy-track"><span id="energyBar"></span></div>
@@ -46,6 +47,7 @@
     <div id="volumeIntertitle" role="status" hidden></div><div id="chapterToast" role="status" hidden></div>
     <div id="message" role="status" aria-live="polite"></div>
     <nav id="actions" aria-label="场景操作">
+      <div id="steeringPad" hidden aria-hidden="true" data-no-localize><i></i><i></i><i></i><i></i><span></span></div>
       <button id="mapOpen" type="button" aria-label="舆图"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h14v14H5z"/><path d="M5 6V4a1.8 1.8 0 0 0-3.6 0v16A1.8 1.8 0 0 0 5 20v-2M19 6V4a1.8 1.8 0 0 1 3.6 0v16A1.8 1.8 0 0 1 19 20v-2M1.4 5H5M19 5h3.6M1.4 19H5M19 19h3.6"/><path d="M14 7.5c-7 2 2 5-4 9"/><circle cx="8.5" cy="9" r=".8"/></svg><span class="action-label">舆图 · M</span></button>
       <button id="nearbyOpen" type="button" aria-label="互动"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h13a3 3 0 0 1 3 3v6a3 3 0 0 1-3 3H9l-5 4v-4a3 3 0 0 1-2-3V7a3 3 0 0 1 2-3Z"/><circle cx="7" cy="10" r=".6"/><circle cx="11" cy="10" r=".6"/><circle cx="15" cy="10" r=".6"/></svg><span class="action-label">互动</span></button>
       <button id="bagOpen" type="button" aria-label="行囊"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 7 6 3q6-2 12 0l-2 4M8 8c-3 3-5 6-5 9 0 3 3 4 9 4s9-1 9-4c0-3-2-6-5-9ZM7 7h10M12 8v6M12 10l4 3"/></svg><span class="action-label">行囊 · B</span></button>
@@ -88,7 +90,7 @@
       </details>
       <p id="bootStatus" role="status">正在准备旅程 / Preparing your journey…</p><button id="bootRetry" type="button" hidden>重新载入 / Reload</button>
       <p id="loadWarning" role="alert" hidden></p><button id="startLoadRetry" type="button" hidden>重试载入</button>
-      <small class="version-note" data-no-localize data-release-zh="清描石径" data-release-en="Clear Brushstrokes">V6.10.13 · 清描石径 · 六卷与番外开发试玩</small>
+      <small class="version-note" data-no-localize data-release-zh="指间行旅" data-release-en="Ways to Wander">V6.10.14 · 指间行旅 · 六卷与番外开发试玩</small>
     </div>
     <aside id="startChapterShelf" aria-labelledby="startChapterHeading">
       <small>篇章一览</small><h2 id="startChapterHeading">六卷与番外</h2>
@@ -133,6 +135,7 @@
     <section><h3>显示与语言</h3><div class="settings-grid">
       <button id="languageToggle" data-no-localize aria-label="Switch language / 切换语言">中文 / English</button>
       <button id="settingsReadSize" aria-pressed="false">大字号</button>
+      <button id="steeringToggle" type="button" data-no-localize aria-pressed="false">屏幕方向盘</button>
       <button id="settingsSceneGuides" aria-pressed="true">地点名称标记</button>
       <button id="cameraView" type="button" data-no-localize>看全景</button>
       <button id="settingsScreenMode" aria-pressed="false" hidden>全屏显示</button>
@@ -154,13 +157,13 @@
 <button id="audioToggle">开启声音</button><details><summary>试听与说明</summary><button id="audioMusicOnly">仅听音乐 · 关闭环境与操作声</button><button id="audioMusicTest">播放当前地点音乐</button><button id="audioTest">试听音效 · 两声提示</button>
 <p>若试听仍无声，请检查浏览器标签页是否静音及设备媒体音量。音乐为本游戏新编旋律，音色、环境音与操作音效由程序合成，未使用第三方录音或游戏原曲。各项音量可单独调至零。</p></details>
 </section>
-<script type="application/json" id="journeyScripts">["locale-en.js?v=6922","locale.js?v=6106","data.js?v=6112","v5-world.js?v=6922","voyage-world.js?v=6922","town-world.js?v=6922","town-model.js?v=6922","story2-model.js?v=6925","market-families.js?v=6923","neighbors.js?v=6923","small-talk.js?v=6923","conversations.js?v=6923","bonds-model.js?v=6923","seals-model.js?v=6923","rural-model.js?v=6922","production-model.js?v=6930","v3-dialogue.js?v=6922","v3-steps.js?v=6922","story3-model.js?v=6922","scholar-model.js?v=6922","children-model.js?v=6922","v4-script.js?v=6922","v4-steps.js?v=6922","story4-model.js?v=6922","v5-script.js?v=6922","v5-steps.js?v=6922","story5-model.js?v=6922","season5-model.js?v=6922","voyage-model.js?v=6922","climate.js?v=6113","festival-model.js?v=6922","prefecture-model.js?v=6922","prefecture-world.js?v=6922","weather.js?v=6112","estate-model.js?v=6922","chronicle-model.js?v=6925","character-model.js?v=6926","kitchen-folio-data.js?v=6103","kitchen-folio-model.js?v=6103","hearth-model.js?v=6102","engine.js?v=6103","chapter-catalog.js?v=6100","art.js?v=6922","audio.js?v=6110","story-threads.js?v=6922","opening.js?v=6108","continuity-model.js?v=6922","locomotion.js?v=6105","touch-walk.js?v=6926","asset-loader.js?v=6106","physical-layout.js?v=6100","garden-layout.js?v=6922","character-ui.js?v=6926","portrait-stage.js?v=6106","courtyard-light.js?v=6112","scene-scale.js?v=6111","brook-world.js?v=6111","scene-depth.js?v=6112b","walking-landscape.js?v=6112","game.js?v=6113","store-work.js?v=6107","hall-work.js?v=6107","lantern-work.js?v=6922","hands-on.js?v=6103","map.js?v=6100","volume2.js?v=6925","seals.js?v=6106","worktable.js?v=6930","production.js?v=6106","village.js?v=6922","volume3.js?v=6930","children.js?v=6922","scholar.js?v=6922","volume4.js?v=6930","guild.js?v=6922","volume5.js?v=6927","seasons.js?v=6922","voyage.js?v=6930","chapters.js?v=6107-title","chapter-mark.js?v=6922","ending-scenes.js?v=6922","endings.js?v=6922","bonds.js?v=6922","desktop.js?v=6102","town-ui.js?v=6103","festival-ui.js?v=6922","estate-ui.js?v=6922","memory-book.js?v=6922","dialogue-scenes.js?v=6923","settings.js?v=6922","continuity.js?v=6922","mobile.js?v=6922","street-talk.js?v=6927","records.js?v=6925","home-memories.js?v=6922","family-letter.js?v=6922","hearth.js?v=6103","kitchen-folio.js?v=6103"]</script>
+<script type="application/json" id="journeyScripts">["locale-en.js?v=6922","locale.js?v=6106","data.js?v=6112","v5-world.js?v=6922","voyage-world.js?v=6922","town-world.js?v=6922","town-model.js?v=6922","story2-model.js?v=6925","market-families.js?v=6923","neighbors.js?v=6923","small-talk.js?v=6923","conversations.js?v=6923","bonds-model.js?v=6923","seals-model.js?v=6923","rural-model.js?v=6922","production-model.js?v=6930","v3-dialogue.js?v=6922","v3-steps.js?v=6922","story3-model.js?v=6922","scholar-model.js?v=6922","children-model.js?v=6922","v4-script.js?v=6922","v4-steps.js?v=6922","story4-model.js?v=6922","v5-script.js?v=6922","v5-steps.js?v=6922","story5-model.js?v=6922","season5-model.js?v=6922","voyage-model.js?v=6922","climate.js?v=6113","festival-model.js?v=6922","prefecture-model.js?v=6922","prefecture-world.js?v=6922","weather.js?v=6112","estate-model.js?v=6922","chronicle-model.js?v=6925","character-model.js?v=6926","kitchen-folio-data.js?v=6103","kitchen-folio-model.js?v=6103","hearth-model.js?v=6102","engine.js?v=6103","chapter-catalog.js?v=6100","art.js?v=6922","audio.js?v=6110","story-threads.js?v=6922","opening.js?v=6108","continuity-model.js?v=6922","locomotion.js?v=6105","touch-walk.js?v=6114","asset-loader.js?v=6106","physical-layout.js?v=6100","garden-layout.js?v=6922","character-ui.js?v=6926","portrait-stage.js?v=6106","courtyard-light.js?v=6112","scene-scale.js?v=6111","brook-world.js?v=6111","scene-depth.js?v=6112b","walking-landscape.js?v=6112","game.js?v=6114","store-work.js?v=6107","hall-work.js?v=6107","lantern-work.js?v=6922","hands-on.js?v=6103","map.js?v=6100","volume2.js?v=6925","seals.js?v=6106","worktable.js?v=6930","production.js?v=6106","village.js?v=6922","volume3.js?v=6930","children.js?v=6922","scholar.js?v=6922","volume4.js?v=6930","guild.js?v=6922","volume5.js?v=6927","seasons.js?v=6922","voyage.js?v=6930","chapters.js?v=6107-title","chapter-mark.js?v=6922","ending-scenes.js?v=6922","endings.js?v=6922","bonds.js?v=6922","desktop.js?v=6114","town-ui.js?v=6103","festival-ui.js?v=6922","estate-ui.js?v=6922","memory-book.js?v=6922","dialogue-scenes.js?v=6923","settings.js?v=6922","continuity.js?v=6922","mobile.js?v=6922","street-talk.js?v=6927","records.js?v=6925","home-memories.js?v=6922","family-letter.js?v=6922","hearth.js?v=6103","kitchen-folio.js?v=6103"]</script>
 <script>
 (() => {
   const files = JSON.parse(document.getElementById('journeyScripts').textContent);
   if(location.hash==='#brook-walk'){
     const memory=new Map();
-    for(const key of ['nanlan_language','nanlan_sound','nanlan_volume','nanlan_ambient_volume','nanlan_music_volume','nanlan_effect_volume']){
+    for(const key of ['nanlan_language','nanlan_sound','nanlan_volume','nanlan_ambient_volume','nanlan_music_volume','nanlan_effect_volume','nanlan_show_steering']){
       try{const pref=window.localStorage.getItem(key);if(pref!==null)memory.set(key,pref);}catch{}
     }
     const privateStorage={

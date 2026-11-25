@@ -909,8 +909,8 @@ function showPeople(){
   });$('panelExtra').append(grid);
 }
 function walkingHelp(){
-  return deskText('点地面走到该处，点人物或物件会先走近互动。用 WASD 或方向键行走，同时按两键可斜走，按住 Shift 可快步。手机或平板上，按住地面向任意方向拖动即可行走，松手停步。',
-    'Click or tap the ground to walk there, or choose a person or object to approach it. Use WASD or the arrow keys to walk. Hold two directions to move diagonally, and Shift to walk faster. On a phone or tablet, drag anywhere on the ground to steer and lift your finger to stop.');
+  return deskText('键盘：WASD 或方向键行走，两键同时按可斜走，Shift 快步。I 打开场景互动列表，Tab 选按钮，Enter 确认。\n鼠标：左键点路面走过去，点人物、物件或入口会自动走近。\n手机或平板：点按与鼠标相同。按住左下方向盘边缘行走，滑向斜角可转向，松手即停。也可以在地面拖动。齿轮设置里可以收起方向盘。',
+    'Keyboard: Walk with WASD or the arrows. Hold two directions for diagonals or Shift for a brisk walk. I lists scene interactions. Tab selects a button and Enter confirms.\nMouse: Click the ground to walk, or click a person, object or exit to approach.\nPhone or tablet: Tap a destination, or hold the edge of the direction pad to walk. Slide to turn and lift to stop. You can also drag on the ground. Hide the pad in Settings.');
 }
 function showHelp(){
   const s=started?state():null,sections=[deskText('眼前怎样行动','Getting around')+'\n'+walkingHelp()+'\n'+deskText('空格或 E 互动，B 开合行囊，J 看当前记录，M 看舆图。','Space or E interacts, B toggles the satchel, J opens the journal, and M opens the map.'),'放心尝试\n体力或材料不足时，游戏会告诉你还缺什么。休息、补料后可以再来，不会因为一次没做成而清空进度。'];
@@ -1730,10 +1730,18 @@ function pickWalkTarget(p){
   path=findPath(p)||[];if(!path.length)notice('这里暂时走不到。可以从「场景互动」选择物件。');
 }
 const touchWalk=installTouchWalk(canvas,$('walkPad'),canWalk,()=>{
-  path=[];focusedObjectId=null;edgeExitAttempt=null;cancelNavigation();
-},pickWalkTarget,worldPoint);
+  keys={};path=[];focusedObjectId=null;edgeExitAttempt=null;cancelNavigation();
+},pickWalkTarget,worldPoint,vector=>{
+  // A quick tap between animation frames still takes one short, collision-checked step.
+  const {x,y}=state().player;
+  moveAlong(vector.x,vector.y,5*actorScale(y),visibleObjects());
+  direction=NanlanLocomotion.facing(state().player.x-x,state().player.y-y,direction);
+  tryKeyboardExit(vector.x,vector.y,0);
+});
 canvas.addEventListener('pointerdown',e=>{
-  if(e.pointerType!=='touch'&&e.button===0&&canWalk())pickWalkTarget(worldPoint(e));
+  if(e.pointerType!=='touch'&&e.button===0&&canWalk()){
+    touchWalk.cancel();keys={};path=[];pickWalkTarget(worldPoint(e));
+  }
 });
 canvas.addEventListener('pointermove',e=>{if(e.pointerType!=='touch')canvas.style.cursor=active&&!transitioning&&resolveHit(worldPoint(e))?'pointer':'default';});
 canvas.addEventListener('pointerleave',()=>{canvas.style.cursor='default';});
@@ -2350,7 +2358,7 @@ $('bagOpen').onclick=showBag;
 $('save').onclick=()=>{const result=engine.save();$('saveState').textContent=result.ok?(engine.memoryOnly?'仅本次试玩':'已保存'):'保存失败 · 进度仍在';notice(result.ok?(engine.memoryOnly?'当前为仅本次试玩模式，可从行囊导出备份。':'进度已保存，下次选择继续即可。'):result.message,true);};
 window.addEventListener('keydown',e=>{
   if(window.NanlanSettings?.isOpen())return;
-  if(e.ctrlKey||e.metaKey||e.altKey||['INPUT','TEXTAREA','SELECT'].includes(e.target?.tagName))return;
+  if(e.ctrlKey||e.metaKey||e.altKey||e.isComposing||e.target?.isContentEditable||['INPUT','TEXTAREA','SELECT'].includes(e.target?.tagName))return;
   const k=e.key.toLowerCase();
   if(k==='escape'){touchWalk.cancel();if(!$('gallery').hidden)$('galleryClose').click();else if(!$('worldMap').hidden)closeMap();else if(!$('dialog').hidden)closeDialog();else if(active){cancelNavigation();path=[];keys={};moving=false;focusedObjectId=null;clearSceneNotice();}return;}
   if(!$('dialog').hidden){
@@ -2364,6 +2372,13 @@ window.addEventListener('keydown',e=>{
   if(k==='m'&&!$('worldMap').hidden){e.preventDefault();closeMap();return;}
   if(!active)return;
   if(['arrowup','arrowdown','arrowleft','arrowright',' '].includes(k))e.preventDefault();
+  if(['w','a','s','d','arrowup','arrowdown','arrowleft','arrowright'].includes(k)){
+    if(!e.repeat){
+      touchWalk.cancel();path=[];focusedObjectId=null;cancelNavigation();keys[k]=true;
+    }
+    return;
+  }
+  if(k==='i'){e.preventDefault();if(!e.repeat)showNearby();return;}
   if(k==='b'){e.preventDefault();showBag();return;}
   if(k==='m'){e.preventDefault();showMap();return;}if(k==='j'){e.preventDefault();showQuest();return;}
   if((k==='e'||k===' ')&&!e.repeat){const near=nearbyInteractionObject();if(near)interact(near);else notice('靠近场景物件或微光采集物，再按空格或 E。');return;}
@@ -2374,7 +2389,7 @@ window.addEventListener('blur',()=>{keys={};path=[];moving=false;});
 document.addEventListener('visibilitychange',()=>{keys={};path=[];moving=false;if(document.hidden){active=false;if(started)engine.save();}else{active=started&&$('dialog').hidden&&$('gallery').hidden&&$('worldMap').hidden&&!transitioning&&!window.NanlanOpening?.running()&&!window.NanlanSettings?.isOpen()&&!window.NanlanMobile?.isOverview();lastFrame=performance.now();}});
 document.addEventListener('keydown',e=>{
   if(e.key!=='Tab')return;const root=!$('sceneLoading').hidden?$('sceneLoading'):!$('gallery').hidden?$('gallery'):!$('worldMap').hidden?$('worldMap'):!$('dialog').hidden?$('dialog'):null;if(!root)return;
-  const buttons=[...root.querySelectorAll('button:not([hidden]):not(:disabled),input')];if(!buttons.length)return;
+  const buttons=[...root.querySelectorAll('button:not(:disabled),input:not(:disabled),select:not(:disabled),textarea:not(:disabled),summary,a[href],[tabindex]:not([tabindex="-1"])')].filter(el=>el.getClientRects().length);if(!buttons.length)return;
   if(e.shiftKey&&document.activeElement===buttons[0]){e.preventDefault();buttons[buttons.length-1].focus();}
   else if(!e.shiftKey&&document.activeElement===buttons[buttons.length-1]){e.preventDefault();buttons[0].focus();}
 });

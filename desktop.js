@@ -33,18 +33,17 @@ window.addEventListener('keydown',e=>{
  if(k==='escape'&&bagSession){stop();if(!e.repeat)restore();return;}
  if(!$('dialog').hidden&&(k===' '||k==='arrowdown'||k==='arrowup')){
   stop();if(e.repeat)return;
-  if(k===' '&&dialogKind==='kitchen'&&e.target?.closest('summary')){e.target.closest('summary').click();return;}
-  if(k===' '&&['v3-worktable','v3-hearth','seal-draft','silk-care','paper-reading','paper-work','market-work','hall-work','lantern-work','family-letter','kitchen'].includes(dialogKind)&&e.target?.closest('#dialog button')){e.target.closest('button').click();return;}
+  const focused=e.target?.closest('#choices button,#panelExtra button,#panelExtra summary,#next,#dialogQuestNavigate');
+  if(k===' '&&focused&&!focused.disabled&&focused.getClientRects().length){focused.click();return;}
   if(k===' '&&dialogKind==='arrival'){const choice=e.target?.closest('#choices button:not(:disabled)');if(choice)choice.click();else $('choices').querySelector('button:not(:disabled)')?.focus();return;}
   if(k===' '){if(!$('next').hidden&&$('next').getClientRects().length)$('next').click();else{const choices=[...$('choices').querySelectorAll('button:not(:disabled)')];if(!choices.length)closeDialog();else {choices[0].focus();notice('方向键选择，Enter 确认，Esc 返回。');}}return;}
-  const options=['v3-worktable','v3-hearth','seal-draft','silk-care'].includes(dialogKind)
-    ? [...$('dialog').querySelectorAll('#panelExtra button:not(:disabled), #choices button:not(:disabled)')].filter(b=>b.getClientRects().length)
-    : dialogKind==='kitchen'
-    ? [...$('dialog').querySelectorAll('.kitchen-action:not([hidden]):not(:disabled), #choices button:not(:disabled)')]
-    : [...$('choices').querySelectorAll('button:not(:disabled)')];
-  if($('choices').hidden||!options.length)return;let i=options.indexOf(document.activeElement);i=(i+(k==='arrowdown'?1:-1)+options.length)%options.length;options[i].focus();return;
+  const options=[...$('dialog').querySelectorAll('#panelExtra button:not(:disabled),#panelExtra summary,#choices button:not(:disabled),#next:not([hidden])')].filter(el=>el.getClientRects().length);
+  if(!options.length)return;
+  const selected=options.indexOf(document.activeElement);
+  const i=selected<0?(k==='arrowdown'?0:options.length-1):(selected+(k==='arrowdown'?1:-1)+options.length)%options.length;
+  options[i].focus();return;
  }
  if(k===' '&&active){stop();if(e.repeat)return;const near=nearbyInteractionObject();if(near)interact(near);else notice('靠近人物或物件，按空格或 E 互动。');}
 },true);
-window.addEventListener('keyup',e=>{if(e.key===' '&&!['INPUT','TEXTAREA'].includes(e.target?.tagName)){e.preventDefault();}},true);
+
 })();

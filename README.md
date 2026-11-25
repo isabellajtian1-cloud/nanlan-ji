@@ -1,8 +1,8 @@
-# 南澜记 V6.10.17 · 四时天气签
+# 南澜记 V6.10.18 · 入篱见青
 
-[打开六卷与番外开发试玩](https://isabellajtian1-cloud.github.io/nanlan-ji/play-6.10.17.html?play=full) · [从竹篱菜圃体验](https://isabellajtian1-cloud.github.io/nanlan-ji/play-6.10.17.html#farm-garden)
+[打开六卷与番外开发试玩](https://isabellajtian1-cloud.github.io/nanlan-ji/play-6.10.18.html?play=full) · [从竹篱菜圃体验](https://isabellajtian1-cloud.github.io/nanlan-ji/play-6.10.18.html#farm-garden)
 
-解压完整包后打开 `index.html` 即可游玩。右上角纸签用春花、夏荷、秋稻、冬梅显示季节，旁边的图案和文字显示此刻天气。点击纸签或用键盘选中后按 Enter 打开日历。
+解压后打开 `index.html`。点庭院东边的竹篱进入菜圃，点水滴浇水，点竹篮采收。菜圃体验入口使用独立试玩进度。
 
 ## V6.10.6 · 一路相续
 

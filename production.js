@@ -51,9 +51,22 @@ function show(i=selected){selected=i;const s=state(),p=s.production,z=M.status(s
    else{
      if(weather==='rain'&&p.fish.start!=null&&!p.fish.protected&&!z.rainLoss&&!z.fishReady&&N.clock(s).minute+20<=720)action(L('扎篱通水 · 竹材一根','Secure the Fence with One Bamboo'),'silkGuard');
      if(p.fish.fedAt===null){
+       if(window.NanlanPondFeeding){
+         const foods=[
+           ['feed',L('取一份鱼食','Take one ration of fish feed'),N.available(s,'fishFeed')],
+           ['leaves',L('取两份桑叶','Take two mulberry leaves'),(s.bag.mulberryLeaf||0)+(s.bag.wetLeaf||0)>=2],
+           ['litter',L('取一份蚕沙','Take one share of silkworm litter'),s.bag.silkwormCompost]
+         ];
+         for(const [id,label,ready] of foods){
+           const b=button(label,()=>NanlanPondFeeding.open(id,()=>show(2)),'pond-food-'+id,false,false);
+           b.disabled=!ready;
+         }
+         if(!foods.some(row=>row[2]))paragraph(L('可在乡邻补给摊买鱼食，也可用两份桑叶或一份蚕沙。','Buy feed at the village pantry, or bring two leaves or one share of silkworm litter.'));
+       }else{
        action(L('把一份蚕沙撒入塘中','Scatter One Share of Silkworm Litter'),'silkFeedFish',{food:'litter'},undefined,(s.bag.silkwormCompost||0)>0,L('可在清蚕匾或收茧时取得蚕沙。','Collect litter when cleaning the tray or gathering cocoons.'));
        action('投一份鱼食','silkFeedFish',{food:'feed'},undefined,N.available(s,'fishFeed')>=1,'鱼食不足，可用桑叶投喂。');
        action('投桑叶 ×2','silkFeedFish',{food:'leaves'},undefined,(s.bag.mulberryLeaf||0)+(s.bag.wetLeaf||0)>=2,'先去桑畦采两份桑叶。');
+       }
      }else if(z.fishReady){
        action(L('起鱼取泥 · 全收','Lift the Fish and Gather Pond Mud'),'silkHarvestFish');
        if(p.fish.start!=null)action(L('少收一尾，留苗取泥','Keep One Fry and Gather Pond Mud'),'silkHarvestFish',{keep:true});

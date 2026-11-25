@@ -1,0 +1,22 @@
+.field-tools { display:flex; justify-content:center; gap:.55rem; margin:.2rem 0 .5rem }
+.field-tools button, .field-beds button { font:inherit; color:#3e4835; border:1px solid #aa9974; background:#e9dfc7; cursor:pointer }
+.field-tools button { display:inline-flex;align-items:center;gap:.4em;min-height:42px; padding:.18rem .9rem; border-radius:5px }
+.field-tools i {display:inline-grid;width:29px;height:29px;place-items:center;overflow:hidden}
+.field-tools i svg,.field-tools i img {display:block;width:100%;height:100%}
+.field-tools [aria-pressed=true] { color:#fff5d5; background:#49614c }
+.field-beds { touch-action:none; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:3px; width:min(100%,440px); margin:auto; user-select:none; -webkit-user-select:none }
+.field-beds button { position:relative; display:grid; place-items:center; height:clamp(62px,10.5dvh,92px); overflow:hidden; border-radius:5px; background:radial-gradient(ellipse at 50% 70%,#c3b38a,#efe6ce 78%); padding:0 0 16px; touch-action:none }
+.field-beds button svg { display:block; width:auto; aspect-ratio:384/341.3333; height:100%; overflow:hidden; pointer-events:none }
+.field-beds button span { position:absolute; bottom:1px; font-size:12px; line-height:16px; letter-spacing:.04em }
+.field-beds button[data-ripe=true] span { color:#355a38; font-weight:bold }
+.field-beds button:focus-visible,.pond-stage:focus-visible { outline:3px solid #8b602b; outline-offset:-3px }
+.field-beds .worked { animation:field-touch .5s ease-out }
+.field-beds .worked::after {content:'';pointer-events:none;position:absolute;left:50%;top:46%;width:30px;height:10px;border:2px solid #7da6b1;border-radius:50%;animation:bed-ripple .55s ease-out forwards}
+.field-beds .worked[data-work=basket]::after {width:12px;height:19px;border:0;border-radius:85% 16%;background:#668254;box-shadow:-5px 3px #92a46d;animation:leaf-lift .52s ease-out forwards}
+@keyframes bed-ripple {from{transform:translate(-50%,-35%) scale(.35);opacity:1}to{transform:translate(-50%,-35%) scale(1.7);opacity:0}}
+@keyframes leaf-lift {from{transform:translate(-50%,0) rotate(-20deg);opacity:.9}to{transform:translate(7px,-22px) rotate(12deg);opacity:0}}
+@keyframes field-touch { from {box-shadow:inset 0 0 20px #71978b} to {box-shadow:none} }
+.pond-stage { position:relative; display:block; width:min(96%,350px,43dvh); aspect-ratio:384/344; padding:0; margin:0 auto; border:0; border-radius:18%; background:transparent; touch-action:none; user-select:none; -webkit-user-select:none; cursor:crosshair }
+.pond-stage svg,.pond-stage canvas { position:absolute; inset:0; width:100%; height:100%; pointer-events:none }
+.pond-note { text-align:center; margin:.3rem 0; min-height:1.35em; font-size:.95rem; color:#395844 }
+@media (prefers-reduced-motion:reduce){.field-beds .worked{animation:none}.field-beds .worked::after{display:none}}

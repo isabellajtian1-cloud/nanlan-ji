@@ -388,7 +388,7 @@ async function perform(name,p={},rerender){
   if(rerender)rerender();else notice(result.duplicate?'这件事已经办好了。':actionMessage(name));
   const nextChapter=result.completed&&N.chapterEntries(state()).find(e=>!e.started&&e.ready);
   if(nextChapter&&!$('dialog').hidden)navButton(window.NanlanI18n?.language==='en'?'Next Chapter · View Entrance':'下一卷已可开启 · 查看入口',()=>window.NanlanChapters.show(nextChapter.number),'completed-next-chapter');
-  if(gathered&&!result.duplicate){
+  if(gathered&&!result.duplicate&&!p.fieldStroke){
     const received=Object.entries(state().bag).filter(([id,n])=>n>(beforeBag[id]||0)).map(([id,n])=>(N.itemNames[id]||id)+' ×'+(n-(beforeBag[id]||0)));
     if(received.length){
       const text=(name==='harvest'?'采收获得：':name==='clearWeed'?'清理获得：':'已采得：')+received.join('、');
@@ -655,7 +655,7 @@ function refreshToolbar(){
     const b=belt.children[i],locked=(i<5||id==='axe')?!s.tools[id]:false;
     b.className='tool'+(locked?' locked':'')+(s.selected===id?' active':'');
     b.setAttribute('aria-label','第 '+(i+1)+' 格 '+label+(locked?' 尚未获得':'')+' · '+deskText('快捷键 ','Key ')+['1','2','3','4','5','6','7','8','9','0','-','='][i]);b.querySelector('.slot-key').title=deskText('快捷键','Keyboard shortcut');b.setAttribute('aria-pressed',String(s.selected===id));
-    b.querySelector('.slot-count').textContent=id==='water'?(s.bucketWater?'满':'空'):['seed','repair','hotMeal'].includes(id)?'×'+N.quantity(s,id):'';
+    b.querySelector('.slot-count').textContent=id==='water'?String(s.bucketWater||0)+'/'+(s.mode==='daily'?3:1):['seed','repair','hotMeal'].includes(id)?'×'+N.quantity(s,id):'';
   });
   const current=toolDefs.find(d=>d[0]===s.selected)||toolDefs[0];
   let note=current[2];
@@ -664,6 +664,7 @@ function refreshToolbar(){
     note=weeds.length&&!weeds.some(o=>!s.collected[o.id])?deskText('此处杂草已清理。当前任务见左上角。','The weeds here are cleared. See the current quest at top left.'):
       deskText('靠近未清理的杂草后使用。','Use near uncleared weeds.');
   }
+  if(s.scene==='yard'&&['basket','water'].includes(s.selected)&&s.flags.smallBed)note=deskText('点或划过菜畦。站在田边可按住空格，用方向键逐畦操作。','Tap or sweep across beds. At the fence, hold Space and use the arrows.');
   $('toolInfo').textContent=deskText('工具说明 · ','Tool · ')+current[1]+'：'+note;
 }
 function selectTool(index){
@@ -805,7 +806,7 @@ function taskMaterials(s){
 function showBag(){
   window.NanlanDesktop?.enterBag();
   const s=state(),required=taskMaterials(s),keys=Object.keys(N.itemNames).filter(k=>N.quantity(s,k)>0||required[k]>0);
-  activity('随身行囊','家用 '+s.coins+' 文 · 体力 '+Math.floor(s.stamina)+'/100\n钥匙串：'+(s.keyring.includes('yardKey')?'院门钥匙':'暂无')+' · 水桶：'+(!s.tools.water?'尚未领取':Number(s.bucketWater||0)>0?'已装水':'空')+'\n'+(s.flags.bedReady?'床褥已搬进卧房。':'床褥仍在行囊。')+'\n\n当前任务要用的材料即使为 0 也会列出来源；预留库存仍属于你，但不能散卖。');
+  activity('随身行囊','家用 '+s.coins+' 文 · 体力 '+Math.floor(s.stamina)+'/100\n钥匙串：'+(s.keyring.includes('yardKey')?'院门钥匙':'暂无')+' · 水桶：'+(!s.tools.water?'尚未领取':Number(s.bucketWater||0)>0?String(s.bucketWater)+(deskText(' 份水',' portions of water')):'空')+'\n'+(s.flags.bedReady?'床褥已搬进卧房。':'床褥仍在行囊。')+'\n\n当前任务要用的材料即使为 0 也会列出来源；预留库存仍属于你，但不能散卖。');
   const grid=document.createElement('div');grid.className='inventory-grid';
   for(const id of keys){
     const row=document.createElement('div');row.className='inventory-row';
@@ -1007,7 +1008,7 @@ async function handleGardenPlot(target){
   if(index>=4&&!f.fullGarden){notice('这两块药田还没有扩整。继续生活，等许青禾教你整理药圃。',true);return;}
   if(index>0&&!g.tilled){if(selected!=='hoe'){gardenToolHint(3,'这块土还硬着。先按 3 选中长柄锄，再点这块土地。','点下方长柄锄，再点硬土。','Select the hoe below, then the hard soil.');return;}await directGardenAction('tillPlot',index);return;}
   if(!c.planted){if(selected!=='seed'){gardenToolHint(6,'这里可以播种。先按 6 选中布种袋，再点这块空畦。','点下方布种袋，再点空畦。','Select the seed pouch below, then the empty plot.');return;}if(N.quantity(s,'seed')<1){notice('布种袋空了。采收会留下种子，也可向乡邻补购。',true);return;}showDirectSeedChoice(index,target);return;}
-  if(!g.watered){if(selected!=='water'){gardenToolHint(5,'嫩芽还缺水。先按 5 选中箍木桶，再点这块菜畦。','点下方木桶，再点嫩芽。','Select the bucket below, then the seedlings.');return;}if(s.bucketWater<1){notice('木桶是空的。先去庭院水缸装水，再回来点菜畦。',true);return;}await directGardenAction('waterCrop',index);return;}
+  if(!g.watered){if(selected!=='water'){gardenToolHint(5,'嫩芽还缺水。先按 5 选中箍木桶，再点这块菜畦。','点下方木桶，再点嫩芽。','Select the bucket below, then the seedlings.');return;}if(!window.NanlanWeather?.helpsWater(s)&&s.bucketWater<1){notice('木桶是空的。先去庭院水缸装水，再回来点菜畦。',true);return;}await directGardenAction('waterCrop',index);return;}
   if(c.ready){if(!['hand','basket'].includes(selected)){gardenToolHint(4,'作物已经成熟。按 1 使用双手，或按 4 选竹背篓，再点作物采收。','点下方竹背篓，再点成熟的作物。','Select the basket below, then the ripe crop.');return;}await directGardenAction('harvest',index);return;}
   notice((g.kind==='herb'?'药草':'青菜')+'正在生长，还需约 '+Math.ceil(c.remaining)+' 游戏分钟。走动、做事或休息都会推进时间。');
 }
@@ -1030,6 +1031,7 @@ function showGarden(index=selectedPlot){
     tile.onclick=()=>{selectedPlot=i;window.NanlanAudio?.play('click');showGarden(i);};board.append(tile);
   }
   $('panelExtra').append(board);
+  if(f.smallBed&&window.NanlanFieldwork)navButton(deskText('在田边连续浇水、采收','Water or harvest a row'),NanlanFieldwork.show,'field-open');
   const canPrepare=q==='M03'&&f.pathCleared&&!f.smallBed;
   const canExpand=q==='M07'&&!f.fullGarden;
   if(canPrepare){actButton('整理第一块菜畦','smallBed',{choice:'vegetable'},()=>showGarden(0),'bed-vegetable');actButton('先整理香草小畦','smallBed',{choice:'herb'},()=>showGarden(0),'bed-herb');}
@@ -1048,7 +1050,7 @@ function showGarden(index=selectedPlot){
     }else if(!g.watered){
       const water=Number.isFinite(s.bucketWater)?s.bucketWater:0,rainWater=!!window.NanlanWeather?.helpsWater(s),b=button(rainWater?'借檐雨浇灌 · 不耗桶水':'提起木桶 · 浇水（水 '+water+'）',()=>gardenAction('waterCrop',{plot:selectedPlot}),'garden-water');
       if(!rainWater&&!s.tools.water){b.disabled=true;prerequisiteNote('先在仓房领取水桶。领取前水量按 0 显示，不能尝试浇水。');}
-      else if(water<1){b.disabled=true;prerequisiteNote('木桶是空的。先到庭院水缸装水，再回来浇灌。');}
+      else if(!rainWater&&water<1){b.disabled=true;prerequisiteNote('木桶是空的。先到庭院水缸装水，再回来浇灌。');}
     }
     else if(c.ready)button('亲手采收 · '+(g.kind==='herb'?'鲜草药':'青菜')+' ×3，留种 ×1',()=>gardenAction('harvest',{plot:selectedPlot}),'garden-harvest');
     else prerequisiteNote('作物正在扎根生长，不必重复浇水。'+timeNote);
@@ -1432,6 +1434,7 @@ async function interactCore(o){
   if(a==='crateMove'){window.NanlanStoreWork.show();dialogObject=o;return;}
   if(a==='hallMove'){window.NanlanHallWork.show();dialogObject=o;return;}
   if(a==='dryRack'){activity('庭院 · 自家晾架','这就是当初留下的自家晾架。竹脚落在地面，药草与潮湿桑叶都在这里摊开通风。');window.NanlanVillage?.rack();dialogObject=o;return;}
+  if(a==='fieldStroke'){window.NanlanFieldwork?.arrive(o);return;}
   if(a==='gardenDirect'){await handleGardenPlot(o);return;}
   if(a==='silkProduction'){window.NanlanProduction.show();dialogObject=o;return;}
   if(a?.startsWith('seal')){window.NanlanSeals.gather(o);return;}
@@ -1472,7 +1475,7 @@ async function interactCore(o){
   else if(a==='garden')showGarden(storyGardenPlot());
   else if(a==='craft')showCraft();
   else if(a==='cook')showCook();
-  else if(a==='water'){activity('庭院 · 水缸','缸中的水可装入旧木桶。一次装满，够做一锅饭或浇一畦地。');if(N.reached(s,'M04'))actButton('把水桶装满','fillWater',{},()=>{closeDialog();refreshHud();notice(actionMessage('fillWater'));});}
+  else if(a==='water'){activity('庭院 · 水缸',s.mode==='daily'?deskText('木桶能装三份水，每畦用一份。下雨可借檐雨。','The bucket holds three portions, one per bed. Rainwater is free.'):'缸中的水可装入旧木桶。一次装满，够做一锅饭或浇一畦地。');if(N.reached(s,'M04'))actButton('把水桶装满','fillWater',{},()=>{closeDialog();refreshHud();notice(actionMessage('fillWater'));});}
   else if(a==='drain'){activity('庭院水口',f.drainClear?'水口通了，灶边与通路不再被积水妨碍。':'落叶塞住了小水口。清掉这一处即可通水，不需要修复池塘。');if(q==='M04'&&!f.drainClear)actButton('清理落叶，疏通水口','clearDrain',{},()=>{closeDialog();notice('小水口已经通了。');});}
   else if(a==='table'){
     activity('正厅 · 一家人的饭桌',q==='M04'?'第一锅饭已经端来。家人先吃上热饭，这处落脚的房子便开始像个家。':'饭桌旁可以商量家事，来信、座次和一顿饭都会留下记录。');
@@ -1830,6 +1833,13 @@ function setupCamera(rect,now){
   let targetX=whole?W/2:s.player.x;
   // Frame the character's body above its feet without hiding the path ahead.
   let targetY=whole?H/2:s.player.y-43*actorScale(s.player.y);
+  // Approach the fence with room in frame for all six painted beds above the toolbelt.
+  if(!whole&&s.scene==='yard'&&s.flags.smallBed&&window.NanlanFieldwork){
+    const edge=gardenTarget(0),distance=Math.hypot(s.player.x-edge.x,s.player.y-edge.y);
+    const weight=Math.max(0,Math.min(1,(165-distance)/105));
+    targetY+=weight*Math.max(0,gardenSpots[5][1]-vh/targetScale*.12-targetY);
+    targetX+=weight*Math.max(0,gardenSpots[5][0]-vw/targetScale*.25-targetX);
+  }
   const walk=walkingView&&!whole ? landscape.walkingFrame(s.player,
     resized?null:camera.walk,moving,reduceCameraMotion.matches,{width:vw/targetScale,height:vh/targetScale}) : null;
   if(walk){
@@ -2196,7 +2206,7 @@ function render(){
   paintWorldLight(s,depth.day);
   drawEntranceSigns();
 
-  renderGardenWorkFx(time);
+  renderGardenWorkFx(time);window.NanlanFieldwork?.draw(time);
   renderCompletionFeedback(time);
 }
 function frame(t){
@@ -2327,7 +2337,9 @@ $('continueGame').onclick=async()=>{
     if(!await loadSceneAssets(check.state.scene,check.state)){startLoadError(deskText('场景画面未能全部载入。请重试，原存档已保留。','Some scene artwork could not load. Retry; your save is safe.'),()=>$('continueGame').onclick());return;}
     if(localStorage.getItem(N.SAVE_KEY)!==resumeRaw){storedRaw=localStorage.getItem(N.SAVE_KEY);window.NanlanChapterMark?.refresh();startLoadError(deskText('另一页更新了进度，请核对时辰后再次继续。','Another page updated the save. Review the time and continue again.'),()=>$('continueGame').onclick());return;}
     applyRestoredSnapshot(check.state,resumeRaw);
-    if(window.NanlanWalkSample){
+    if(window.NanlanFarmSample){
+      if(window.NanlanFarmSample==='pond')NanlanProduction.show(2);else NanlanFieldwork.show();
+    }else if(window.NanlanWalkSample){
       notice(deskText('沿竹篱往上走，点「榕溪石径」入溪，再向右过桥。此页单独试走。','Follow the bamboo fence uphill and tap Banyan Brook Lane. Cross the bridge to the right. This walk has its own session.'));
     }else{
       notice(!state().flags.volume2Started&&N.done(state(),'M20')?(window.NanlanI18n?.language==='en'?'Progress restored. Volume II is available; open the South Street notice in your task panel.':'进度已恢复。第二卷已可开启，打开任务栏里的「南街铺讯」，到正厅与家人商议。'):deskText('进度已恢复 · '+timeText().short+'。左上角可查看当前任务。','Progress restored · '+timeText().short+'. Your current quest is at the top left.'));

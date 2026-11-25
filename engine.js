@@ -451,7 +451,7 @@
           return once(s,'weed:'+id,()=>{requireThat(s.stamina>=2,'体力不足。可到床榻小憩。');s.collected[id]=true;give(s,{weed:1,...(['weed1','weed2'].includes(id)?{wood:1}:{})});s.stamina-=2;});}
         if(name==='smallBed'){quest('M03');requireScene(s,'yard');requireThat(f.pathCleared,'先清完通路上 3 处杂草。');return once(s,'smallBed',()=>{requireThat(['vegetable','herb'].includes(p.choice),'先选一小畦的用途。');f.smallBed=true;s.choices.firstBed=p.choice;});}
         if(name==='cleanStove'){quest('M04');requireScene(s,'yard');f.stoveClean=true;return;}
-        if(name==='fillWater'){requireScene(s,'yard');requireThat(s.tools.water,'先在仓房领取水桶。');requireThat(reached(s,'M04'),'先清理后院通路。');s.bucketWater=1;f.bucketFilled=true;return;}
+        if(name==='fillWater'){requireScene(s,'yard');requireThat(s.tools.water,'先在仓房领取水桶。');requireThat(reached(s,'M04'),'先清理后院通路。');s.bucketWater=s.mode==='daily'?3:1;f.bucketFilled=true;return;}
         if(name==='clearDrain'){quest('M04');requireScene(s,'yard');f.drainClear=true;return;}
         if(name==='cookMeal'||name==='cookFeast'){
           requireScene(s,'yard');const feast=name==='cookFeast';if(feast)requireThat(reached(s,'M20'),'先办完京中来信。');else requireThat(reached(s,'M04'),'先整理后院。');

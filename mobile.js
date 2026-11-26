@@ -20,7 +20,13 @@ const taskClick=$('taskToggle').onclick;$('taskToggle').onclick=()=>{if(media.ma
 media.addEventListener('change',()=>{closeOverview();refresh();});
 window.addEventListener('keydown',e=>{if(!looking)return;if(e.key==='Tab'||e.target===view&&['Enter',' '].includes(e.key))return;e.preventDefault();e.stopImmediatePropagation();if(e.key==='Escape')closeOverview();},true);
 let safe=null;
-function measure(){if(!media.matches){safe=null;return;}const a=$('actions').getBoundingClientRect(),t=$('tasks').getBoundingClientRect(),r=$('hud').getBoundingClientRect(),left=Math.max(10,status.getBoundingClientRect().left-r.left),right=Math.max(10,r.right-view.getBoundingClientRect().right);safe={left,top:Math.max(54,t.bottom-r.top+8),width:Math.max(1,r.width-left-right),bottom:Math.min(r.height-58,a.top-r.top-8)};}
+function measure(){
+ if(!media.matches){safe=null;return;}
+ const a=$('actions').getBoundingClientRect(),task=$('tasks'),r=$('hud').getBoundingClientRect();
+ const left=Math.max(10,status.getBoundingClientRect().left-r.left),right=Math.max(10,r.right-view.getBoundingClientRect().right);
+ // Use the resting location so a task card moving out of the way cannot pull the camera after it.
+ safe={left,top:Math.max(54,task.offsetTop+task.offsetHeight+8),width:Math.max(1,r.width-left-right),bottom:Math.min(r.height-58,a.top-r.top-8)};
+}
 window.addEventListener('resize',()=>{keys={};path=[];moving=false;measure();});
 const oldRefresh=refresh;function measuredRefresh(){oldRefresh();measure();}
 window.NanlanMobile={refresh:measuredRefresh,compact:()=>media.matches,isOverview:()=>looking,safeFrame:()=>safe};measuredRefresh();

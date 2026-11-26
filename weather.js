@@ -120,10 +120,27 @@ window.NanlanWeatherPaint=(()=>{
       distance:[[52,126],[125,129],[125,347],[62,383]],stone:[[532,623,126,32],[758,668,102,38]],water:[[851,496,11,3]],drips:[[843,95,851,496],[139,101,147,517]]},
     serviceKitchen:{openings:[[[43,152],[135,124],[135,327],[43,389]],[[989,116],[1064,112],[1064,302],[989,298]]]},
     reedLanding:{stone:[[187,441,82,54],[288,551,49,23]],water:[[915,456,95,39],[775,553,120,63],[537,493,61,21]]},
-    banyanBrook:{water:[[520,495,57,17],[579,524,65,17]]},
+    banyanBrook:{water:[[520,495,57,17],[579,524,65,17]],stone:[[522,330,31,6]]},
+    market:{soil:[[490,405,63,18],[593,551,76,25],[467,579,40,11]],stone:[[552,350,41,9],[376,639,62,17],[681,618,50,13]]},
+    county:{stone:[[555,373,48,13],[524,473,89,26],[650,581,110,36],[400,624,63,22]]},
+    prefMarket:{stone:[[609,399,58,19],[534,510,82,25],[652,607,88,30],[423,565,49,17]]},
+    qingxi:{stone:[[527,382,52,14],[604,463,78,21],[471,550,83,24],[612,617,76,24]]},
+    foothill:{soil:[[472,435,62,19],[548,534,69,26],[424,602,58,18]]},
+    mountain:{soil:[[546,405,53,15],[500,491,67,21]],stone:[[601,536,38,10],[458,607,46,15]]},
+    mountainside:{soil:[[562,416,53,18],[506,550,62,20]],stone:[[609,485,38,10]]},
+    summit:{stone:[[550,421,45,13],[597,512,51,13],[454,597,49,14]],soil:[[611,406,29,9]]},
+    bambooGrove:{soil:[[537,405,59,14],[501,501,69,20],[592,595,83,23]]},
+    coast:{soil:[[517,487,82,21],[686,543,67,17],[414,605,74,20]]},
+    tidalflat:{soil:[[406,487,53,13],[536,604,73,21],[749,478,39,10]]},
+    wharf:{stone:[[554,422,59,15],[662,514,86,24],[486,602,90,26]]},
+    prefDock:{stone:[[508,425,69,20],[665,484,77,21],[545,601,99,29]]},
+    anchorage:{stone:[[555,463,76,18],[702,546,69,18],[480,605,58,18]]},
+    oldTrail:{soil:[[507,452,59,19],[573,564,69,23]],stone:[[591,358,39,8],[620,328,31,6]]},
     gardenClose:{soil:[[291,292,113,32],[730,286,134,30],[269,472,118,41],[769,474,105,38]],stone:[[545,585,15,82]]},
     pondClose:{water:[[537,387,233,107]]}
   };
+  // The voyage returns to the same painted jetty, fair, coast, grove and beacon.
+  for(const [stop,source] of Object.entries({qPier:'wharf',qFair:'qingxi',qSalt:'coast',qBamboo:'bambooGrove',qBeacon:'summit'}))surfaces[stop]=surfaces[source];
   const rainTypes={
     drizzle:{count:58,speed:270,wind:.12,length:4,wet:.45,veil:.14},
     shower:{count:122,speed:435,wind:.30,length:10,wet:.81,veil:.23},
@@ -145,7 +162,7 @@ window.NanlanWeatherPaint=(()=>{
     if(spec.outside){clip.addPath(path(spec.outside));clip.addPath(path(spec.distance));}
     let salt=121;for(const c of scene)salt=(Math.imul(salt,31)+c.charCodeAt(0))>>>0;
     const seeds=Array.from({length:180},(_,i)=>{const h=salt+i*131,s=Array.from({length:9},(_,k)=>hash(h+k*3109));return s;});
-    const field={...spec,stone,water,spots,clip,masked:!!(spec.outside||spec.openings),indoor:!open&&!spec.outside&&!spec.openings,seeds};
+    const field={...spec,stone,water,soil,spots,clip,masked:!!(spec.outside||spec.openings),indoor:!open&&!spec.outside&&!spec.openings,seeds};
     layouts.set(scene,field);return field;
   }
   function stamp(ctx,img,x,y,w,h,strength){
@@ -221,6 +238,7 @@ window.NanlanWeatherPaint=(()=>{
   function contacts(ctx,f,r,t,quiet,image){
     const img=textures(),base=ctx.globalAlpha;
     const gloss=reflectedStone(image,f);
+    for(const [x,y,rx,ry] of f.soil)stamp(ctx,img.cloud,x,y,rx*2.5,ry*2.1,.64*r.wet);
     for(const [i,[x,y,rx,ry]] of f.stone.entries()){
       stamp(ctx,img.cloud,x,y,rx*2.8,ry*1.9,.30*r.wet);
       if(gloss)stamp(ctx,gloss[i],x,y,rx*2.1,ry*1.6,.66*r.wet);
@@ -238,6 +256,12 @@ window.NanlanWeatherPaint=(()=>{
       if(phase<.23){
         const h=(1-phase/.23)**1.15*(21+23*d),w=1.4+e;
         ctx.drawImage(img.drop,x-r.wind*h-w/2,y-h-4,w,4+c*3);
+      }else if(material==='soil'){
+        // Earth absorbs the blow. A momentary fleck settles into a damp mark.
+        const age=(phase-.23)/.77;
+        ctx.fillStyle='rgba(53,44,34,'+(.43*(1-age))+')';
+        ctx.beginPath();ctx.ellipse(x,y,1+size*age,.6+.50*age,0,0,tau);ctx.fill();
+        if(age<.27){ctx.fillStyle='rgba(202,207,185,'+(.65-age*2)+')';ctx.fillRect(x+.6,y-1-Math.sin(age/.27*Math.PI)*2,1.1,1.1);}
       }else splash(ctx,x,y,(phase-.23)/.77,size,water,.49+.25*r.wet);
     }
     ctx.globalAlpha=base;

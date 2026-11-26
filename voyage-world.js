@@ -3,17 +3,17 @@
 const add=(sc,o)=>{if(W[sc]&&!W[sc].objects.some(v=>v.id===o.id))W[sc].objects.push(o);};
 const point=(id,x,y,label,role)=>({id,x,y,label,type:'activity',action:'voyageScene',...(role?{role}:{})});
 const defs=[
- ['qPier','青屿 · 渡口','Qingyu · Landing','wharf'],
- ['qFair','青屿 · 临潮集','Qingyu · Tidal Fair','qingxi'],
- ['qSalt','青屿 · 盐田边','Qingyu · Salt Pans','coast'],
- ['qBamboo','青屿 · 上行竹径','Qingyu · Upper Bamboo Path','bambooGrove'],
- ['qBeacon','青屿 · 旧灯台下','Qingyu · Old Beacon Path','summit'],
- ['qLodge','青屿 · 临时宿院','Qingyu · Guest Courtyard','backHall']
+ ['qPier','青屿 · 渡口','Qingyu · Landing','wharf',647,484],
+ ['qFair','青屿 · 临潮集','Qingyu · Tidal Fair','qingxi',625,494],
+ ['qSalt','青屿 · 盐田边','Qingyu · Salt Pans','coast',691,492],
+ ['qBamboo','青屿 · 上行竹径','Qingyu · Upper Bamboo Path','bambooGrove',554,519],
+ ['qBeacon','青屿 · 旧灯台下','Qingyu · Old Beacon Path','summit',620,503],
+ ['qLodge','青屿 · 临时宿院','Qingyu · Guest Courtyard','backHall',615,483]
 ];
-for(const [id,name,en,src]of defs){
+for(const [id,name,en,src,companionX,companionY]of defs){
  W[id]={name,soundScene:src,asset:W[src].asset,spawn:[530,510],bounds:[200,350,940,585],collisions:[],objects:[]};
  const dict=window.NANLAN_EN||(window.NANLAN_EN={});dict[name]=en;
- add(id,point('voyageCompanion',650,490,'同行的人'));add(id,point('voyageSupplies',800,540,'旅途补给'));
+ add(id,point('voyageCompanion',companionX,companionY,'同行的人'));add(id,point('voyageSupplies',800,540,'旅途补给'));
 }
 const door=(sc,to,x,y,label)=>add(sc,{id:'road-'+sc+'-'+to,to,x,y,label,type:'door'});
 door('qPier','qFair',900,555,'沿上行路往临潮集');door('qFair','qPier',230,555,'回青屿渡口');

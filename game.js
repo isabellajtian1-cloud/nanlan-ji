@@ -110,6 +110,10 @@ async function loadSceneAssets(scene,sceneState=state()){
   const required=[scene,NanlanLocomotion.atlasKey(sceneState.gender,sceneState.actorState?.outfit==='nanlanSilk')];
   if(scene==='prefTea')required.push('teaServings','teaExtras');
   if(globalThis.NanlanTown.rooms.includes(scene))required.push(...world[scene].objects.filter(o=>o.role).map(o=>'npc_'+o.role));
+  if(world[scene]?.objects.some(o=>o.id==='voyageCompanion')){
+    const companion=N.voyage.get(sceneState)?.companion;
+    if(companion&&companion!=='none')required.push('npc_'+companion);
+  }
   if(scene==='backHall')required.push('backHallReady');
   if(world[scene]?.objects?.some(o=>o.v3Art!=null))required.push('v3Props');
   if(scene==='yard'){
@@ -2013,6 +2017,46 @@ function update(dt){
   }
   if(manualLength)tryKeyboardExit(dx,dy,dt);
 }
+// Keep the task heading readable when arriving close to the edge of a painting.
+// All rectangles here are CSS pixels, including on high-density touch displays.
+let questOffsetX=0,questOffsetY=0,questFrameKey='';
+function frameQuestCard(rect,s){
+  const card=$('tasks');
+  if(!started||card.hidden||$('hud').hidden)return;
+  const h=(s.gender==='male'?88:84)*actorScale(s.player.y)*camera.scale,x=rect.left+camera.ox+s.player.x*camera.scale;
+  const sole=rect.top+camera.oy+s.player.y*camera.scale,top=sole-h;
+  const key=[s.scene,Math.round(x/2),Math.round(top/2),Math.round(h),camera.vw,camera.vh,card.offsetWidth,card.offsetHeight,card.className].join('/');
+  if(key===questFrameKey||card.matches(':active')||card.querySelector(':active'))return;
+  questFrameKey=key;
+  const r=card.getBoundingClientRect(),w=r.width,height=r.height;
+  if(!w||!height)return;
+  const left=r.left-questOffsetX,y=r.top-questOffsetY;
+  const half=Math.max(12,Math.min(40,h*.16));
+  const face={left:x-half-5,right:x+half+5,top:top-6,bottom:top+h*.35+6};
+  const overlap=(l,t,b)=>Math.max(0,Math.min(l+w,b.right)-Math.max(l,b.left))*Math.max(0,Math.min(t+height,b.bottom)-Math.max(t,b.top));
+  let nx=0,ny=0;
+  if(overlap(left,y,face)){
+    const fixed=['status','location','chapterClock','actions','toolbelt','mobileStatus','mobileTools','mobileOverview','steeringPad']
+      .map(id=>document.getElementById(id)).filter(el=>el&&el.offsetWidth&&getComputedStyle(el).visibility!=='hidden').map(el=>el.getBoundingClientRect());
+    const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+    const positions=[[left,face.bottom+6],[face.right+8,y],[face.left-w-8,y],[left,face.top-height-8],
+      [rect.right-w-10,y],[rect.left+10,rect.bottom-height-80],[rect.right-w-10,rect.bottom-height-80]];
+    let best=Infinity;
+    for(const [cx,cy] of positions){
+      const l=clamp(cx,rect.left+6,rect.right-w-6),t=clamp(cy,rect.top+6,rect.bottom-height-6);
+      const distance=Math.hypot(l-left,t-y),hits=fixed.reduce((sum,p)=>sum+overlap(l,t,p),0);
+      const score=overlap(l,t,face)*5000+hits*7+distance;
+      if(score<best){best=score;nx=Math.round(l-left);ny=Math.round(t-y);}
+    }
+    // Stay in a usable position while the player takes another step past it.
+    if((questOffsetX||questOffsetY)&&!overlap(r.left,r.top,face)&&
+       r.left>=rect.left&&r.right<=rect.right&&r.top>=rect.top&&r.bottom<=rect.bottom&&
+       !fixed.some(p=>overlap(r.left,r.top,p)))return;
+  }
+  if(nx===questOffsetX&&ny===questOffsetY)return;
+  questOffsetX=nx;questOffsetY=ny;
+  card.style.translate=nx||ny?nx+'px '+ny+'px':'';
+}
 function setupCamera(rect,now){
   const s=state(),dpr=Math.min(window.devicePixelRatio||1,3,Math.sqrt(12000000/Math.max(1,rect.width*rect.height)));
   const vw=Math.max(1,rect.width),vh=Math.max(1,rect.height);
@@ -2027,7 +2071,7 @@ function setupCamera(rect,now){
     s.player,moving,compact,reduceCameraMotion.matches);
   const landscape=window.NanlanLandscape;
   const walkingView=landscape?.views[s.scene];
-  const zoom=walkingView ? walkingView.zoom : NanlanSceneScale.zoom(s.scene)*entry.zoom;
+  const zoom=walkingView?.zoom ?? NanlanSceneScale.zoom(s.scene)*entry.zoom;
   const requestedScale=portraitScale*zoom*(compact ? .89 : 1);
   // A fixed limit for each painting keeps the whole figure and the furnishing
   // in view. Zoom stays steady as the player approaches the foreground.
@@ -2050,15 +2094,16 @@ function setupCamera(rect,now){
   const walk=walkingView&&!whole ? landscape.walkingFrame(s.player,
     resized?null:camera.walk,moving,reduceCameraMotion.matches,{width:vw/targetScale,height:vh/targetScale}) : null;
   if(walk){
-    targetX+=walk.aheadX;
-    targetY+=walk.aheadY;
+    const strength=walkingView.depth??1;
+    targetX+=walk.aheadX*strength;
+    targetY+=walk.aheadY*strength;
   }
   // A small walking window lets feet travel across the road before the camera follows.
   // Stop following immediately at rest; scenery must not slide under a planted actor.
   if(!whole&&!resized&&camera.focusX!==undefined){
     const follow=(current,target,radius)=>current+Math.sign(target-current)*Math.max(0,Math.abs(target-current)-radius);
-    targetX=moving?follow(camera.focusX,targetX,Math.min(56,vw/targetScale*(walkingView ? .033 : .09))):camera.focusX;
-    targetY=moving?follow(camera.focusY,targetY,Math.min(35,vh/targetScale*(walkingView ? .045 : .065))):camera.focusY;
+    targetX=moving?follow(camera.focusX,targetX,Math.min(56,vw/targetScale*(walkingView?.zoom ? .033 : .09))):camera.focusX;
+    targetY=moving?follow(camera.focusY,targetY,Math.min(35,vh/targetScale*(walkingView?.zoom ? .045 : .065))):camera.focusY;
   }
   const resize=camera.vw!==vw||camera.vh!==vh||camera.dpr!==dpr;
   const snap=resize||camera.scene!==s.scene||camera.started!==started||reduceCameraMotion.matches;
@@ -2077,6 +2122,7 @@ function setupCamera(rect,now){
   };
   const pixel=n=>Math.round(n*dpr)/dpr;
   camera={entry,walk,returningFromOverview,scale,ox:pixel(offset(vw,W,focusX,safe?safe.left+safe.width/2:vw/2)),oy:pixel(offset(vh,H,focusY,safe?(safe.top+safe.bottom)/2:vh/2)),focusX,focusY,dpr,vw,vh,scene:s.scene,started,whole,time:now};
+  frameQuestCard(rect,s);
 }
 function polygon(points,fill,stroke){
   ctx.beginPath();points.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));ctx.closePath();ctx.fillStyle=fill;ctx.fill();if(stroke){ctx.strokeStyle=stroke;ctx.stroke();}
@@ -2143,6 +2189,10 @@ function paintWorldLight(s,daylight){
 }
 const npcRoles={countyInn:'landlord',v2Neighbor:'neighbor',v2ObserveMorning:'customer',v2ObserveNoon:'customer',v2ObserveAfternoon:'customer',v2Supplier:'cen',v2MotherCounter:'mother',v2FatherCounter:'father',grandfather:'grandfather',father:'father',fatherHill:'father',mother:'mother',motherHall:'mother',villager:'chen',doctor:'doctor',aCen:'cen',shenYu:'yu',shenYuCoast:'yu',chengWan:'wan',qiu:'qiu',bambooStall:'vendor',villagePantry:'vendor',pharmacyKeeper:'doctor',teahouseKeeper:'tea',v2Customer:'customer',keyHandover:'guard',familyLuggage:'father'};
 function npcRole(o){
+  if(o.id==='voyageCompanion'){
+    const voyage=N.voyage.get(state());
+    return voyage?.away&&voyage.companion!=='none'?voyage.companion:null;
+  }
   if(o.role)return o.role;
   if(o.id==='v2Repair')return state().flags.v2Leased&&!state().flags.v2Sign?'lin':null;
   return npcRoles[o.id]||null;

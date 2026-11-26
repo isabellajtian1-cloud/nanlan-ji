@@ -1,4 +1,10 @@
-# 南澜记 V6.10.29 · 榕下众生
+# 南澜记 V6.10.30 · 山海入景
+
+[开始或继续完整六卷与番外](https://isabellajtian1-cloud.github.io/nanlan-ji/play-6.10.30.html?play=full) · [雨中逛集市](https://isabellajtian1-cloud.github.io/nanlan-ji/play-6.10.30.html?sky=shower&place=market#weather-yard) · [从檐廊试走](https://isabellajtian1-cloud.github.io/nanlan-ji/play-6.10.30.html#home-veranda)
+
+解压后打开 index.html。临时试走独立于旅程存档。
+
+## 南澜记 V6.10.29 · 榕下众生
 
 [完整六卷与番外开发试玩](https://isabellajtian1-cloud.github.io/nanlan-ji/play-6.10.29.html?play=full) · [到村里看街坊](https://isabellajtian1-cloud.github.io/nanlan-ji/play-6.10.29.html#village-people) · [从正厅看家人](https://isabellajtian1-cloud.github.io/nanlan-ji/play-6.10.29.html#scale-walk)
 

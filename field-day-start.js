@@ -37,7 +37,11 @@ if(window.NanlanFarmSample){
         if(NanlanWeather.current(st).id===sky){found=true;break;}
       }
     }
-    sample.move(548,347);
+    const place=new URLSearchParams(location.search).get('place');
+    if(['market','county','bambooGrove','coast'].includes(place)){
+      ok(sample.enter(place));
+      st.selected='hand';
+    }else sample.move(548,347);
   }
   if(window.NanlanFarmSample==='scale'){
     ok(sample.enter('hall'));

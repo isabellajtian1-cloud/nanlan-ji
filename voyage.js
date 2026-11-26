@@ -202,7 +202,7 @@ function replay(id){
 function visible(s,scene,o){
  const t=V.get(s);if(o.id==='voyageBook')return !!s.flags.season5Complete;
  if(o.id==='voyageExtras')return !!s.flags.voyageComplete;
- if(o.id==='voyageCompanion'){if(!t?.away||t.companion==='none')return false;o.role=t.companion;return true;}
+ if(o.id==='voyageCompanion')return !!t?.away&&!!t.companion&&t.companion!=='none';
  if(t?.away&&o.id!=='voyageCompanion'&&npcRole(o)===t.companion)return false;
  if(['voyageBox','voyageHarbor'].includes(o.id))return !!s.flags.season5Complete;
  if(o.id==='voyageCoastRest')return !!s.flags.voyageComplete;

@@ -115,3 +115,16 @@
   #start.lingnan-title .start-buttons { margin-top: 8px; }
   #start.lingnan-title .start-vignette { background: linear-gradient(90deg,#f2e6cff0 0%,#f2e6cfe0 32%,#f2e6cf00 82%); }
 }
+.lingnan-title .title-quest-guide {
+  min-height: 44px;
+  margin-top: 4px;
+  padding: 6px 2px;
+  border: 0;
+  background: transparent;
+  color: #344b38;
+  font: inherit;
+  font-size: 14px;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  cursor: pointer;
+}

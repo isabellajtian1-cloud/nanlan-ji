@@ -19,6 +19,7 @@ world.village.objects.find(o=>o.id==='villagePantry').label='乡邻余粮 · 种
  labels['乡邻余粮 · 种子与补给']='Neighbor’s Pantry · Seeds and Supplies';
  labels['灶台 · 做饭']='Stove · Cook';labels['灶台']='Stove';
  Object.assign(labels,{
+  '玩法与任务指引':'Controls and quest guide','设置与存档':'Settings and saves',
   '南澜记可行走场景，可点地面前往，也可拖动或用方向键行走':'Walkable scene. Tap to go to a spot, drag to steer, or use the arrow keys.',
   '庭院水口':'Courtyard Drain','清理庭院水口':'Clear the Courtyard Drain','先清灶边和庭院水口。':'Clear the stove and courtyard drain first.',
   '清理庭院水口。池塘只是背景，不用修。':'Clear the courtyard drain. The pond is scenery and does not need repair.',
@@ -331,6 +332,14 @@ function closeDialog(force=false){
   $('dialog').hidden=true;$('dialog').classList.remove('arrival-mode','travel-confirm');dialogKind=null;dialogObject=null;path=[];keys={};
   active=started&&!transitioning&&!document.hidden&&$('gallery').hidden&&$('worldMap').hidden;
   if(previousFocus?.isConnected)previousFocus.focus({preventScroll:true});
+  if (pulseJournalOnReturn) {
+    pulseJournalOnReturn = false;
+    if (!familyNoteHint.hidden && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      $('familyNote').animate([
+        { backgroundColor: '#f1e4c8' }, { backgroundColor: '#fff3ce' }, { backgroundColor: '#f1e4c8' }
+      ], { duration: 1350, easing: 'ease-in-out' });
+    }
+  }
 }
 $('skip').onclick=closeDialog;
 const DOOR_REACH=18;
@@ -561,6 +570,19 @@ function familyNote(s,q){
   const i=N.steps[q].findIndex(([flag])=>!s.flags[flag]);
   return deskText(...familyWords[q].notes[Math.max(0,i)]);
 }
+const familyNoteLabel = document.createElement('span');
+const familyNoteHint = document.createElement('small');
+familyNoteHint.className = 'family-note-hint';
+familyNoteHint.hidden = true;
+$('familyNote').append(familyNoteLabel, familyNoteHint);
+let pulseJournalOnReturn = false;
+
+function journalHelp() {
+  const open = window.matchMedia('(pointer: coarse)').matches
+    ? deskText('点随身工具里的「线装任务簿」，就能查看当前任务。', 'Tap the Quest Journal in your tools to see your current quest.')
+    : deskText('按 J 或点击工具栏的「线装任务簿」，就能查看当前任务。', 'Press J or select the Quest Journal on the toolbar to see your current quest.');
+  return open + deskText('接下家人的嘱托后，也可以点画面上的叮嘱。翻开后，点「带我去看看」就能找路。', ' After you agree to help your family, you can also select their note on screen. In the journal, choose “Show me the way” for directions.');
+}
 function offerFamilyRequest(o){
   const id=N.pendingFamilyRequest(state());
   if(!id||id==='M01'||N.familyRequests[id].person!==o.id)return false;
@@ -578,7 +600,15 @@ function refreshQuestBanner(s=state(),q=N.current(s)){
   $('familyNote').hidden=!personal;
   $('mapObjective').hidden=!!waiting;
   if(waiting||personal){
-    if(personal)$('familyNote').textContent=familyNote(s,q);
+    if (personal) {
+      familyNoteLabel.textContent = familyNote(s,q);
+      familyNoteHint.hidden = q !== 'M01' || !s.flags.handover || !!s.flags.questJournalOpened;
+      if (!familyNoteHint.hidden) {
+        familyNoteHint.textContent = window.matchMedia('(pointer: coarse)').matches
+          ? deskText('点这句叮嘱，看看下一步。', 'Tap this note to see your next step.')
+          : deskText('点这句叮嘱或按 J，看看下一步。', 'Click this note or press J to see your next step.');
+      }
+    }
     lastQuestSignature=null;
     return;
   }
@@ -686,6 +716,11 @@ function selectTool(index){
 }
 function showQuest(){
   const s=state(),q=N.current(s);
+  if (q === 'M01' && s.flags.handover && !s.flags.questJournalOpened) {
+    s.flags.questJournalOpened = true;
+    familyNoteHint.hidden = true;
+    engine.save();
+  }
   const waiting=N.pendingFamilyRequest(s);
   if(waiting){
     activity(deskText('随身手记','Pocket journal'),nextHint(s),'quest');
@@ -922,7 +957,13 @@ function walkingHelp(){
     'Keyboard: Walk with WASD or the arrows. Hold two directions for diagonals or Shift for a brisk walk. I lists scene interactions. Tab selects a button and Enter confirms.\nMouse: Click the ground to walk, or click a person, object or exit to approach.\nPhone or tablet: Tap a destination, or hold the edge of the direction pad to walk. Slide to turn and lift to stop. You can also drag on the ground. Hide the pad in Settings.');
 }
 function showHelp(){
-  const s=started?state():null,sections=[deskText('眼前怎样行动','Getting around')+'\n'+walkingHelp()+'\n'+deskText('空格或 E 互动，B 开合行囊，J 看当前记录，M 看舆图。','Space or E interacts, B toggles the satchel, J opens the journal, and M opens the map.'),'放心尝试\n体力或材料不足时，游戏会告诉你还缺什么。休息、补料后可以再来，不会因为一次没做成而清空进度。'];
+  const s = started ? state() : null;
+  const sections = [
+    deskText('查看当前任务\n', 'Your current quest\n') + journalHelp(),
+    deskText('眼前怎样行动\n', 'Getting around\n') + walkingHelp() + '\n' +
+      deskText('空格或 E 互动，B 开合行囊，M 看舆图。', 'Space or E interacts, B toggles the satchel, and M opens the map.'),
+    '放心尝试\n体力或材料不足时，游戏会告诉你还缺什么。休息、补料后可以再来，不会因为一次没做成而清空进度。'
+  ];
   if(s)sections.push(deskText('沿路换景\n走到门口或路口后，选择「进入」前往下一处，也可以留在原地。','Taking an exit\nWalk up to a door or road exit, then choose Enter to travel or Stay to remain here.'));
   if(s&&N.reached(s,'M03'))sections.push('工具与整理\n数字键可选择工具栏。菜圃可在场景里直接劳作：选锄头点硬土、选种袋点空畦、选木桶点缺水作物；成熟后用双手或竹背篓点击采收。菜圃总览仍可查看全部地块。');
   if(s&&N.reached(s,'M04'))sections.push('时间与休息\n日常时钟会随游玩推进；对白、舆图和菜单中暂停。卧房床榻可以临时恢复体力，也可以睡到次日清晨。');
@@ -2279,7 +2320,9 @@ function download(name,text){
 function chooseGender(value){gender=value;for(const id of ['female','male'])$(id).setAttribute('aria-pressed',String(id===gender));$('selection').textContent='已选择'+(gender==='female'?'女主角':'男主角')+' · 将以这个身份走进南澜';}
 $('female').onclick=()=>chooseGender('female');$('male').onclick=()=>chooseGender('male');
 function showStartGuide(){
-  activity('启程前 · 怎样行动',walkingHelp()+'\n\n'+deskText('空格或 E 互动，B 打开或收起行囊。第一次遇到采集、修缮、种植或买卖时，会有相应提示。','Space or E interacts, and B toggles the satchel. Gathering, repairs, planting and trading each have a guide when you first encounter them.'));
+  activity(deskText('启程前 · 玩法与任务', 'Before you set out · Controls and quests'),
+    deskText('查看当前任务\n', 'Your current quest\n') + journalHelp() + '\n\n' + walkingHelp() + '\n\n' +
+    deskText('空格或 E 互动，B 打开或收起行囊。第一次遇到采集、修缮、种植或买卖时，会有相应提示。','Space or E interacts, and B toggles the satchel. Gathering, repairs, planting and trading each have a guide when you first encounter them.'));
 }
 function finishOpeningIntro(){
   closeDialog(true);focusedObjectId='familyLuggage';
@@ -2292,6 +2335,7 @@ function goToArrival(action){
   if(target)approach(target);
 }
 function arrivalReply(choice){
+  pulseJournalOnReturn = !state().flags.questJournalOpened;
   const grandfather=choice==='grandfather';
   activity(grandfather?'祖父 · 门前':'母亲 · 门前',grandfather?
     deskText('祖父借你的手站稳，侧耳听了听。「声在东边。像是风吹着一扇没拴紧的窗。进去瞧瞧。」','Grandfather steadies himself on your arm and listens. “From the east. It sounds like a shutter loose in the wind. Let us look inside.”'):
@@ -2359,7 +2403,14 @@ $('continueGame').onclick=async()=>{
     }else if(window.NanlanWalkSample){
       notice(deskText('沿竹篱往上走，点「榕溪石径」入溪，再向右过桥。此页单独试走。','Follow the bamboo fence uphill and tap Banyan Brook Lane. Cross the bridge to the right. This walk has its own session.'));
     }else{
-      notice(!state().flags.volume2Started&&N.done(state(),'M20')?(window.NanlanI18n?.language==='en'?'Progress restored. Volume II is available; open the South Street notice in your task panel.':'进度已恢复。第二卷已可开启，打开任务栏里的「南街铺讯」，到正厅与家人商议。'):deskText('进度已恢复 · '+timeText().short+'。左上角可查看当前任务。','Progress restored · '+timeText().short+'. Your current quest is at the top left.'));
+      const s = state();
+      if (!s.flags.volume2Started && N.done(s,'M20')) {
+        notice(deskText('进度已恢复。第二卷已可开启，打开任务栏里的「南街铺讯」，到正厅与家人商议。','Progress restored. Volume II is available; open the South Street notice in your task panel.'));
+      } else {
+        const hint = N.pendingFamilyRequest(s) ? nextHint(s) :
+          deskText('翻开「线装任务簿」可查看下一步。', 'Open the Quest Journal to see your next step.');
+        notice(deskText('进度已恢复 · ', 'Progress restored · ') + timeText().short + ' · ' + hint);
+      }
     }
   }finally{transitioning=false;$('continueGame').disabled=false;$('continueGame').textContent=continueLabel;$('continueGame').removeAttribute('aria-busy');}
 };

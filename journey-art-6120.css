@@ -1,0 +1,66 @@
+/* Paint-only layers share the world's tone curve. Insets, text, focus rings and
+   dialogue controls stay on their own unfiltered layers. Filter URLs are defined
+   in the document so fragments resolve there, including when opened from disk. */
+.lingnan-title .scroll-window,
+.opening-landscape:has(img:not([hidden])),
+.opening-portraits,
+.identity-sprite,
+.garden-world > canvas,
+.pond-stage > canvas,
+.pond-plant-layer,
+:where(#wrap) img:where(:not(.title-scroll img, #mapPlaceImage)),
+.repair-detail, .herb-tray-art, .hearth-picture, .hearth-pot::before,
+.food-banner, .ware-closeup {
+  filter: var(--paint-illustration);
+}
+
+/* Small atlas crops retain their original alpha and crop boundaries. */
+:where(#wrap) svg:has(image),
+.food-tile, .hearth-art, .food-mini, .ware-mini, .v3-prop, .kids-gift-art, .season-paper {
+  filter: var(--paint-tone);
+}
+
+/* Preserve the authored states on which interactions rely. */
+.market-desk.not-booked .hands-backdrop { filter: var(--paint-illustration) saturate(.6) brightness(.83); }
+.lamp-piece img { filter: var(--paint-illustration) brightness(.75) saturate(.65); }
+.lamp-piece.lit img { filter: var(--paint-illustration) brightness(1.12) saturate(.85) drop-shadow(0 0 8px #fbc56a); }
+.cloth-goods .inventory-art { filter: var(--paint-tone) drop-shadow(3px 6px 3px #25272980); }
+.garden-plot.unprepared svg { filter: var(--paint-tone) saturate(.35); }
+/* The map preview already uses the walking renderer's detail pass. */
+#mapPlaceImage:not(.undiscovered) { filter: var(--paint-tone) saturate(.85) sepia(.08); }
+
+/* Put painted backgrounds behind the labels, controls and map routes. */
+.map-board { background-image: none; }
+.map-board::before {
+  background: linear-gradient(90deg,#18372b0a,transparent 22%,transparent 75%,#17342913),
+              linear-gradient(#fff3c712,transparent 22%,transparent 80%,#44351d15),
+              url("world-map-v26.webp") center/cover no-repeat;
+  filter: var(--paint-illustration);
+}
+#characterCreate, .peddler-tray, .paper-reading-desk, .scholar-pot, .naming-paper {
+  isolation: isolate;
+  background-image: none;
+}
+.peddler-tray { position: relative; }
+#characterCreate::before, .peddler-tray::before, .paper-reading-desk::before,
+.scholar-pot::before, .naming-paper::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  z-index: -2;
+  filter: var(--paint-illustration);
+}
+#characterCreate::before { background: linear-gradient(#132e28e8,#132e28f5),url("opening-homecoming-v663.webp") center/cover; }
+.peddler-tray::before { background: url("peddler-wares-v6923.webp") center/100% 100% no-repeat; }
+.paper-reading-desk::before { background: linear-gradient(#f0e1bfbd,#e6d1a9c9),url("study.webp") center 55%/cover; }
+.scholar-pot::before { background: url("scholar-hearth.webp") center/100% 100% no-repeat; }
+.naming-paper::after { background: url("study.webp") center/cover; }
+.epilogue-memory-picture:not([hidden]) {
+  display: block;
+  width: 100%;
+  max-height: 340px;
+  object-fit: contain;
+  border-radius: 8px;
+}

@@ -185,7 +185,17 @@ function replay(id){
   activity(P(b.title)+' · '+L('对白','Conversations'),epilogueLines[id].map((_,stage)=>epilogueText(id,stage)).join('\n\n'),'voyage-memory');
   navButton(L('回到这篇回忆','Return to this memory'),()=>replay(id),'extra-dialogue-back');
  },'extra-dialogue-replay');
- if(id===0){const img=document.createElement('img');img.src=DATA.assets[s.gender==='male'?'familyMealMale':'familyMealFemale'];img.alt=L('一家人围桌吃饭的回忆','A memory of the family sharing a meal');img.style.cssText='display:block;width:100%;max-height:340px;object-fit:contain;border-radius:8px';$('panelExtra').append(img);}
+ const scene=V.extraTargets(id,3)[0],place=world[scene];
+ const img=document.createElement('img');img.className='epilogue-memory-picture';
+ if(id===0){
+  img.src=DATA.assets[s.gender==='male'?'familyMealMale':'familyMealFemale'];
+  img.alt=L('一家人围桌吃饭','The family sharing a meal');
+ }else{
+  const asset=scene==='backHall'&&s.flags.v4_room?'backHallReady':place.asset;
+  img.src=window.NanlanEstateUI?.preview(s,scene,DATA.assets[asset])||DATA.assets[asset];
+  img.alt=L('回忆中的'+place.name,'The place in this memory: '+NanlanI18n.t(place.name));
+ }
+ img.onerror=()=>{img.hidden=true;};$('panelExtra').append(img);
  note(L('这是已完成的回忆；查看不会再次扣料、推进时间或发放奖励。','This is a completed memory. Viewing it does not spend materials, advance time or grant rewards.'));
  navButton(L('查看其他邀约','View other invitations'),extras,'extra-memory-back');
 }

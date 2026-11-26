@@ -1300,92 +1300,128 @@ function showConversation(o, visiting=true){
   navButton(deskText('回到眼前的事','Back to what brought you here'),()=>interact(o),'chat-back');
   navButton(deskText('改日再聊','Say goodbye'),closeDialog,'chat-leave');
 }
-function npc(o){npcStory(o);addConversation(o);window.NanlanSeals?.npc(o);window.NanlanProduction?.npc(o);window.NanlanVillage?.npc(o);window.NanlanBondUI?.npc(o);}
-function npcStory(o){
+function npc(o,reply){
+  npcStory(o,reply);
+  if(o.id==='fatherHill'&&state().flags.fatherFound)return;
+  addConversation(o);window.NanlanSeals?.npc(o);window.NanlanProduction?.npc(o);window.NanlanVillage?.npc(o);window.NanlanBondUI?.npc(o);
+}
+function npcTaskReply(name,p,label){
+  switch(name){
+    case 'findFather':return deskText('父亲背起包袱，走到你身边。「走吧，沿刚才那条路回去，别叫家里人久等。」一起下山后，回旧宅正厅与父亲说说话。',
+      'Father shoulders his bundle and falls in beside you. “Let’s go back the way you came. They’ll be waiting.” Walk home together and speak with him in the main hall.');
+    case 'confirmHistory':return deskText('祖父指了指那朵小花。「记得。画了这一笔，那一回便不追问了。」小花的来历已核实。可以回村找程婉商量誊写副本。',
+      'Grandfather points to the little flower. “I remember. Once that mark was made, we let the question rest.” The mark is verified. Ask Cheng Wan in the village about making a copy.');
+    case 'reviewReceipts':return deskText('邱管事把买卖和交付的凭单逐张对齐。「货数对得上。还有这笔运费，咱们单拿出来说。」凭单已核对，可以当面议价，也可以请陈伯代呈。',
+      'Steward Qiu aligns the sales and delivery slips. “The quantities match. Let’s look at the carriage fee on its own.” The receipts are checked. Negotiate here or ask Uncle Chen to mediate.');
+    case 'resolveAccounts':return p.choice==='negotiate'
+      ?deskText('邱管事划去多算的一行。「转运、代存，合起来两文。」两人已议定费用，结清时付 2 文。',
+        'Qiu crosses out the extra charge. “Carriage and storage come to two coins.” The fee is agreed. Pay 2 coins to settle it.')
+      :deskText('邱管事把有争议的那张凭单单独折好。代呈一事已记下，去村里找陈伯取回执。',
+        'Qiu folds the disputed slip separately. Your request for mediation is recorded. See Uncle Chen in the village for the written reply.');
+    case 'mediationReceipt':return deskText('陈伯把回执交到你手里。「核过了，转运和代存共两文。」回执已收下，可以在这里结清。',
+      'Uncle Chen hands you the written reply. “They checked. Two coins for carriage and storage.” You have the reply and can settle here.');
+    case 'payFee':return deskText('两文钱已经付清。转运与代存这笔账结了，支出已记入家庭收支。',
+      'You paid 2 coins for carriage and storage. The account is settled and the expense is in the household ledger.');
+    default:return deskText('已办妥：','Completed: ')+NanlanI18n.t(label);
+  }
+}
+function npcStory(o,reply){
   const s=state(),f=s.flags,q=N.current(s),id=o.id;
+  function speak(title,greeting){
+    activity(title,reply||greeting,reply?'dialogue-scene':'general');
+    if(reply)$('dialogKicker').textContent=deskText('✓ 记事已更新','✓ Journal updated');
+  }
+  function task(label,name,p={},actionId=name){
+    return button(label,()=>perform(name,p,()=>npc(o,npcTaskReply(name,p,label))),actionId,false,false);
+  }
   if(q==='M19'&&['father','mother','motherHall','grandfather'].includes(id)){window.NanlanFamilyLetter.talk(id.startsWith('mother')?'mother':id,o,0,!!s.familyTalks[id.startsWith('mother')?'mother':id]);return;}
   if(!f.volume2Started&&N.done(s,'M20')&&['father','motherHall','grandfather'].includes(id)){window.NanlanV2.entry();return;}
   if(f.volume2Started&&['father','motherHall','grandfather'].includes(id)){window.NanlanV2.show('v2Family');return;}
     if(id==='grandfather'){
     const tone=s.choices.arrival==='grandfather'?'「你在门前扶的那一下，祖父记着。」\n\n':'';
-    activity('祖父',tone+(q==='M19'?'「来信只问我们好不好。把这一季的日子写进去，不必只写京中的旧事。」':
+    speak('祖父',tone+(q==='M19'?'「来信只问我们好不好。把这一季的日子写进去，不必只写京中的旧事。」':
       q==='M16'?'程婉：“画一朵，他就说，这一笔先不问了。”\n祖父：“簿子上的数目，未必能记尽。”':
       N.done(s,'M04')?'「纸还有空白处，拿来写几个字吧。别只等着地里的东西长。」':'「走了这么远，倒到了门口才觉得腿沉。先让家人有地方坐，也有地方睡。」'));
     if(f.historyConfirmed&&f.copyApproved)window.NanlanThreads.offer('flower');
-    if(q==='M16'&&!f.historyConfirmed)actButton('请祖父核对小花记号的往事','confirmHistory',{},()=>npc(o));
+    if(q==='M16'&&!f.historyConfirmed)task('请祖父核对小花记号的往事','confirmHistory',{});
     if(q==='M19'){
-      if(!s.familyTalks.grandfather)actButton('听祖父谈来信','familyLetter',{who:'grandfather'},()=>npc(o));
-      if(f.letterFamily&&f.giftChosen&&!f.replyWritten)actButton('请祖父写好回信','writeReply',{},()=>npc(o));
+      if(!s.familyTalks.grandfather)task('听祖父谈来信','familyLetter',{who:'grandfather'});
+      if(f.letterFamily&&f.giftChosen&&!f.replyWritten)task('请祖父写好回信','writeReply',{});
     }
     if(N.done(s,'M04'))button('与祖父整理字纸、练写一个字',showPractice,'practice');
     button('查看当前任务',showQuest,'npc-quest',true);return;
   }
   if(['father','fatherHill','mother','motherHall'].includes(id)){
     const father=id.startsWith('father'),who=father?'父亲':'母亲';
-    activity(who,id==='fatherHill'?'父亲在河道旁收拾被雨冲散的物件。你和阿岑确认了归路，现在可以一起回家。':
+    speak(who,id==='fatherHill'?'父亲在河道旁收拾被雨冲散的物件。你和阿岑确认了归路，现在可以一起回家。':
       father?(f.fatherHome?deskText('父亲拍拍衣襟，摸出一张折好的纸。「你瞧，出门前写去哪儿、几时回。我可不敢再叫你沿着河道找一趟。」','Father pats his coat and unfolds a slip. “Look. Where I’m going and when I expect to be back. I won’t have you searching the river for me again.”'):deskText('父亲在膝头摊开手掌，掌心一道红印。「箱绳勒的。还好里面的碗没碎，我一路光听它们碰来碰去，比听车轱辘还提神。」','Father opens his hand on his knee. A rope mark crosses the palm. “From the trunks. Those bowls rattled all the way here. Kept me wider awake than the cartwheels.”')):
       f.firstShared?deskText('母亲拿布慢慢擦着碗沿。「头一回在这里吃饭，你祖父连碗底那几粒米都拨干净了。我洗碗时才看见。」','Mother rubs the rim of a bowl. “At our first meal here your grandfather picked up every last grain. I only noticed when I washed his bowl.”'):
       !f.firstRepair?deskText('母亲把铺盖夹在臂弯里，腾出一只手来拉你。「你摸摸，里头还是干的。先看看窗边和漏雨的地方，找一处给你祖父落脚。」','Mother tucks the bedding under one arm and reaches for your hand. “Feel that? Still dry inside. Let’s check the window and the leak and find your grandfather a place to rest.”'):
       s.choices.repair==='window'?deskText('「凑近些。窗缝里那声哨子没了，你听。」母亲侧耳等了等。「这几日赶路，倒数这一会儿最安静。」','“Come closer. That whistling through the frame has stopped. Listen.” Mother tilts her head. “It’s the quietest moment we’ve had since we left.”'):
       deskText('母亲用鞋尖探了探墙根。「干了。我方才走过去，还惦记着别踩翻接水的碗，走近才想起来，已经收走了。」','Mother tests the foot of the wall with her shoe. “Dry now. I was stepping round the drip bowl a moment ago before I remembered we’d put it away.”'));
-    if(id==='fatherHill'&&q==='M15')actButton('与父亲结伴，循原路返家','findFather',{},()=>npc(o));
-    if(father&&id==='father'&&q==='M15'&&f.fatherFound&&!f.fatherHome){
-      actButton('先说一句担心','fatherHome',{choice:'care'},()=>npc(o));
-      actButton('商定以后出门先报去向','fatherHome',{choice:'agreement'},()=>npc(o));
+    if(id==='fatherHill'&&f.fatherFound){
+      navButton(deskText('循原路回旧宅正厅','Follow the route home'),()=>startNavigation('hall','father'),'father-return-route');
+      navButton(deskText('收起对话，自己走','Close and walk on'),closeDialog,'father-walk');
+      return;
     }
-    if(q==='M19'&&!s.familyTalks[father?'father':'mother'])actButton('听'+who+'谈来信','familyLetter',{who:father?'father':'mother'},()=>npc(o));
+    if(id==='fatherHill'&&q==='M15')task('与父亲结伴，循原路返家','findFather',{});
+    if(father&&id==='father'&&q==='M15'&&f.fatherFound&&!f.fatherHome){
+      task('先说一句担心','fatherHome',{choice:'care'});
+      task('商定以后出门先报去向','fatherHome',{choice:'agreement'});
+    }
+    if(q==='M19'&&!s.familyTalks[father?'father':'mother'])task('听'+who+'谈来信','familyLetter',{who:father?'father':'mother'});
     if(!father&&q==='M04')button('母亲提醒：做好的热饭要端回正厅饭桌',showQuest,'mother-hint',true);return;
   }
   if(id==='villager'){
-    activity('陈伯',q==='M05'?'「先喝碗茶。村里人各有各的手艺，走一走，往后遇事才知道找谁。」':
+    speak('陈伯',q==='M05'?'「先喝碗茶。村里人各有各的手艺，走一走，往后遇事才知道找谁。」':
       q==='M15'?'「你父亲往高地河道那边去了。先找阿岑，别独自摸路。」':
       q==='M17'?'「有凭单就逐项核对。县里的事，我替你递过去，再把回执带回来。」':
       '「到这儿便是街坊了。有事先说清楚，能帮的，大家一道帮。」');
-    if(q==='M05'&&!f.metChen)actButton('报上姓名，认识街坊','meetChen',{},()=>npc(o));
-    if(q==='M13'&&!f.stormWarned)actButton('确认风雨消息与公共物资','warnStorm',{},()=>npc(o));
-    if(q==='M15'&&!f.fatherClue)actButton('问清父亲最后的去向','fatherClue',{},()=>npc(o));
-    if(q==='M17'&&f.mediationRequested&&!f.accountResolved)actButton('收下县里带回的回执','mediationReceipt',{},()=>npc(o));
-    if(q==='M17'&&f.accountResolved&&!f.fairFeePaid&&s.choices.accounts==='mediate')actButton('按回执结清合理费用 · 2 文','payFee',{},()=>npc(o));
-    if(q==='M19'&&f.replyWritten&&!f.replySent)actButton('托陈伯寄出回信','sendReply',{},()=>npc(o));
-    navButton('问问今日能做的事',()=>{activity('陈伯 · 顺路的小事','回家可与祖父练字、整理仓房；缺材料可看看村中余粮。'+nextHint());$('dialogKicker').textContent='陈伯的提醒 · 不会推进任务';},'chen-hint');return;
+    if(q==='M05'&&!f.metChen)task('报上姓名，认识街坊','meetChen',{});
+    if(q==='M13'&&!f.stormWarned)task('确认风雨消息与公共物资','warnStorm',{});
+    if(q==='M15'&&!f.fatherClue)task('问清父亲最后的去向','fatherClue',{});
+    if(q==='M17'&&f.mediationRequested&&!f.accountResolved)task('收下县里带回的回执','mediationReceipt',{});
+    if(q==='M17'&&f.accountResolved&&!f.fairFeePaid&&s.choices.accounts==='mediate')task('按回执结清合理费用 · 2 文','payFee',{});
+    if(q==='M19'&&f.replyWritten&&!f.replySent)task('托陈伯寄出回信','sendReply',{});
+    navButton('问问今日能做的事',()=>{speak('陈伯 · 顺路的小事','回家可与祖父练字、整理仓房；缺材料可看看村中余粮。'+nextHint());$('dialogKicker').textContent='陈伯的提醒 · 不会推进任务';},'chen-hint');return;
   }
   if(id==='doctor'){
-    activity('许青禾',f.medicinalHarvested?deskText('「亲手收过一回了吧？我头一回收自己种的东西，来来回回数了三遍。明知道不会多出一把，还是忍不住。」青禾笑着把手里的草扎好。','“Gathered your first crop? I counted my first harvest three times. Knew it wouldn’t grow in the counting, but I did it anyway.” Qinghe ties up the bunch in her hands.'):deskText('许青禾把两片叶子平放在掌心。「隔远了像不像一对？凑近瞧，这片边上有齿。我初学时总弄混，叫师父笑了好久。」','Qinghe lays two leaves across her palm. “Twins from a distance, aren’t they? Up close, this one has teeth along the edge. I mixed them up for ages.”'));
-    if(q==='M05'&&!f.metDoctor)actButton('认识许青禾，记下草木的事','meetDoctor',{},()=>npc(o));
+    speak('许青禾',f.medicinalHarvested?deskText('「亲手收过一回了吧？我头一回收自己种的东西，来来回回数了三遍。明知道不会多出一把，还是忍不住。」青禾笑着把手里的草扎好。','“Gathered your first crop? I counted my first harvest three times. Knew it wouldn’t grow in the counting, but I did it anyway.” Qinghe ties up the bunch in her hands.'):deskText('许青禾把两片叶子平放在掌心。「隔远了像不像一对？凑近瞧，这片边上有齿。我初学时总弄混，叫师父笑了好久。」','Qinghe lays two leaves across her palm. “Twins from a distance, aren’t they? Up close, this one has teeth along the edge. I mixed them up for ages.”'));
+    if(q==='M05'&&!f.metDoctor)task('认识许青禾，记下草木的事','meetDoctor',{});
     button('查看种植任务',showQuest,'doctor-hint',true);return;
   }
   if(id==='aCen'){
-    activity('阿岑',q==='M15'?'「先确认水位，再走高地。我跟你一道去。」':'「落竹可用，幼株留下。竹料是先借出去修路，还是先做自家晾架，你拿主意。」');
-    if(q==='M06'&&!f.metCen)actButton('向阿岑问清竹林小路','meetCen',{},()=>npc(o));
+    speak('阿岑',q==='M15'?'「先确认水位，再走高地。我跟你一道去。」':'「落竹可用，幼株留下。竹料是先借出去修路，还是先做自家晾架，你拿主意。」');
+    if(q==='M06'&&!f.metCen)task('向阿岑问清竹林小路','meetCen',{});
     if(q==='M06'&&f.metCen&&f.bambooIdentified&&!f.bambooChoice){
-      actButton('先借竹料修路 · 竹材 ×1','bambooChoice',{choice:'lend'},()=>npc(o),'lend-bamboo');
-      actButton('先做自家晾架 · 竹材 ×1','bambooChoice',{choice:'rack'},()=>npc(o),'own-rack');
+      task('先借竹料修路 · 竹材 ×1','bambooChoice',{choice:'lend'},'lend-bamboo');
+      task('先做自家晾架 · 竹材 ×1','bambooChoice',{choice:'rack'},'own-rack');
     }
-    if(q==='M15'&&!f.guideReady)actButton('请阿岑带路到高地','askGuide',{},()=>npc(o));return;
+    if(q==='M15'&&!f.guideReady)task('请阿岑带路到高地','askGuide',{});return;
   }
   if(id==='chengWan'){
-    activity('程婉',q==='M08'?'「那箱旧书是父亲留下的。先别把纸页扯散了。我同意你们把受潮的两页晾开，原簿还请替我保管。」':
+    speak('程婉',q==='M08'?'「那箱旧书是父亲留下的。先别把纸页扯散了。我同意你们把受潮的两页晾开，原簿还请替我保管。」':
       q==='M16'?'「这是父亲的东西，谢谢你们照看。哪些页可以誊写，我们一起说清楚。」':'「旧物里记着的事，得由见过的人慢慢说。」');
-    if(q==='M08'&&f.boxFound&&!f.ledgerPermission)actButton('确认归属，征得晾晒与查看同意','ledgerPermission',{},()=>npc(o));
-    if(q==='M16'&&!f.bookReturned)actButton('把借灯簿原件交还程婉','returnBook',{},()=>npc(o));
-    if(q==='M16'&&f.historyConfirmed&&!f.copyApproved)actButton('征得同意，留下誊写副本','copyApproved',{},()=>npc(o));return;
+    if(q==='M08'&&f.boxFound&&!f.ledgerPermission)task('确认归属，征得晾晒与查看同意','ledgerPermission',{});
+    if(q==='M16'&&!f.bookReturned)task('把借灯簿原件交还程婉','returnBook',{});
+    if(q==='M16'&&f.historyConfirmed&&!f.copyApproved)task('征得同意，留下誊写副本','copyApproved',{});return;
   }
   if(['shenYu','shenYuCoast'].includes(id)){
-    activity('沈晚渔',N.tide(s).low?deskText('晚渔朝露出水面的石头努了努嘴。「这一阵可以下滩。上次我光顾着挑螺壳，等转身时，自己来的那串脚印只剩一半。你可记着抬头看水。」','Wanyu nods towards the exposed rocks. “You can go down now. Once I was so busy picking shells that half my tracks were gone when I turned. Look up at the water now and then.”'):deskText('晚渔把鞋尖往回缩了一寸。「你看，我刚站的地方都湿了。等水退了再下滩吧，这会儿陪我站站也好。」','Wanyu draws her shoe back an inch. “See? Wet where I was just standing. We’ll go down when it ebbs. Keep me company here a while?”'));
-    if(q==='M09'&&!f.metYu)actButton('请她讲清潮线与海湾归路','meetYu',{},()=>npc(o));
+    speak('沈晚渔',N.tide(s).low?deskText('晚渔朝露出水面的石头努了努嘴。「这一阵可以下滩。上次我光顾着挑螺壳，等转身时，自己来的那串脚印只剩一半。你可记着抬头看水。」','Wanyu nods towards the exposed rocks. “You can go down now. Once I was so busy picking shells that half my tracks were gone when I turned. Look up at the water now and then.”'):deskText('晚渔把鞋尖往回缩了一寸。「你看，我刚站的地方都湿了。等水退了再下滩吧，这会儿陪我站站也好。」','Wanyu draws her shoe back an inch. “See? Wet where I was just standing. We’ll go down when it ebbs. Keep me company here a while?”'));
+    if(q==='M09'&&!f.metYu)task('请她讲清潮线与海湾归路','meetYu',{});
     button('查看当前潮汐',()=>showTide(), 'yu-tide',true);return;
   }
   if(id==='qiu'){
-    activity('邱管事','「买卖归买卖，转运和代存也得逐项算清。把凭单摆出来，我们重新核对。」\n\n合理费用：转运与代存共 2 文；有争议的额外费用不应混在一起。');
-    if(q==='M17'&&!f.receiptsReviewed)actButton('逐项核对实际买卖与交付凭单','reviewReceipts',{},()=>npc(o));
+    speak('邱管事','「买卖归买卖，转运和代存也得逐项算清。把凭单摆出来，我们重新核对。」\n\n合理费用：转运与代存共 2 文；有争议的额外费用不应混在一起。');
+    if(q==='M17'&&!f.receiptsReviewed)task('逐项核对实际买卖与交付凭单','reviewReceipts',{});
     if(q==='M17'&&f.receiptsReviewed&&!f.accountResolved&&!f.mediationRequested){
-      actButton('当面协商，重算费用','resolveAccounts',{choice:'negotiate'},()=>npc(o),'account-negotiate');
-      actButton('请陈伯代呈，带回县里回执','resolveAccounts',{choice:'mediate'},()=>npc(o),'account-mediate');
+      task('当面协商，重算费用','resolveAccounts',{choice:'negotiate'},'account-negotiate');
+      task('请陈伯代呈，带回县里回执','resolveAccounts',{choice:'mediate'},'account-mediate');
     }
-    if(q==='M17'&&f.accountResolved&&!f.fairFeePaid&&s.choices.accounts==='negotiate')actButton('结清双方确认的费用 · 2 文','payFee',{},()=>npc(o));
+    if(q==='M17'&&f.accountResolved&&!f.fairFeePaid&&s.choices.accounts==='negotiate')task('结清双方确认的费用 · 2 文','payFee',{});
     button('查看家庭收支',showAccounts,'qiu-accounts',true);return;
   }
-  activity(o.label,o.lines||'「慢慢来，有事再说。」');
+  speak(o.label,o.lines||'「慢慢来，有事再说。」');
 }
 function showTide(){
   const t=N.tide(state());activity('南澜海湾 · 潮线木牌',(t.low?'现在是低潮，可以进入滩涂，约还有 ':'正在涨潮，下一轮低潮约在 ')+Math.ceil(t.remaining)+' 游戏分钟。\n\n潮汐每 8 分钟一轮，其中低潮 3 分钟。第一次到访有一次低潮教学窗口；离开再来不会反复重置。\n\n涨潮时不能拾取滩涂物资，但随时可以回海边。可先与沈晚渔交谈、回访村里或整理字纸。');

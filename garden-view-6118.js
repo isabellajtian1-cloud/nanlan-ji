@@ -111,6 +111,11 @@
     foot.append(guide,note,header);section.append(board,foot,actions);$('panelExtra').append(section);
     let cursor=Math.max(0,Math.min(5,initial)),finger=null,last=null,stroke=null,held=false,origin=-1,moved=false;
     const tiles=[];
+    const wateredThisVisit=new Set();
+    function wateringReceipt(){
+      const count=wateredThisVisit.size;
+      return L('本次已浇透 '+count+' 畦','Watered '+count+(count===1?' bed':' beds')+' this visit');
+    }
     const live=()=>section.isConnected&&!$('dialog').hidden&&dialogKind==='field-close'&&!document.hidden;
     const wet=()=>!!window.NanlanWeather?.helpsWater(state());
     function sync(){
@@ -164,7 +169,7 @@
     }
     function begin(i){
       cursor=i;origin=i;moved=false;actions.replaceChildren();
-      const k=status(i);stroke={kind:k==='ripe'||k==='dry'?k:null,seen:new Set(),count:0,goods:{},blocked:false};
+      const k=status(i);stroke={kind:k==='ripe'||k==='dry'?k:null,seen:new Set(),goods:{},blocked:false};
       if(stroke.kind)visit(i);
     }
     function visit(i){
@@ -173,14 +178,13 @@
       if(batch.kind==='dry'&&!wet()&&(!s.tools.water||!(s.bucketWater>0))){
         batch.blocked=true;
         const reason=s.tools.water?L('木桶空了，去水缸续水。','The bucket is empty. Refill it at the jar.'):L('先去仓房取木桶。','Collect the bucket from the storehouse.');
-        note.textContent=(batch.count?L('已浇 ','Watered ')+batch.count+L(' 畦。',' beds. '):'')+reason;
+        note.textContent=(wateredThisVisit.size?wateringReceipt()+L('。','. '):'')+reason;
         if(s.tools.water)route(L('去水缸装水','Go to the water jar'),'yard','waterJar');else route(L('去仓房领木桶','Collect the bucket'),'store','water');return;
       }
       const before={...s.bag};
       void work(batch.kind==='dry'?'waterCrop':'harvest',i,null,()=>{
-        batch.count++;
         const tile=tiles[i];tile.dataset.work=batch.kind;tile.classList.remove('field-done');void tile.offsetWidth;tile.classList.add('field-done');
-        if(batch.kind==='dry'){note.textContent=L('已浇透 ','Watered ')+batch.count+L(' 畦',batch.count===1?' bed':' beds');}
+        if(batch.kind==='dry'){wateredThisVisit.add(i);note.textContent=wateringReceipt();}
         else{
           const names={vegetable:L('青菜','Greens'),herb:L('鲜草药','Fresh herbs'),seed:L('留种','Seeds')};
           for(const id of Object.keys(names)){const n=(state().bag[id]||0)-(before[id]||0);if(n>0)batch.goods[id]=(batch.goods[id]||0)+n;}

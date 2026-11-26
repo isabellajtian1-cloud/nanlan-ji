@@ -29,7 +29,7 @@ function paper(o){
 }
 let receipt=null;
 function market(mode='trade'){
- const s=state(),q=N.current(s),booked=s.stallUntil>s.worldTick,open=N.clock(s).minute>=540&&N.clock(s).minute<1020;
+ const s=state(),q=N.current(s),booked=s.stallUntil>s.worldTick,minute=N.clock(s).minute,open=minute>=540&&minute<1020;
  const ferryCustomer=!!window.NanlanFerry&&q==='M10'&&s.flags.productDisplayed&&!s.flags.firstSale;
  if(ferryCustomer&&booked&&mode==='trade'){receipt=null;NanlanFerry.show();return;}
  activity(L(mode==='book'?'镇集 · 留一张摊布':'镇集 · 亲手摆摊',mode==='book'?'Market · Reserve a Cloth':'Market · Your Own Stall'),L('留位、铺布、摆货，再把实货交到客人手里。','Reserve a place, spread the cloth, lay out your goods and hand them to a customer.'),'market-work');$('dialogPortraits').hidden=true;
@@ -40,7 +40,9 @@ function market(mode='trade'){
  if(mode==='book'){
   live.textContent=L('初次试摊可随时预约；以后镇集开市为 09:00—17:00。每次留位六小时，可免费重约。','The first trial may be booked at any time; later market hours are 09:00–17:00. Each booking lasts six hours and can be renewed free.');
   const reserve=control(L(booked?'抚平摊布 · 开始摆货':'放下留位竹签 · 预约摊布',booked?'Smooth the cloth · Arrange goods':'Place the tally · Reserve the cloth'),async()=>{if(booked){market();return;}reserve.disabled=true;const r=await perform('bookStall',{},()=>{});if(r.ok)market();else reserve.disabled=false;},'cloth-unfold');reserve.disabled=!booked&&(!(q==='M10'||s.flags.stallBooked)||(!open&&q!=='M10'));box.append(reserve);
-  if(!open&&q!=='M10')live.textContent+=L('此刻已经散集，明日开市再来。','The market is closed; return tomorrow.');
+  if(!open&&q!=='M10')live.textContent=(minute<540
+    ?L('尚未开市，今日 09:00 开市。','The market has not opened yet. It opens today at 09:00.')
+    :L('今日已经散集，明日 09:00 再开市。','The market has closed for the day. It reopens tomorrow at 09:00.'))+' '+live.textContent;
   if(booked)actButton(L('重新留位 · 不收钱','Renew reservation · Free'),'bookStall',{},()=>market('book'),'stall-renew');return;
  }
  if(!booked){live.textContent=L('摊位还未约好，先向摊主留一张布。','Reserve a cloth before displaying goods.');navButton(L('去预约摊布','Reserve a cloth'),()=>market('book'),'trade-book');return;}

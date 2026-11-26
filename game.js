@@ -19,6 +19,13 @@ world.village.objects.find(o=>o.id==='villagePantry').label='乡邻余粮 · 种
  labels['乡邻余粮 · 种子与补给']='Neighbor’s Pantry · Seeds and Supplies';
  labels['灶台 · 做饭']='Stove · Cook';labels['灶台']='Stove';
  Object.assign(labels,{
+  '家用入账 10 文 · 村庄与日常时钟开放 · 箍木桶每次可装三份水':'10 coins added to household funds · Village and daily clock unlocked · The wooden bucket now holds three measures.',
+  '去正厅找母亲，接下「南澜的第一顿饭」，就能到水缸取水。':'Speak with Mother in the main hall and agree to prepare the first meal. Then you can draw water at the jar.',
+  '先安顿卧房、整理好第一块菜畦，再到正厅找母亲接下「南澜的第一顿饭」。':'Settle the bedroom and prepare the first garden bed. Then speak with Mother in the main hall about the first meal.',
+  '先去仓房领取箍木桶，再回庭院取水。':'Pick up the wooden bucket in the storeroom, then return to the courtyard jar.',
+  '请到南澜海湾的海边或滩涂，走近潮线木牌。':'Go to the tide board on the shore or the tidal flats at Nanlan Bay.',
+  '修山路木道要用一根枯枝，多出的才可出售。':'Keep one fallen branch for the mountain footbridge. You can sell any extras.',
+  '仓房 · 箍木桶':'Storeroom · Wooden Bucket','拿起箍木桶':'Take the wooden bucket','获得箍木桶。':'Wooden bucket acquired.',
   '玩法与任务指引':'Controls and quest guide','设置与存档':'Settings and saves',
   '南澜记可行走场景，可点地面前往，也可拖动或用方向键行走':'Walkable scene. Tap to go to a spot, drag to steer, or use the arrow keys.',
   '庭院水口':'Courtyard Drain','清理庭院水口':'Clear the Courtyard Drain','先清灶边和庭院水口。':'Clear the stove and courtyard drain first.',
@@ -44,11 +51,22 @@ let active=false,started=false,gender='female',dialogKind=null,dialogObject=null
 let path=[],keys={},moving=false,direction='down',walkFrame=0,lastFrame=0,lastHud=0,transitioning=false;
 let walkVelocity=0;
 let storedRaw=null,oldRaw=null,previousFocus=null,messageTimer=0,rewardTimer=0,lastAutosave=0;
-let pointerQuietUntil=0;
-function settlePointerInput(){pointerQuietUntil=performance.now()+450;}
+let pointerQuietUntil=0,lastPointerPress=null,fastTravelPress=null;
+function settlePointerInput(){pointerQuietUntil=performance.now()+450;fastTravelPress=null;}
 // A second tap must not activate a different control revealed by the first tap.
 function blockCarryoverPointer(e){
-  if(performance.now()>=pointerQuietUntil||(e.type==='click'&&e.detail===0))return;
+  const quiet=performance.now()<pointerQuietUntil;
+  const fastButton=e.target.closest?.('[data-fast-travel="true"]');
+  if(e.type==='pointerdown'){
+    // A fresh press on a distinct travel control can proceed as soon as the map opens.
+    const sameSpot=lastPointerPress&&Math.hypot(e.clientX-lastPointerPress.x,e.clientY-lastPointerPress.y)<16;
+    fastTravelPress=quiet&&fastButton&&(!sameSpot||lastPointerPress.target===fastButton)?fastButton:null;
+    lastPointerPress={x:e.clientX,y:e.clientY,target:fastButton||e.target};
+    if(fastTravelPress)return;
+  }else if(fastButton&&fastButton===fastTravelPress){
+    fastTravelPress=null;return;
+  }
+  if(!quiet||(e.type==='click'&&e.detail===0))return;
   e.preventDefault();e.stopImmediatePropagation();
 }
 document.addEventListener('pointerdown',blockCarryoverPointer,true);
@@ -227,9 +245,20 @@ const storyHooks={
 function reward(id,silent=false){
   if(!silent)window.NanlanAudio?.play('success');
   startCompletionFeedback(id);
-  $('chapterToast').textContent=N.titles[id]+' · '+N.rewards[id][1]+(N.pendingFamilyRequest(state())?'\n'+nextHint():storyHooks[id]?'\n余音 · '+storyHooks[id]:'');
+  const outcome=id==='M04'?firstMealReceipt():N.rewards[id][1];
+  $('chapterToast').textContent=N.titles[id]+' · '+outcome+(N.pendingFamilyRequest(state())?'\n'+nextHint():storyHooks[id]?'\n余音 · '+storyHooks[id]:'');
   $('chapterToast').hidden=false;clearTimeout(rewardTimer);
   rewardTimer=setTimeout(()=>$('chapterToast').hidden=true,8500);
+}
+function firstMealReceipt(){
+  const added=N.rewards.M04[0],balance=state().coins,capacity=N.bucketCapacity(state());
+  return deskText('家用入账 '+added+' 文，现有 '+balance+' 文。村路已开，箍木桶如今一次可提 '+capacity+' 份水。',
+    'Added '+added+' coins. Household balance: '+balance+' coins. The village road is open, and the wooden bucket now holds '+capacity+' measures.');
+}
+function bucketUse(s){
+  return s.mode==='daily'
+    ?deskText('一起吃过第一顿饭后，箍木桶一次可提三份水。做一锅饭或浇一畦，各用一份。','After the first family meal, the wooden bucket carries three measures. A pot of rice or a garden bed uses one.')
+    :deskText('初来安家，一趟先提一份水。等全家吃过第一顿饭，箍木桶一趟就能提三份。','While settling in, carry one measure at a time. After sharing the first meal, the same wooden bucket can carry three.');
 }
 function startCompletionFeedback(id){
   const s=state(),source=dialogObject&&Number.isFinite(dialogObject.x)?dialogObject:s.player;
@@ -420,7 +449,7 @@ function objectPrerequisite(o){
   if(['window','leak','bed'].includes(a)&&!f.bedReady&&q!=='M02')return '请在完成 M01「门外的行李」后，于 M02「今夜睡在哪里」处理卧房（东厢房）。';
   if(['tools','bucket','axe'].includes(a)&&!N.reached(s,'M03'))return '请在完成 M02「今夜睡在哪里」后再取用这件物品。';
   if(a==='garden'&&!f.smallBed&&q!=='M03')return '请在完成 M02 后，按 M03「后院见光」清理通路，再整理地面菜畦。';
-  if(['cook','water','drain'].includes(a)&&!N.reached(s,'M04'))return '请在完成 M03「后院见光」后，再进行 M04 的取水、清灶与做饭。';
+  if(['cook','water','drain'].includes(a)&&!N.reached(s,'M04'))return N.firstMealGate(s);
   if(a==='villageLetter'&&!N.reached(s,'M05'))return '请在完成 M04「南澜的第一顿饭」后，再替乡邻读信。';
   if(a==='bridge'&&!N.reached(s,'M06'))return '请在完成 M05「村口那碗茶」后，再修这段竹林小径。';
   if(a==='bookbox'&&!N.reached(s,'M08'))return '请在完成 M07「等它慢慢长」后，再登记旧住客书箱。';
@@ -466,7 +495,7 @@ function nextHint(s=state(),q=N.current(s)){
     M03:!f.farmTools?'仓房里有一束旧农具。':!f.toolsRepaired?'到仓房工作台，用 1 份修补材料修农具。':!f.pathCleared?'选第 2 格镰刀，清掉庭院 3 处杂草。':'去庭院东侧整理一小块菜畦或香草畦。',
     M04:!f.stoveClean?'先收拾庭院东北的灶边。':!f.bucketFilled?(s.tools.water?'水桶已经在手，到庭院水缸取水。':'在仓房领水桶，再到庭院水缸取水。'):!f.drainClear?'清理庭院水口。池塘只是背景，不用修。':!f.firstCooked?'灶边用米、食材、枯枝和一桶水做饭。':'端着热饭回正厅，在饭桌旁与家人分享。',
     M05:'到南澜村认识陈伯、许青禾，再替乡邻读信。',
-    M06:!f.metCen?'去青岚山脚找阿岑。':!f.bambooIdentified?'山脚与山路各有一份落竹可拾。':!f.bambooChoice?'回山脚和阿岑安排竹料的用途。':'到山路木道铺通竹林小径。',
+    M06:!f.metCen?'去青岚山脚找阿岑。':!f.bambooIdentified?'山脚与山路各有一份落竹可拾。':!f.bambooChoice?'回山脚和阿岑安排竹料的用途。':N.available(s,'wood')<1?bridgeWoodTarget(s).label:'到山路木道铺通竹林小径。',
     M07:!f.fullGarden?'庭院东侧先扩整药圃。':!f.dryRack?'仓房做晾架：枯枝 ×1、竹材 ×1。':!f.medicinalPlanted?'在自家药圃播种药草。':!f.medicinalWatered?'水缸装水，再给药草浇水。':'药草需 4 分钟等效生长。可练字、整理仓房或回床榻休息。',
     M08:!f.boxFound?'回仓房检查旧住客留下的书箱。':!f.ledgerPermission?'去村里联系程婉，先确认归属和查看许可。':'到书房窗下晾好两页旧纸。',
     M09:!f.metYu?'先在村里请沈晚渔讲清海湾归路。':!f.coastVisited?'沿村南小路前往南澜海湾。':!f.tideRead?'到海边读潮线木牌。':'在低潮时进入滩涂，亲手拾一份物资。',
@@ -692,7 +721,7 @@ function refreshToolbar(){
     const b=belt.children[i],locked=(i<5||id==='axe')?!s.tools[id]:false;
     b.className='tool'+(locked?' locked':'')+(s.selected===id?' active':'');
     b.setAttribute('aria-label','第 '+(i+1)+' 格 '+label+(locked?' 尚未获得':'')+' · '+deskText('快捷键 ','Key ')+['1','2','3','4','5','6','7','8','9','0','-','='][i]);b.querySelector('.slot-key').title=deskText('快捷键','Keyboard shortcut');b.setAttribute('aria-pressed',String(s.selected===id));
-    b.querySelector('.slot-count').textContent=id==='water'?String(s.bucketWater||0)+'/'+(s.mode==='daily'?3:1):['seed','repair','hotMeal'].includes(id)?'×'+N.quantity(s,id):'';
+    b.querySelector('.slot-count').textContent=id==='water'?String(s.bucketWater||0)+'/'+N.bucketCapacity(s):['seed','repair','hotMeal'].includes(id)?'×'+N.quantity(s,id):'';
   });
   const current=toolDefs.find(d=>d[0]===s.selected)||toolDefs[0];
   let note=current[2];
@@ -703,6 +732,7 @@ function refreshToolbar(){
   }
   if(window.NanlanGardenView&&s.scene==='yard'&&['hoe','seed','basket','water'].includes(s.selected))note=deskText('点院子东边的竹篱菜圃，走到田边后查看各畦。','Select the fenced garden on the east side of the yard to look at the beds.');
   else if(s.scene==='yard'&&['basket','water'].includes(s.selected)&&s.flags.smallBed)note=deskText('点或划过菜畦。站在田边可按住空格，用方向键逐畦操作。','Tap or sweep across beds. At the fence, hold Space and use the arrows.');
+  if(s.selected==='water')note+=' '+bucketUse(s);
   $('toolInfo').textContent=deskText('工具说明 · ','Tool · ')+current[1]+'：'+note;
 }
 function selectTool(index){
@@ -849,7 +879,8 @@ function taskMaterials(s){
 function showBag(){
   window.NanlanDesktop?.enterBag();
   const s=state(),required=taskMaterials(s),keys=Object.keys(N.itemNames).filter(k=>N.quantity(s,k)>0||required[k]>0);
-  activity('随身行囊','家用 '+s.coins+' 文 · 体力 '+Math.floor(s.stamina)+'/100\n钥匙串：'+(s.keyring.includes('yardKey')?'院门钥匙':'暂无')+' · 水桶：'+(!s.tools.water?'尚未领取':Number(s.bucketWater||0)>0?String(s.bucketWater)+(deskText(' 份水',' portions of water')):'空')+'\n'+(s.flags.bedReady?'床褥已搬进卧房。':'床褥仍在行囊。')+'\n\n当前任务要用的材料即使为 0 也会列出来源；预留库存仍属于你，但不能散卖。');
+  activity('随身行囊','家用 '+s.coins+' 文 · 体力 '+Math.floor(s.stamina)+'/100\n钥匙串：'+(s.keyring.includes('yardKey')?'院门钥匙':'暂无')+' · 箍木桶：'+(!s.tools.water?'尚未领取':(s.bucketWater||0)+'/'+N.bucketCapacity(s))+'\n'+(s.flags.bedReady?'床褥已搬进卧房。':'床褥仍在行囊。')+'\n\n当前任务要用的材料即使为 0 也会列出来源；预留库存仍属于你，但不能散卖。');
+  if(s.tools.water)$('line').append(document.createTextNode('\n'+bucketUse(s)));
   const grid=document.createElement('div');grid.className='inventory-grid';
   for(const id of keys){
     const row=document.createElement('div');row.className='inventory-row';
@@ -1423,9 +1454,18 @@ function npcStory(o,reply){
   }
   speak(o.label,o.lines||'「慢慢来，有事再说。」');
 }
-function showTide(){
-  const t=N.tide(state());activity('南澜海湾 · 潮线木牌',(t.low?'现在是低潮，可以进入滩涂，约还有 ':'正在涨潮，下一轮低潮约在 ')+Math.ceil(t.remaining)+' 游戏分钟。\n\n潮汐每 8 分钟一轮，其中低潮 3 分钟。第一次到访有一次低潮教学窗口；离开再来不会反复重置。\n\n涨潮时不能拾取滩涂物资，但随时可以回海边。可先与沈晚渔交谈、回访村里或整理字纸。');
-  if(N.current(state())==='M09'&&!state().flags.tideRead)actButton('辨认潮线，记住归路','readTide',{},showTide);
+function showTide(board=null){
+  const s=state(),t=N.tide(s);activity(board?'南澜海湾 · 潮线木牌':deskText('南澜海湾 · 今日潮汐','Nanlan Bay · Today’s tide'),(t.low?'现在是低潮，可以进入滩涂，约还有 ':'正在涨潮，下一轮低潮约在 ')+Math.ceil(t.remaining)+' 游戏分钟。\n\n潮汐每 8 分钟一轮，其中低潮 3 分钟。第一次到访有一次低潮教学窗口；离开再来不会反复重置。\n\n涨潮时不能拾取滩涂物资，但随时可以回海边。可先与沈晚渔交谈、回访村里或整理字纸。');
+  if(N.current(s)!=='M09'||s.flags.tideRead)return;
+  if(board&&s.flags.metYu){
+    actButton('辨认潮线，记住归路','readTide',{},()=>showTide(board));
+    return;
+  }
+  if(!s.flags.metYu){
+    navButton(deskText('先请沈晚渔讲清归路','Ask Shen Wanyu about the route home'),()=>startNavigation(s.scene==='coast'?'coast':'village',s.scene==='coast'?'shenYuCoast':'shenYu'),'tide-find-yu');
+    return;
+  }
+  navButton(deskText('去海边看潮线木牌','Walk to the shore tide board'),()=>startNavigation('coast','coastBoard'),'tide-find-board');
 }
 function objectGate(o){
   if(o.type==='door'){if(o.requires&&!state().flags[o.requires])return '先在山路木道铺通眼前的小路。';const story=N.sceneGate(state(),o.to);if(story)return story;if(o.to==='tidalflat'&&!N.tide(state()).low)return '潮水正在上涨，下一轮低潮还有 '+Math.ceil(N.tide(state()).remaining)+' 游戏分钟。海边仍可走动与采集。';}
@@ -1591,11 +1631,18 @@ async function interactCore(o){
     activity('仓房 · 旧农具','一束旧镰刀、锄头和背篓还收在墙边。先领出来，再用工作台修好松动的连接。');
     if(N.reached(s,'M03'))actButton('领取农具一束','farmTools',{},()=>{closeDialog();notice('镰刀、锄头和背篓已收好。工作台上可以修理。');});
   }else if(a==='axe'){activity('仓房 · 木柄斧','木柄与铁刃尚好，可随身带走。修好农具后，选中木柄斧，可在竹林和山腰处理沉香、海南黄花梨枯木。枯枝仍可徒手拾取。');if(N.reached(s,'M03')&&!s.tools.axe)actButton('领取木柄斧','takeAxe',{},()=>{closeDialog();notice('木柄斧已放入工具栏第 11 格。');});
-  }else if(a==='bucket'){activity('仓房 · 旧水桶','水桶还能盛水。带到庭院的水缸旁装水，可用于做饭与浇灌。');if(N.reached(s,'M03'))actButton('拿起旧水桶','bucket',{},()=>{closeDialog();notice('获得旧水桶。');});}
+  }else if(a==='bucket'){activity('仓房 · 箍木桶',bucketUse(s));if(N.reached(s,'M03')&&!s.tools.water)actButton('拿起箍木桶','bucket',{},()=>{closeDialog();notice('获得箍木桶。');});}
   else if(a==='garden')showGarden(storyGardenPlot());
   else if(a==='craft')showCraft();
   else if(a==='cook')showCook();
-  else if(a==='water'){activity('庭院 · 水缸',s.mode==='daily'?deskText('木桶能装三份水，每畦用一份。下雨可借檐雨。','The bucket holds three portions, one per bed. Rainwater is free.'):'缸中的水可装入旧木桶。一次装满，够做一锅饭或浇一畦地。');if(N.reached(s,'M04'))actButton('把水桶装满','fillWater',{},()=>{closeDialog();refreshHud();notice(actionMessage('fillWater'));});}
+  else if(a==='water'){
+    const gate=N.firstMealGate(s);
+    activity('庭院 · 水缸',gate||(!s.tools.water?'先去仓房领取箍木桶，再回庭院取水。':bucketUse(s)));
+    if(gate){
+      if(N.pendingFamilyRequest(s)==='M04')navButton(deskText('去正厅找母亲','Find Mother in the main hall'),()=>startNavigation('hall','motherHall'),'water-to-mother');
+    }else if(!s.tools.water)navButton(deskText('去仓房拿箍木桶','Find the wooden bucket'),()=>startNavigation('store','water'),'water-get-bucket');
+    else actButton('把水桶装满','fillWater',{},()=>{closeDialog();refreshHud();notice(deskText('箍木桶已装满','Wooden bucket filled')+' · '+state().bucketWater+'/'+N.bucketCapacity(state()));});
+  }
   else if(a==='drain'){activity('庭院水口',f.drainClear?'水口通了，灶边与通路不再被积水妨碍。':'落叶塞住了小水口。清掉这一处即可通水，不需要修复池塘。');if(q==='M04'&&!f.drainClear)actButton('清理落叶，疏通水口','clearDrain',{},()=>{closeDialog();notice('小水口已经通了。');});}
   else if(a==='table'){
     activity('正厅 · 一家人的饭桌',q==='M04'?'第一锅饭已经端来。家人先吃上热饭，这处落脚的房子便开始像个家。':'饭桌旁可以商量家事，来信、座次和一顿饭都会留下记录。');
@@ -1610,13 +1657,22 @@ async function interactCore(o){
     }
   }else if(a==='villageLetter'){activity('乡邻来信','纸上说远行的人平安，也问家里今年的收成。陈伯请你把信慢慢读给街坊听。');if(q==='M05')actButton('读完这封家信，替乡邻记下回话','readLetter',{},()=>{closeDialog();notice('乡邻的回话记好了。');});}
   else if(a==='pantry')showPantry();
-  else if(a==='bridge'){activity('山路 · 木道','把眼前松动的一段铺好，才好进入竹林。先借出竹料，阿岑会帮工；先做自家晾架，则一起补另一段桥面。');if(q==='M06'&&!f.bridgeReady)actButton('铺通小路 · 枯枝 ×1'+(s.choices.bamboo==='rack'?'、竹材 ×1':''),'repairBridge',{},()=>{closeDialog();notice('小路铺好了，竹林入口已开放。');});}
+  else if(a==='bridge'){
+    activity('山路 · 木道','把眼前松动的一段铺好，才好进入竹林。先借出竹料，阿岑会帮工；先做自家晾架，则一起补另一段桥面。');
+    if(q==='M06'&&!f.bridgeReady){
+      if(f.bambooChoice&&N.available(s,'wood')<1){
+        const target=bridgeWoodTarget(s);
+        $('line').append(document.createTextNode('\n\n'+target.label));
+        navButton(deskText('带我去拾枯枝','Show me where to gather a branch'),()=>startNavigation(target.scene,target.object),'bridge-find-wood');
+      }else actButton('铺通小路 · 枯枝 ×1'+(s.choices.bamboo==='rack'?'、竹材 ×1':''),'repairBridge',{},()=>{closeDialog();notice('小路铺好了，竹林入口已开放。');});
+    }
+  }
   else if(a==='bookbox'){activity('仓房 · 旧住客书箱','书箱是旧住客留下的私人物件，里面的书页受了潮。先确认归属，联系程婉，征得同意后再查看和晾晒。');if(q==='M08'&&!f.boxFound)actButton('登记书箱，托人联系旧住客家人','findBox',{},()=>{closeDialog();notice('已记下书箱归属线索。去村里联系程婉。');});}
   else if(a==='dry'){window.NanlanHands.paper(o);}
   else if(a==='archive')showArchive();
-  else if(a==='tide')showTide();
+  else if(a==='tide')showTide(o);
   else if(a==='stall')showStall();
-  else if(a==='sellSurplus'){activity('村中收购 · 出售余货','按件出售采集物、菜蔬和手作制品。首次试卖和未交小批单所需的货物会自动留出；制作材料请按需要保留。');for(const item of Object.keys(N.prices))if(N.saleAvailable(s,item,true)>0)actButton('卖出 '+N.itemNames[item]+' ×1 · '+N.prices[item]+' 文','sellExtra',{item,sequence:s.transactions.length},()=>interact(o),'surplus-'+item);}
+  else if(a==='sellSurplus'){activity('村中收购 · 出售余货','按件出售采集物、菜蔬和手作制品。首次试卖和未交小批单所需的货物会自动留出；制作材料请按需要保留。');if(N.needsBridgeWood(s))$('line').append(document.createTextNode('\n修山路木道要用一根枯枝，多出的才可出售。'));for(const item of Object.keys(N.prices))if(N.saleAvailable(s,item,true)>0)actButton('卖出 '+N.itemNames[item]+' ×1 · '+N.prices[item]+' 文','sellExtra',{item,sequence:s.transactions.length},()=>interact(o),'surplus-'+item);}
   else if(a==='trade')showTrade();
   else if(a==='gutter'){activity('宅院 · 屋檐与沟渠','先检查水能往哪儿走，再收好晾晒物，通知陈伯。风雨到来由剧情触发，不会因为日历换了一天就错过。');if(q==='M13')actButton('检查沟渠与屋檐，记下风雨准备','checkGutter',{},()=>{closeDialog();refreshHud();notice('沟渠与屋檐已经检查。');});}
   else if(a==='crates'&&(q==='M14'||f.cratesRaised)){window.NanlanStoreWork.show();}
@@ -1628,7 +1684,7 @@ async function interactCore(o){
   }else if(a==='shelter'){window.NanlanHallWork.show();}else if(a==='waterMark'){activity('高地 · 水位标记','沿石上刻痕确认水位，再走阿岑指出的归路。');if(q==='M15')actButton('确认安全水位与返回路线','checkWater',{},()=>{closeDialog();notice('水位已确认，可以去找父亲。');});}
   else if(a==='lamps'){window.NanlanLanternWork.show();}
   else activity(o.label,'这处物件暂时没有新的安排。'+nextHint());
-  prerequisiteNote(objectPrerequisite(o));
+  if(a!=='water')prerequisiteNote(objectPrerequisite(o));
   dialogObject=o;
 }
 // A closer look is optional. The only saved action is the ordinary dryPage action.
@@ -1638,6 +1694,7 @@ function showFamilyMeal(feast=false,memory=false){
   activity(memory?'饭桌旧事 · 一家同食':feast?'岁末家宴 · 一家同席':'第一顿热饭 · 一家同食',
     feast?'灯火映着碗沿，祖父放下筷子，笑着听你说这一年的见闻。席间的热气，让远迁的日子终于有了家的模样。':
     '母亲把热饭递到你手里，父亲夹来一筷青菜。祖父慢慢尝了一口，点点头：「能坐下来好好吃顿饭，就安稳了。」'+(s.choices.firstMeal==='chen'?'\n留给陈伯的那一碗，也已盛好放在一旁。':''),'meal');
+  if(!memory&&!feast)$('line').append(document.createTextNode('\n\n'+firstMealReceipt()));
   $('dialogPortraits').hidden=true;
   const figure=document.createElement('figure'),img=document.createElement('img');figure.className='family-meal-art';img.src=DATA.assets[imageKey];img.alt='祖父、父亲、母亲与'+(s.gender==='male'?'男主角':'女主角')+'围坐饭桌用餐';figure.append(img);$('panelExtra').append(figure);
   $('dialogKicker').textContent=memory?'回看团聚 · 不消耗饭菜':'饭已上桌 · 一家团聚';

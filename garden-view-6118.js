@@ -120,7 +120,7 @@
     const wet=()=>!!window.NanlanWeather?.helpsWater(state());
     function sync(){
       const s=state();
-      water.textContent=wet()?L('檐下有雨 · 可借雨浇地','Rainwater available'):L('木桶　','Bucket　')+(s.bucketWater||0)+'/'+(s.mode==='daily'?3:1);
+      water.textContent=wet()?L('檐下有雨 · 可借雨浇地','Rainwater available'):L('箍木桶　','Wooden bucket　')+(s.bucketWater||0)+'/'+N.bucketCapacity(s);
       stock.textContent=L('种子　','Seeds　')+N.available(s,'seed');
       tiles.forEach((b,i)=>{
         const k=status(i),g=N.gardenPlot(s,i);

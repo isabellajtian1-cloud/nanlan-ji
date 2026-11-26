@@ -57,7 +57,7 @@
   };
   const rewards = {
     M01:[0,'院门钥匙归入钥匙串 · 庭院可进入'], M02:[0,'卧房（东厢房）床榻可临时休息 · 保留家人的回应'],
-    M03:[0,'小畦与仓房可用 · 清草回收的枯枝可做饭'], M04:[10,'家用结余 10 文 · 村庄与日常时钟开放'],
+    M03:[0,'小畦与仓房可用 · 清草回收的枯枝可做饭'], M04:[10,'家用入账 10 文 · 村庄与日常时钟开放 · 箍木桶每次可装三份水'],
     M05:[5,'邻里信任 · 字纸小事增加'], M06:[8,'竹林小径与基础竹作开放'],
     M07:[10,'药草可晾晒 · 回收种子，能继续种植'], M08:[5,'获准整理旧页，仍代为保管原簿'],
     M09:[8,'镇集试摊路线开放'], M10:[8,'一张真实买卖凭单 · 小批单开放'],
@@ -201,9 +201,19 @@
     return missing.map(([id,count])=>names[id]+' ×'+count).join(english?', ':'、');
   }
   // Sales protect outstanding promises even before the player explicitly reserves them.
+  function needsBridgeWood(s) {
+    return !s.flags.bridgeReady && ['M05','M06'].includes(current(s));
+  }
+  function bucketCapacity(s) { return s.mode==='daily'?3:1; }
+  function firstMealGate(s) {
+    if(reached(s,'M04'))return '';
+    if(done(s,'M03'))return '去正厅找母亲，接下「南澜的第一顿饭」，就能到水缸取水。';
+    return '先安顿卧房、整理好第一块菜畦，再到正厅找母亲接下「南澜的第一顿饭」。';
+  }
   function saleAvailable(s,id,extra=false) {
     const order=s.order?.product===id?s.order:null;
     let hold=order?Math.max(0,2-order.delivered-order.reserved):0;
+    if(id==='wood'&&needsBridgeWood(s))hold=Math.max(hold,1);
     if(!order&&current(s)==='M11'&&s.featured===id)hold=Math.max(hold,2);
     if(extra&&current(s)==='M10'&&!s.flags.firstSale&&products.includes(id))hold=Math.max(hold,1);
     return Math.max(0,available(s,id)-hold);
@@ -215,7 +225,12 @@
   function give(s,items) { for(const [id,n] of Object.entries(items))s.bag[id]=quantity(s,id)+n; }
   function once(s,key,fn) { if(s.actions[key])return false;fn();s.actions[key]=true;return true; }
   function expectQuest(s,id) { requireThat(current(s)===id,'当前先完成 '+(current(s)||'日常生活')+' '+(titles[current(s)]||'')+'。'); }
-  function requireScene(s,scene) { requireThat((Array.isArray(scene)?scene:[scene]).includes(s.scene),'请先到'+(Array.isArray(scene)?scene.join(' / '):scene)+'对应的物件旁操作。'); }
+  function requireScene(s,scene,message) {
+    const places=Array.isArray(scene)?scene:[scene];
+    if(places.includes(s.scene))return;
+    const names=places.map(id=>globalThis.NANLAN_DATA?.world[id]?.name).filter(Boolean);
+    fail(message||(names.length?'请先到'+names.join('或')+'，走近要用的物件。':'请循舆图指引，走近要用的物件。'));
+  }
   function log(s,type,amount,note,item) {
     s.transactions.push({id:'T'+(s.transactions.length+1),tick:s.worldTick,type,amount,note,item:item||null});
   }
@@ -305,6 +320,9 @@
       requireThat(g.plantedAt===null||(Number.isFinite(g.plantedAt)&&g.plantedAt>=0&&g.plantedAt<=value.worldTick),'地块种植时间无效。');
       if(g.wateredAt!==undefined)requireThat(Number.isFinite(g.wateredAt)&&g.wateredAt>=0&&g.wateredAt<=value.worldTick,'地块浇水时间无效。');
     }
+    // Older meal entries described the reward as the entire balance.
+    const mealEntry=value.journal?.find(entry=>entry.id==='M04'&&entry.text==='家用结余 10 文 · 村庄与日常时钟开放');
+    if(mealEntry)mealEntry.text=rewards.M04[1];
     if(value.quests.M01?.status==='ACTIVE'&&!value.flags.handover)value.quests.M01.status='OFFERED';
     for(const id of ORDER){
       const status=value.quests[id]?.status;
@@ -478,7 +496,7 @@
           return once(s,'weed:'+id,()=>{requireThat(s.stamina>=2,'体力不足。可到床榻小憩。');s.collected[id]=true;give(s,{weed:1,...(['weed1','weed2'].includes(id)?{wood:1}:{})});s.stamina-=2;});}
         if(name==='smallBed'){quest('M03');requireScene(s,'yard');requireThat(f.pathCleared,'先清完通路上 3 处杂草。');return once(s,'smallBed',()=>{requireThat(['vegetable','herb'].includes(p.choice),'先选一小畦的用途。');f.smallBed=true;s.choices.firstBed=p.choice;});}
         if(name==='cleanStove'){quest('M04');requireScene(s,'yard');f.stoveClean=true;return;}
-        if(name==='fillWater'){requireScene(s,'yard');requireThat(s.tools.water,'先在仓房领取水桶。');requireThat(reached(s,'M04'),'先清理后院通路。');s.bucketWater=s.mode==='daily'?3:1;f.bucketFilled=true;return;}
+        if(name==='fillWater'){requireScene(s,'yard');requireThat(reached(s,'M04'),firstMealGate(s));requireThat(s.tools.water,'先去仓房领取箍木桶，再回庭院取水。');s.bucketWater=bucketCapacity(s);f.bucketFilled=true;return;}
         if(name==='clearDrain'){quest('M04');requireScene(s,'yard');f.drainClear=true;return;}
         if(name==='cookMeal'||name==='cookFeast'){
           requireScene(s,'yard');const feast=name==='cookFeast';if(feast)requireThat(reached(s,'M20'),'先办完京中来信。');else requireThat(reached(s,'M04'),'先整理后院。');
@@ -549,7 +567,7 @@
         if(name==='ledgerPermission'){quest('M08');requireScene(s,'village');requireThat(f.boxFound,'先查看仓房旧书箱。');f.ledgerPermission=true;return;}
         if(name==='dryPage'){quest('M08');requireScene(s,'study');requireThat(f.ledgerPermission,'先征得程婉同意，再晾晒旧页。');requireThat([0,1].includes(p.index),'请选择要晾晒的页。');return once(s,'dryPage:'+p.index,()=>{f['driedPage'+p.index]=true;f.pagesDried=!!(f.driedPage0&&f.driedPage1);});}
         if(name==='meetYu'){requireScene(s,['village','coast']);requireThat(reached(s,'M09'),'先完成书箱的事。');f.metYu=true;return;}
-        if(name==='readTide'){quest('M09');requireScene(s,['coast','tidalflat']);requireThat(f.metYu,'先请沈晚渔讲清归路。');f.tideRead=true;return;}
+        if(name==='readTide'){quest('M09');requireScene(s,['coast','tidalflat'],'请到南澜海湾的海边或滩涂，走近潮线木牌。');requireThat(f.metYu,'先请沈晚渔讲清归路。');f.tideRead=true;return;}
         if(name==='bookStall'){requireScene(s,'market');requireThat(reached(s,'M10'),'先完成潮线教学。');requireThat(q==='M10'||(clock(s).minute>=540&&clock(s).minute<1020),'普通集市在 09:00—17:00 开放。可先做家中小事或休息，再来预约。');s.stallUntil=s.worldTick+360;f.stallBooked=true;return;}
         if(name==='displayProduct'){quest('M10');requireScene(s,'market');requireThat(s.stallUntil>s.worldTick,'试摊预约已结束，可重新预约，不收罚款。');requireThat(products.includes(p.product)&&available(s,p.product)>=1,'先在仓房做一件制品，再带来摆摊。');s.featured=p.product;f.productDisplayed=true;return;}
         if(name==='tryFerryBasket'){
@@ -566,7 +584,7 @@
           }
           requireThat(Number.isInteger(p.sequence)&&p.sequence===s.transactions.length,'这笔买卖已结算，请查看更新后的余货。');requireThat(saleAvailable(s,s.featured)>=1,'这件主打货需要留给小批单，请先交单或补做制品。');spend(s,{[s.featured]:1});
           s.coins+=prices[s.featured];log(s,'sale',prices[s.featured],'镇集售出 '+itemNames[s.featured],s.featured);give(s,{receipt:1});f.firstSale=true;return;}
-        if(name==='sellExtra'){requireScene(s,['village','market','generalStore']);requireThat(reached(s,'M05'),'先安顿家人，再到村里出售余货。');requireThat(Object.hasOwn(prices,p.item),'这件物品不可出售。');requireThat(Number.isInteger(p.sequence)&&p.sequence===s.transactions.length,'这笔买卖已结算。');if(s.scene==='market')requireThat(s.stallUntil>s.worldTick,'请先预约摊布。');requireThat(saleAvailable(s,p.item,true)>=1,'这些物品要留给首次试卖或未完成的小批单，暂不能作为余货出售。');spend(s,{[p.item]:1});s.coins+=prices[p.item];log(s,'sale',prices[p.item],'余货售出 '+itemNames[p.item],p.item);give(s,{receipt:1});return;}
+        if(name==='sellExtra'){requireScene(s,['village','market','generalStore']);requireThat(reached(s,'M05'),'先安顿家人，再到村里出售余货。');requireThat(Object.hasOwn(prices,p.item),'这件物品不可出售。');requireThat(Number.isInteger(p.sequence)&&p.sequence===s.transactions.length,'这笔买卖已结算。');if(s.scene==='market')requireThat(s.stallUntil>s.worldTick,'请先预约摊布。');requireThat(!(p.item==='wood'&&needsBridgeWood(s)&&available(s,'wood')<=1),'修山路木道要用一根枯枝，多出的才可出售。');requireThat(saleAvailable(s,p.item,true)>=1,'这些物品要留给首次试卖或未完成的小批单，暂不能作为余货出售。');spend(s,{[p.item]:1});s.coins+=prices[p.item];log(s,'sale',prices[p.item],'余货售出 '+itemNames[p.item],p.item);give(s,{receipt:1});return;}
         if(name==='acceptOrder'){quest('M11');requireScene(s,'market');return once(s,'acceptOrder',()=>{s.order={id:'O1',product:s.featured,total:2,delivered:0,reserved:0};f.orderAccepted=true;});}
         if(name==='reserveOrder'){quest('M11');requireScene(s,'market');requireThat(s.order,'先接小批单。');const needed=2-s.order.delivered-s.order.reserved;
           const n=Math.min(available(s,s.order.product),needed);requireThat(n>0,'先在仓房补做主打制品。已预留的货不会被试摊卖掉。');s.order.reserved+=n;f.orderReserved=true;return;}
@@ -621,7 +639,7 @@
       });
     }
   }
-  return {Engine,familyRequests,pendingFamilyRequest,chapterEntries,voyage,V6_ORDER,season5,SEASON5_ORDER,v5,V5_ORDER,v4,V4_ORDER,children,scholar,v3,V3_ORDER,rural,initial,current,done,reached,sceneGate,clock,tide,crop,gardenPlot,quantity,available,saleAvailable,mealSupplies,mealMissingText,normaliseLoaded,
+  return {Engine,familyRequests,pendingFamilyRequest,chapterEntries,voyage,V6_ORDER,season5,SEASON5_ORDER,v5,V5_ORDER,v4,V4_ORDER,children,scholar,v3,V3_ORDER,rural,initial,current,done,reached,sceneGate,clock,tide,crop,gardenPlot,quantity,available,saleAvailable,needsBridgeWood,bucketCapacity,firstMealGate,mealSupplies,mealMissingText,normaliseLoaded,
     rareResources,resourceCooldown,resourceRequirement,daylight,SAVE_KEY,ORDER,V2_ORDER,shopPrice,shopCustomers,story2:storyV2,shopProducts:storyV2.products,titles,steps,rewards,itemNames,products,prices,supplyPrices,recipes};
 });
 

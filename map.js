@@ -33,6 +33,14 @@ function mapKnown(id){
   const s=state();if(id===s.scene||s.visits[id])return true;if(globalThis.NanlanPrefecture.places.includes(id))return globalThis.NanlanPrefecture.unlocked(s);
   if(N.voyage.islands.includes(id))return true;return id===s.scene||id==='gate'||!!s.visits[id]||!mapAccess(id);
 }
+function bridgeWoodTarget(s){
+  const places=[['foothill','footBranch','青岚山脚','the mountain foot'],['village','extra-village-wood','南澜村','Nanlan Village'],['village','wood1','南澜村','Nanlan Village']];
+  const readyAt=id=>s.nodes[id]===undefined?0:s.nodes[id]+N.resourceCooldown('wood');
+  const target=places.find(([,id])=>readyAt(id)<=s.worldTick)||places.reduce((a,b)=>readyAt(a[1])<=readyAt(b[1])?a:b);
+  const [scene,object,zh,en]=target,wait=Math.max(0,Math.ceil(readyAt(object)-s.worldTick));
+  const label=deskText('修木道还差一根枯枝，去'+zh+'拾一根。','The footbridge needs one fallen branch. Gather one at '+en+'.');
+  return {scene,object,label:label+(wait?deskText('此处还需等 '+wait+' 游戏分钟。',' This spot regrows in '+wait+' game minutes.'):'')};
+}
 function objectiveForStep(flag,label){
   const s=state(),f=s.flags;
   if(flag?.startsWith('voyage_')){const to=N.voyage.target(s);return to?{scene:to[0],object:to[1],label}:null;}
@@ -58,6 +66,7 @@ function objectiveForStep(flag,label){
     receiptsReviewed:['market','qiu'],accountResolved:f.mediationRequested?['village','villager']:['market','qiu'],fairFeePaid:s.choices.accounts==='mediate'?['village','villager']:['market','qiu'],
     letterFamily:['hall',!s.familyTalks.grandfather?'grandfather':!s.familyTalks.father?'father':'motherHall'],giftChosen:['hall','mealTable'],replyWritten:['hall','grandfather'],replySent:['village','villager'],
     seatingChosen:['hall','mealTable'],feastCooked:['yard','stove'],festivalLamps:['yard','festivalLantern'],feastShared:['hall','mealTable']};
+  if(flag==='bridgeReady'&&f.bambooChoice&&N.available(s,'wood')<1)return bridgeWoodTarget(s);
   if(flag==='pathCleared')targets.pathCleared=['yard',['weed1','weed2','weed3'].find(id=>!s.collected[id])];
   const [scene,object]=targets[flag]||[s.scene,null];
   return {scene,object,label:label||flag};
@@ -137,14 +146,14 @@ function inspectMapPlace(id,objectId=null){
   if(!why&&route?.length)description+='\n\n出行路线：'+[world[s.scene].name,...route.map(step=>world[step.to].name)].join(' → ');
   if(!why&&route===null)description+='\n当前通路尚未连通，先完成门前交接或当前修路任务。';
   $('mapPlaceDescription').textContent=description;
-  function add(label,fn,secondary){const b=document.createElement('button');b.textContent=label;b.onclick=fn;if(secondary)b.className='secondary';$('mapPlaceActions').append(b);}
+  function add(label,fn,secondary){const b=document.createElement('button');b.textContent=label;b.onclick=fn;if(secondary)b.className='secondary';$('mapPlaceActions').append(b);return b;}
   const pref=globalThis.NanlanPrefecture;
   if(started&&pref.places.includes(id)&&!pref.away(s)&&!N.voyage.get(s)?.away)
     add(deskText('去新河埠查看府城班船','Go to New River Wharf to check the ferry'),()=>{closeMap();startNavigation('wharf','prefBoard');});
   if(started&&pref.away(s)&&!pref.places.includes(id))
     add(deskText('去府城河埠搭回程船','Go to the landing for the return ferry'),()=>{closeMap();startNavigation('prefDock','prefReturn');});
   if(started&&!why&&route!==null)add(s.scene===target?(o?'走近目标 · '+o.label:'查看这里的互动地点'):'沿路前往'+w.name,()=>{closeMap();if(state().scene===target&&!o)showNearby();else startNavigation(target,o?.id);});
-  if(started&&!why&&route!==null&&s.visits[target]&&target!==s.scene)add('快速抵达 · 已走过的地方',()=>quickTravel(target,o?.id),true);
+  if(started&&!why&&route!==null&&s.visits[target]&&target!==s.scene)add('快速抵达 · 已走过的地方',()=>quickTravel(target,o?.id),true).dataset.fastTravel='true';
   if(!started)add('从旧宅门前启程',()=>{closeMap();$('begin').focus();});
   add('放大场景原画',()=>{closeMap();showGallery();const card=$('galleryGrid').querySelector('[data-scene="'+(id==='gate'?'yard':id)+'"]');if(card){card.classList.add('expanded');card.scrollIntoView({block:'start'});}},true);
   for(const local of visibleObjects(id,true)){
@@ -237,7 +246,7 @@ function chooseTaskRoute(target){
   if(!$('dialog').hidden)closeDialog(true);
   activity('这次怎样前往？',target.label+'\n'+world[target.scene].name,'task-route');
   navButton('沿路走去 · 可随时采集',()=>{closeDialog(true);startNavigation(target.scene,target.object);},'route-walk');
-  if(state().visits[target.scene])navButton('快速抵达 · 已走过的地方',()=>quickTravel(target.scene,target.object),'route-quick');
+  if(state().visits[target.scene])navButton('快速抵达 · 已走过的地方',()=>quickTravel(target.scene,target.object),'route-quick').dataset.fastTravel='true';
   else{const p=document.createElement('p');p.className='prerequisite-note';p.textContent='第一次请沿路走到，之后就能快行。';$('panelExtra').append(p);}
 }
 function continueNavigation(){if(navigationTarget)startNavigation(navigationTarget,navigationObject);}

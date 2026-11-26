@@ -1145,13 +1145,19 @@ function kitchenObstacle(s){
   if((s.bucketWater||0)<1)return '桶里还没有水。到庭院水缸装一桶水，再来下米。';
   if(N.available(s,'rice')<1)return '米箩空了。备一份米粮，再来做饭。';
   if(N.available(s,'wood')<1)return '灶下缺柴。拾一份枯枝，再来生火。';
-  const food=N.quantity(s,'vegetable')?'vegetable':'ingredient';
-  if(N.available(s,food)<1)return '还缺一份可用的菜蔬或食材。';
+  if(N.mealSupplies(s).missing.some(([id])=>id==='greens'))return '还缺一份可用的菜蔬或食材。';
   return '';
 }
 function showCook(){
   const s=state(),q=N.current(s);
-  activity('灶边 · 一顿热饭','一锅热饭用米粮、菜蔬或食材、枯枝各一份，再添一桶水。','kitchen');
+  const feastPacked=q==='M20'&&s.flags.feastCooked&&(N.quantity(s,'feast')>0||s.flags.feastShared);
+  const pendingFeast=q==='M20'&&!feastPacked;
+  const stoveLine=pendingFeast
+    ? deskText('岁末家宴与普通做饭共用食材。请给家宴留米粮一份、菜蔬（或食材）一份、枯枝一份和桶内水一份。',
+      'Everyday cooking uses the same supplies as the year-end feast. Set aside one rice, one vegetable or pantry ingredient, one bundle of firewood and one measure of bucket water.')
+    : feastPacked ? deskText('岁末家宴已经备好。','The year-end feast is ready.')
+    : '一锅热饭用米粮、菜蔬或食材、枯枝各一份，再添一桶水。';
+  activity('灶边 · 一顿热饭',stoveLine,'kitchen');
   const scene=document.createElement('div');scene.className='kitchen-scene';
   const art=document.createElement('img');art.alt='';art.draggable=false;
   art.onerror=()=>{art.hidden=true;scene.classList.add('without-art');};
@@ -1174,6 +1180,19 @@ function showCook(){
   }
   async function finish(){
     if(busy||stage===3||dialogKind!=='kitchen'||!scene.isConnected)return;
+    if(pendingFeast){
+      const shortAfterPot=N.mealSupplies(state(),2).missing;
+      if(shortAfterPot.length){
+        const list=N.mealMissingText(shortAfterPot,window.NanlanI18n.language==='en');
+        activity(deskText('这锅饭要用家宴的料','Use the feast supplies?'),
+          deskText('现在煮普通热饭，岁末家宴就会缺'+list+'。','Cooking this everyday meal would leave the feast short of '+list+'.'),'kitchen');
+        navButton(deskText('留给家宴，回灶边','Keep the supplies for the feast'),showCook,'kitchen-keep-feast');
+        button(deskText('仍煮普通热饭','Cook the everyday meal anyway'),()=>perform('cookMeal',{},()=>{
+          showCook();notice(deskText('普通热饭已盛好一份。','One everyday meal is ready.'),true);
+        }),'kitchen-use-feast',false,false);
+        return;
+      }
+    }
     busy=true;paint();
     try{
       const result=await perform('cookMeal',{},()=>{
@@ -1197,6 +1216,21 @@ function showCook(){
     if(stage===0)window.NanlanAudio?.play('water');
     stage++;paint();
   };
+  let feastButton;
+  if(N.reached(s,'M20')&&!feastPacked){
+    feastButton=button(deskText('准备岁末家宴','Prepare the year-end feast'),()=>{
+      const {missing}=N.mealSupplies(state());
+      if(missing.length){
+        const list=N.mealMissingText(missing,window.NanlanI18n.language==='en');
+        notice(deskText('家宴还缺'+list+'。','The feast still needs '+list+'.'),true);
+        $('dialogNotice').scrollIntoView({block:'nearest'});
+        return;
+      }
+      return perform('cookFeast',{},()=>{
+        showCook();notice(deskText('岁末家宴已备好，收进行囊 ×1。','Year-end feast prepared and packed ×1.'),true);
+      });
+    },'cookFeast',false,false);
+  }
   if(N.done(s,'M04')){NanlanFoodUI.stove();NanlanHearthUI.stoveLinks();}
   if(q==='M04'&&!s.flags.stoveClean)actButton('先把灶边清理干净','cleanStove',{},showCook);
   if(N.reached(s,'M04')){
@@ -1205,10 +1239,10 @@ function showCook(){
     else if(s.flags.stoveClean&&s.flags.drainClear&&(s.bucketWater||0)<1)navButton('去水缸装水',()=>{closeDialog();startNavigation('yard','waterJar');},'kitchen-to-water');
   }
   if(s.flags.volume2Started)actButton('煮一锅鲜鱼饭 · 塘鱼1、枯枝1、桶内水1','silkCookFish',{sequence:s.revision},showCook);
-  if(N.reached(s,'M20'))actButton('准备岁末家宴','cookFeast',{},showCook);
   paint(kitchenObstacle(s));
   if(s.scholar?.recipe)globalThis.NanlanScholar?.kitchen();
-  if(!spot.disabled)spot.focus({preventScroll:true});
+  if(pendingFeast)feastButton.focus({preventScroll:true});
+  else if(!spot.disabled)spot.focus({preventScroll:true});
 }
 function showBed(){
   const s=state(),f=s.flags,q=N.current(s);

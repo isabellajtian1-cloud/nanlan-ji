@@ -185,6 +185,21 @@
   function available(s,id) {
     return quantity(s,id)-rural.held(s,id)-(s.order && s.order.product===id ? s.order.reserved : 0);
   }
+  // Both pots use one portion from each group. Vegetables and pantry ingredients are interchangeable.
+  function mealSupplies(s, portions=1) {
+    const vegetables=Math.max(0,available(s,'vegetable'));
+    const ingredients=Math.max(0,available(s,'ingredient'));
+    const stock={rice:available(s,'rice'),greens:vegetables+ingredients,wood:available(s,'wood'),water:s.bucketWater||0};
+    const missing=Object.entries(stock)
+      .filter(([,count])=>count<portions)
+      .map(([id,count])=>[id,portions-Math.max(0,count)]);
+    return {cost:{rice:1,[vegetables>0?'vegetable':'ingredient']:1,wood:1},missing};
+  }
+  function mealMissingText(missing,english=false) {
+    const names=english ? {rice:'rice',greens:'vegetables (or pantry ingredients)',wood:'firewood',water:'bucket water'}
+      : {rice:'米粮',greens:'菜蔬（或食材）',wood:'枯枝',water:'桶内水'};
+    return missing.map(([id,count])=>names[id]+' ×'+count).join(english?', ':'、');
+  }
   // Sales protect outstanding promises even before the player explicitly reserves them.
   function saleAvailable(s,id,extra=false) {
     const order=s.order?.product===id?s.order:null;
@@ -467,9 +482,12 @@
         if(name==='clearDrain'){quest('M04');requireScene(s,'yard');f.drainClear=true;return;}
         if(name==='cookMeal'||name==='cookFeast'){
           requireScene(s,'yard');const feast=name==='cookFeast';if(feast)requireThat(reached(s,'M20'),'先办完京中来信。');else requireThat(reached(s,'M04'),'先整理后院。');
-          requireThat(f.stoveClean&&f.drainClear,'先清灶边和庭院水口。');requireThat(s.bucketWater>=1,'先到水缸取水。');
-          const food=quantity(s,'vegetable')?'vegetable':'ingredient';
-          spend(s,{rice:1,wood:1,[food]:1});s.bucketWater--;give(s,feast?{feast:1}:{hotMeal:1});f[feast?'feastCooked':'firstCooked']=true;log(s,'cook',0,feast?'准备家宴':'煮一锅热饭');return;}
+          if(feast&&q==='M20'&&f.feastCooked&&(quantity(s,'feast')>0||f.feastShared))return false;
+          requireThat(f.stoveClean&&f.drainClear,'先清灶边和庭院水口。');
+          const supplies=mealSupplies(s);
+          if(feast&&supplies.missing.length)fail('家宴还缺'+mealMissingText(supplies.missing)+'。');
+          requireThat(s.bucketWater>=1,'先到水缸取水。');
+          spend(s,supplies.cost);s.bucketWater--;give(s,feast?{feast:1}:{hotMeal:1});f[feast?'feastCooked':'firstCooked']=true;log(s,'cook',0,feast?'准备家宴':'煮一锅热饭');return;}
         if(name==='shareFirst'){quest('M04');requireScene(s,'hall');return once(s,'shareFirst',()=>{requireThat(['family','chen'].includes(p.choice),'先选怎样分饭。');spend(s,{hotMeal:1});s.choices.firstMeal=p.choice;f.firstShared=true;f.stableLights=true;});}
         if(name==='nap'){requireScene(s,'bed');requireThat(f.bedReady,'先搬入床褥。');s.stamina=100;if(s.mode==='daily')s.worldTick=Math.min(s.worldTick+30,Math.floor(s.worldTick/1440)*1440+1320);return;}
         if(name==='sleep'){requireScene(s,'bed');requireThat(done(s,'M04'),'请在完成 M04「南澜的第一顿饭」后再睡一夜；现在可临时休息恢复体力。');sleepToMorning(s);return;}
@@ -603,7 +621,7 @@
       });
     }
   }
-  return {Engine,familyRequests,pendingFamilyRequest,chapterEntries,voyage,V6_ORDER,season5,SEASON5_ORDER,v5,V5_ORDER,v4,V4_ORDER,children,scholar,v3,V3_ORDER,rural,initial,current,done,reached,sceneGate,clock,tide,crop,gardenPlot,quantity,available,saleAvailable,normaliseLoaded,
+  return {Engine,familyRequests,pendingFamilyRequest,chapterEntries,voyage,V6_ORDER,season5,SEASON5_ORDER,v5,V5_ORDER,v4,V4_ORDER,children,scholar,v3,V3_ORDER,rural,initial,current,done,reached,sceneGate,clock,tide,crop,gardenPlot,quantity,available,saleAvailable,mealSupplies,mealMissingText,normaliseLoaded,
     rareResources,resourceCooldown,resourceRequirement,daylight,SAVE_KEY,ORDER,V2_ORDER,shopPrice,shopCustomers,story2:storyV2,shopProducts:storyV2.products,titles,steps,rewards,itemNames,products,prices,supplyPrices,recipes};
 });
 

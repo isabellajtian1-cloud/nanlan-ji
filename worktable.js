@@ -117,6 +117,10 @@ window.NanlanWorktable = (() => {
   function inspect(area, label, commit, back) {
     const rim = area === 'rim';
     const w = bench('inspect', L('验货案 · 试一试这只篓','Inspection bench · Examine the basket'), rim ? L('套叠时篓口有些发涩。摸过各处，把待验签系在松动的地方。','The rim catches when nested. Feel the basket and tie a tag where it is loose.') : L('轻提时一侧微微下沉。摸过各处，把待验签系在松动的地方。','One side dips when lifted. Feel each part and tie a tag where it gives.'), label, commit, back);
+    if(state().choices.learnedPlank){
+      const tip=control(w.board,L('照木道的法子试两头','Try the plank test'),()=>{w.live.textContent=rim?L('你按住一侧，另一侧的篾尾翘起来，勾住了篓口。','Pinning one side makes a loose tip catch on the rim.'):L('你托住篓身，提起远边，篓耳根的短篾先动了。','Support the body and lift the far side. The short split at the handle joint slips first.');});
+      tip.classList.add('secondary');
+    }
     const specimen = element('div','wt-specimen');
     specimen.innerHTML = inventoryArt('narrowBasket');
     w.board.append(specimen);

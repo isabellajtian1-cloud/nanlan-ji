@@ -25,7 +25,7 @@ function act(s,name,p,h){const {requireThat:need,requireScene:at,spend,give,log}
    need(a.shared&&!a.signed,'等一家人尝过这道饭再来。');a.signed=true;s.journal.push({id:'锅边先生',tick:s.worldTick,text:'南澜李家，已试过。'});return;
  }
  if(name==='liangCook'){
-   at(s,'yard');const why=cookingBlock(s);need(!why,why);need(['perfect','ordinary','early','late','quick'].includes(p.result),'请重新照看这锅笋饭。');if(p.result==='quick')need(a.practice>=3,'亲手做成三锅后，便能照旧火候快做。');
+   at(s,['yard','serviceKitchen']);const why=cookingBlock(s);need(!why,why);need(['perfect','ordinary','early','late','quick'].includes(p.result),'请重新照看这锅笋饭。');if(p.result==='quick')need(a.practice>=3,'亲手做成三锅后，便能照旧火候快做。');
    spend(s,{rice:1,shoot:1,wood:1});s.bucketWater--;give(s,{[p.result==='perfect'?'crustRice':'shootRice']:1});a.pots++;
    if(['ordinary','perfect'].includes(p.result))a.practice=Math.min(3,a.practice+1);
    if(['early','late'].includes(p.result))a.margin=p.result;

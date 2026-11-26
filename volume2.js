@@ -190,6 +190,7 @@ window.NanlanV2={
         note(deskText('柜台成交扣店内实货，不扣行囊。行囊为 0 仍可出售店内可售货；装车、在途、店内分别记账。','Counter sales use shop stock, not your satchel. Zero in the satchel does not prevent selling available shop goods. Packed goods, shipments and shop stock are separate.'));
         if(Object.values(shop.holds).some(n=>n>0))action(deskText('解除自己的留货 · 不动顾客预订','Release My Holds · Keep Customer Reservations'),'v2NoHold');
       }
+      if(window.NanlanHomeward&&NanlanHomewardModel.ownsHamper(s)&&f.v2Opened&&f.v2CustomerHeard&&o&&['generalStoreKeeper','v2Customer','v2Shelf'].includes(o.id)&&(!s.choices.ferryWideHandle||q==='V2_10'))navButton(deskText(s.choices.ferryWideHandle?'看大娘试新提梁':'接过大娘带来的旧篓',s.choices.ferryWideHandle?'See the refitted handle':'Examine her worn hamper'),()=>NanlanHomeward.handle(o),'homeward-handle');
       const waiting=N.shopCustomers(s);
       if(f.v2Opened&&!d?.closed&&waiting>0){
         const voices={

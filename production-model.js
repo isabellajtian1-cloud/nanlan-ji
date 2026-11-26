@@ -39,7 +39,7 @@ function act(s,name,q,h){const {requireThat:need,requireScene:at,spend,give,log}
  if(name==='silkBotanical'){at(s,'study');need(!p.botanical,'草木底稿已经誊好，可带给母亲看。');p.botanical=true;s.journal.push({id:'祖父记草木',tick:s.worldTick,text:'祖父画下桑叶与岭南小白花，愿将底稿借给母亲作新衣绣样。'});return;}
  if(name==='silkClothes'){need((['yard','hall'].includes(s.scene)&&!h.familyAtShop(s,'mother'))||(s.scene==='generalStore'&&h.familyAtShop(s,'mother')),'请到母亲当前所在的地方，当面交付生丝。');need(p.botanical,'请先到书房看祖父的草木底稿，再请母亲制衣。');need(p.clothesStartedAt===null,'母亲已经接下这份生丝，不必再交。');spend(s,{fineSilk:2});p.clothesStartedAt=s.worldTick;p.clothesReadyAt=(Math.floor(s.worldTick/1440)+3)*1440+360;return;}
  if(name==='silkClothesSeen'){need(s.actorState.outfit==='nanlanSilk','新衣还在裁绣，请等到约定的清晨。');if(p.clothesSeen)return false;p.clothesSeen=true;return;}
- if(name==='silkCookFish'){at(s,'yard');need(s.flags.stoveClean,'请先清理灶边。');need(s.bucketWater>=1,'请先到水缸取水。');spend(s,{pondFish:1,wood:1});s.bucketWater--;give(s,{hotMeal:1});return;}
+ if(name==='silkCookFish'){at(s,['yard','serviceKitchen']);need(s.flags.stoveClean,'请先清理灶边。');need(s.bucketWater>=1,'请先到水缸取水。');spend(s,{pondFish:1,wood:1});s.bucketWater--;give(s,{hotMeal:1});return;}
  const R=country,work=(mins,energy)=>R.work(s,mins,energy,need);
  if(name==='silkBuy'){
    at(s,'village');need(p.kit&&Object.hasOwn(inputs,q.item),'先在池边接过初养用具。');

@@ -1,6 +1,6 @@
 /* Original score and soundscapes: compose_soundscape.py. No third-party recordings. */
 (()=>{'use strict';
-const $=id=>document.getElementById(id),names=['click','blocked','door','water','repair','gather','rest','success','test','step','sealWood','sealStone','riceSimmer','riceLid','riceRake','riceCrust'];
+const $=id=>document.getElementById(id),names=['click','blocked','door','water','repair','gather','rest','success','test','step','sealWood','sealStone','riceSimmer','riceLid','riceRake','riceCrust','bowlTouch','ferryPole','stallBoards','stepStone','stepWood','stepTile'];
 const titleButton=$('titleMusic'),titleScreen=$('start'),titleKey='title-river-6110';
 let enabled=true,volume=.75,started=false,scene=titleButton?'title':'gate',night=false,playing=false,error='',lastClick=0,lastStep=0,dialogue=false;
 let quiet=true;try{quiet=localStorage.getItem('nanlan_music_arrangement')!=='full';}catch(_){}
@@ -105,7 +105,7 @@ function layer(k,key){
   l.pending=request;return request;
 }
 async function environment(){if(!enabled||!started||document.hidden)return false;init();const ticket=++environmentTicket,p=profile();const results=await Promise.allSettled([layer('music',p.music),layer('ambient',p.ambient)]);if(ticket!==environmentTicket||!enabled||document.hidden)return false;playing=results.every(r=>r.status==='fulfilled');const needsGesture=scene==='title'&&results.some(r=>r.status==='rejected'&&r.reason?.name==='NotAllowedError');error=playing||needsGesture?'':'音乐或环境音暂未播放，请点击试听重试。';status();return playing;}
-async function play(name='click'){if(!enabled||!started||document.hidden||!names.includes(name))return false;init();if(name==='click'){const now=Date.now();if(now-lastClick<90)return false;lastClick=now;}effect.pause();effect.src=''+name+'.wav';effectGain=name==='step'?.07:name==='click'?.1:name==='blocked'?.4:name==='success'?.28:.65;effect.muted=target('effect')===0;effect.volume=target('effect')*effectGain;try{await effect.play();return true;}catch(e){if(e.name!=='AbortError'){error='操作音效暂未启动，请点击试听重试。';status();}return false;}}
+async function play(name='click'){if(!enabled||!started||document.hidden||!names.includes(name))return false;init();if(name==='click'){const now=Date.now();if(now-lastClick<90)return false;lastClick=now;}effect.pause();effect.src=''+name+'.wav';effectGain=name.startsWith('step')?(name==='step'?.07:.30):name==='click'?.1:name==='blocked'?.4:name==='success'?.28:.65;effect.muted=target('effect')===0;effect.volume=target('effect')*effectGain;try{await effect.play();return true;}catch(e){if(e.name!=='AbortError'){error='操作音效暂未启动，请点击试听重试。';status();}return false;}}
 function pause(){window.NanlanScenery?.quietSound();environmentTicket++;for(const l of Object.values(layers)){l.ticket++;l.pending=null;l.pendingKey='';clearInterval(l.timer);for(const p of l.players)p.pause();l.players.forEach((p,i)=>p.mix=i===l.active?1:0);}effect?.pause();playing=false;status();}
 async function unlock(){if(!enabled)return false;if(scene==='title'&&window.NanlanOpening?.running())scene=window.NanlanOpening.environment()||'gate';started=true;init();return environment();}
 async function enable(test=false){enabled=true;started=true;try{localStorage.setItem('nanlan_sound','on');}catch(_){}init();await Promise.all([play(test?'test':'click'),environment()]);status();}
@@ -122,7 +122,7 @@ function setEnvironment(next,isNight,walking){
     }
   }
   if(window.NanlanScenery&&typeof state==='function')NanlanScenery.sound(state(),next==='yard'&&enabled&&started&&!document.hidden,target('ambient'));
-  if(walking&&effect?.paused&&Date.now()-lastStep>650){lastStep=Date.now();void play('step');}
+  if(walking&&effect?.paused&&Date.now()-lastStep>650){lastStep=Date.now();const p=typeof state==='function'?state().player:null;const material=p&&window.NanlanHomewardRoad?.floor(next,p.x,p.y);void play(({wood:'stepWood',stone:'stepStone',tile:'stepTile'})[material]||'step');}
 }
 function setDialogue(value){dialogue=value;gains();}
 function openPanel(){status();if(window.NanlanSettings){window.NanlanSettings.open('audio');return;}$('audioPanel').hidden=false;$('audioTest').focus();}

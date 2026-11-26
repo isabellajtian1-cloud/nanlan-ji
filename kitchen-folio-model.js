@@ -52,7 +52,7 @@
       give(s,{[p.item]:1});f.picked[p.item]=day(s);return;
     }
     if(action==='foodUnseal'){
-      requireScene(s,'yard');need(f.jar && s.worldTick>=f.jar.due,'这坛还没有到开坛的时候。');
+      requireScene(s,['yard','serviceKitchen']);need(f.jar && s.worldTick>=f.jar.due,'这坛还没有到开坛的时候。');
       pack(s,D.recipes[f.jar.id],give);f.jar=null;return;
     }
     const r=Object.hasOwn(D.recipes,p.id)&&D.recipes[p.id];
@@ -66,7 +66,7 @@
       log(s,'buy',-bill.price,'食材篮 · '+r.title[0],null);return;
     }
     if(action==='foodCook'){
-      requireScene(s,'yard');need(inSeason(s,r),'这道菜尚未到供应时节。');
+      requireScene(s,['yard','serviceKitchen']);need(inSeason(s,r),'这道菜尚未到供应时节。');
       need(r.work!=='crock'||!f.jar,'糟坛已有一份，待揭坛后再用。');
       need(s.bucketWater>=1,'请先到庭院水缸装水。');
       spend(s,{wood:1,...Object.fromEntries(r.foods.map(id=>[id,1]))});s.bucketWater--;

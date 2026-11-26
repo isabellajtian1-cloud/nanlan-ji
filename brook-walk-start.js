@@ -6,11 +6,11 @@ if (window.NanlanWalkSample) {
   walk.memoryOnly = true;
   const act = (name, options) => {
     const result = walk.act(name, options);
-    if (!result.ok) throw Error(result.message);
+    if (!result.ok) throw Error(name + ' · ' + result.message);
   };
   const enter = scene => {
     const result = walk.enter(scene);
-    if (!result.ok) throw Error(result.message);
+    if (!result.ok) throw Error(scene + ' · ' + result.message);
   };
   const standBy = id => {
     const person = world[walk.state.scene].objects.find(object => object.id === id);
@@ -47,6 +47,11 @@ if (window.NanlanWalkSample) {
   enter('bed');
   act('sleep');
   enter('village');
-  walk.move(948,373);
+  if(window.NanlanHomewardSample){
+    walk.state.worldTick=Math.floor(walk.state.worldTick/1440)*1440+1056;
+    if(window.NanlanHomewardSample==='veranda'){enter('yard');enter('eavesGallery');walk.move(591,452);}
+    else walk.move(430,371);
+  }
+  else walk.move(948,373);
   localStorage.setItem(model.SAVE_KEY, JSON.stringify(walk.state));
 }

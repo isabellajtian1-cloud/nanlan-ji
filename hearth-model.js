@@ -91,7 +91,7 @@
     need(s.revision===p.sequence,'手边的记录已变，请重新核对。');
     const book=s.hearthBook || (s.hearthBook={});
     if (action==='hearthCook') {
-      h.requireScene(s,'yard');
+      h.requireScene(s,['yard','serviceKitchen']);
       const issue=problem(p.method,p.foods);
       need(!issue,issue?.[0]);
       need(Number.isInteger(s.bucketWater) && s.bucketWater>=1,'请先到庭院水缸装水。');

@@ -26,10 +26,11 @@ function place(id){
  const number=placeVolumes[id]||1,flag=placeFlags[id];let questTitle='',stepLabel='';
  let requirement=number===1?'随第一卷剧情与修路进度逐步开放。':number===2?'在正厅开启第二卷后，进入县城与南街。':'';
  if(flag){for(const [quest,steps]of Object.entries(N.steps)){const step=steps.find(row=>row[0]===flag);if(step){questTitle=N.titles[quest];stepLabel=step[1];requirement='完成「'+questTitle+'」中的「'+stepLabel+'」后开放。';break;}}}
+ if(['homeLane','reedLanding','eavesGallery','washingCourt','serviceKitchen','dryingLoft'].includes(id))requirement='与家人吃过第一顿热饭后，可从村口或庭院步行前往。';
  if(id==='banyanBrook')requirement='与家人吃过第一顿热饭后，可从南澜村东边入溪径。';
  if(id.startsWith('pref'))requirement='第三卷完成「谁替你看一会儿店」的回柜台事项后，从新河埠按船期乘船前往府城。';
  if(number===6)requirement='第六卷完成行前安排，在避风泊岸核船期、天气和往返船脚，再乘班船前往青屿。';
- const requirementEn=id==='banyanBrook'?'After your first family meal, take the eastern lane from Nanlan Village.':id.startsWith('pref')?'In Volume III, return to the counter after the shop shift, then take the scheduled ferry from New River Wharf.':number===6?'Finish the Volume VI preparations, then check the weather, sailing time and return fare at the sheltered berth before sailing to Qingyu.':number===2?'Begin Volume II in the main hall to enter the county town and South Street.':'Opens gradually with Volume I’s story and path repairs.';
+ const requirementEn=['homeLane','reedLanding','eavesGallery','washingCourt','serviceKitchen','dryingLoft'].includes(id)?'After the first family supper, walk from the village or courtyard.':id==='banyanBrook'?'After your first family meal, take the eastern lane from Nanlan Village.':id.startsWith('pref')?'In Volume III, return to the counter after the shop shift, then take the scheduled ferry from New River Wharf.':number===6?'Finish the Volume VI preparations, then check the weather, sailing time and return fare at the sheltered berth before sailing to Qingyu.':number===2?'Begin Volume II in the main hall to enter the county town and South Street.':'Opens gradually with Volume I’s story and path repairs.';
  const shared5=['backHall','yard','hall','store','generalStore','market','guild','workshop','wharf'].includes(id);
  return {number,volumes:shared5?[number,5]:[number],flag,requirement,requirementEn,questTitle,stepLabel};
 }

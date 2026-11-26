@@ -5,6 +5,7 @@
   else root.NanlanEngine = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
+  const homeward=typeof module==='object'&&module.exports?require('./homeward-model.js'):globalThis.NanlanHomewardModel;
   const SAVE_KEY = 'nanlan_v20';
   const identity=typeof module==='object'&&module.exports?require('./character-model.js'):globalThis.NanlanCharacter;
   const chronicle=typeof module==='object'&&module.exports?require('./chronicle-model.js'):globalThis.NanlanChronicle;
@@ -144,7 +145,7 @@
       mode:'prologue',storyBeat:'抵达',stamina:100,coins:80,
       bag:{bedroll:1,repair:2,rice:2,ingredient:1,seed:1,wood:0,weed:0},
       tools:{hand:true},selected:'hand',keyring:[],flags:{},choices:{},collected:{},nodes:{},
-      quests:{},claimed:{},actions:{},garden:{kind:null,plantedAt:null,watered:false,duration:120},
+      quests:{},claimed:{},actions:{},garden:{kind:null,plantedAt:null,watered:false,duration:120},extraPlots:Array.from({length:5},emptyPlot),
       hearthBook:{},foodFolio:foodFolio.fresh(),rural:rural.fresh(),production:production.fresh(),actorState:production.freshActors(),seals:seals.fresh(),shop:storyV2.emptyShop(),story2:storyV2.emptyStory(),practice:{},pages:{},visits:{gate:true},familyTalks:{},order:null,transactions:[],journal:[],
       tideAnchor:null,tideTutorialUsed:false,stallUntil:null,featured:null,lastNotice:'先和家人完成门前交接。'
     };
@@ -270,7 +271,7 @@
     if(!s.flags.gateOpen)return '先在门前完成交接、接过钥匙，再亲手打开院门。';
     if(['yard','hall','study','bed','store'].includes(to))return '';
     if(!done(s,'M04'))return '先安顿卧房、清理后院，再和家人吃第一顿热饭。M04 完成后可出村认路。';
-    if(to==='village'||to==='banyanBrook')return '';
+    if(['village','banyanBrook','homeLane','reedLanding','eavesGallery','washingCourt','serviceKitchen','dryingLoft'].includes(to))return '';
     if(['foothill','mountain','bambooGrove'].includes(to))return reached(s,'M06')?'':'先在南澜村认识陈伯与许青禾，完成 M05。';
     if(['mountainside','summit'].includes(to))return done(s,'M13')?'':'高地要等 M13 风雨准备完成，再由阿岑引路；眼下可去竹林采集。';
     if(['coast','tidalflat'].includes(to))return reached(s,'M09')?'':'先完成 M08 书箱任务，再请沈晚渔指路。';
@@ -424,6 +425,11 @@
         if(seasonal&&name.startsWith('seasonTray'))return seasonal.tend(s,name,p,{need:requireThat,climate,weather:localWeather,spend,give,near:this.near(this.world.yard.objects.find(o=>o.id==='dryRackVisual'))});
         if(name.startsWith('food'))return foodFolio.act(s,name,p,{requireThat,requireScene,spend,give,available,done,clock,log});
         if(name.startsWith('hearth'))return hearth.act(s,name,p,{requireThat,requireScene,spend,give,done,clock});
+        if(name.startsWith('homeward')&&homeward){
+          const h={need:requireThat,tide,current,weather:localWeather,near:id=>this.near(this.world[s.scene].objects.find(o=>o.id===id))};
+          if(['homewardWash','homewardHang','homewardLift','homewardAirWait','homewardSetCloth'].includes(name))return homeward.laundry(s,name,p,h);
+          return homeward.act(s,name,p,h);
+        }
         if(name==='streetTalk'){
           const person=this.world[s.scene].objects.find(o=>o.id===p.object);
           requireThat(person&&Object.hasOwn(neighbors.residents,p.object)&&neighbors.present(s,p.object,children.camp(s))&&this.near(person),'请在街坊出门时走到对方身旁。');
@@ -499,7 +505,7 @@
         if(name==='fillWater'){requireScene(s,'yard');requireThat(reached(s,'M04'),firstMealGate(s));requireThat(s.tools.water,'先去仓房领取箍木桶，再回庭院取水。');s.bucketWater=bucketCapacity(s);f.bucketFilled=true;return;}
         if(name==='clearDrain'){quest('M04');requireScene(s,'yard');f.drainClear=true;return;}
         if(name==='cookMeal'||name==='cookFeast'){
-          requireScene(s,'yard');const feast=name==='cookFeast';if(feast)requireThat(reached(s,'M20'),'先办完京中来信。');else requireThat(reached(s,'M04'),'先整理后院。');
+          requireScene(s,['yard','serviceKitchen']);const feast=name==='cookFeast';if(feast)requireThat(reached(s,'M20'),'先办完京中来信。');else requireThat(reached(s,'M04'),'先整理后院。');
           if(feast&&q==='M20'&&f.feastCooked&&(quantity(s,'feast')>0||f.feastShared))return false;
           requireThat(f.stoveClean&&f.drainClear,'先清灶边和庭院水口。');
           const supplies=mealSupplies(s);

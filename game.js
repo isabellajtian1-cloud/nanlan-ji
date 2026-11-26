@@ -121,6 +121,7 @@ async function loadSceneAssets(scene,sceneState=state()){
   if(scene==='bed')required.push('bed','bedDamage','bedPatched');
   if(scene==='hall'&&(N.current(sceneState)==='M14'||sceneState.flags.hallwayCleared))required.push('hallBefore','hallAfter');
   if(scene==='village')required.push('villageLetter');
+  if(window.NanlanHomeward && ['village','banyanBrook','wharf'].includes(scene))required.push('inventoryCrafts');
   const unique=[...new Set(required.map(id=>world[id]?.asset||id))];
   const signature=JSON.stringify([scene,unique]);
   if(currentSceneLoad?.signature===signature)return currentSceneLoad.promise;
@@ -397,7 +398,7 @@ async function perform(name,p={},rerender){
   if(result.ok){clearSceneNotice();clearDialogNotice();}
   if(nightCopy&&result.ok&&!result.duplicate){try{localStorage.setItem('nanlan_last_night',nightCopy);}catch{notice(deskText('已过夜，设备空间不足，未能保留睡前副本。','Morning has come, but the device could not keep a bedtime copy.'),true);}}
   if(!result.ok){window.NanlanAudio?.play('blocked');notice(result.message,true);$('saveState').textContent=result.message.startsWith('保存失败')?'本次动作尚未保存':'当前目标尚待完成';return result;}
-  if(!result.duplicate&&name!=='tryFerryBasket')window.NanlanAudio?.play(p.seal?(p.seal==='stone'?'sealStone':'sealWood'):name==='openGate'?'door':/water|Water/.test(name)?'water':/repair|Repair|patch|Patch|craft|Craft/.test(name)?'repair':/nap|sleep|townStay|townMeal/.test(name)?'rest':/collect|harvest|Harvest|gather/.test(name)?'gather':'success');
+  if(!result.duplicate&&name!=='tryFerryBasket'&&!name.startsWith('homeward'))window.NanlanAudio?.play(p.seal?(p.seal==='stone'?'sealStone':'sealWood'):name==='openGate'?'door':/water|Water/.test(name)?'water':/repair|Repair|patch|Patch|craft|Craft/.test(name)?'repair':/nap|sleep|townStay|townMeal/.test(name)?'rest':/collect|harvest|Harvest|gather/.test(name)?'gather':'success');
   $('saveState').textContent=engine.memoryOnly?'仅本次试玩 · 关闭网页会丢失':'已保存';
   if(!result.duplicate){
     const memory=window.NanlanMemoryBook?.unlocked(previous,state());
@@ -1233,7 +1234,7 @@ function showCook(){
           navButton('端去正厅与家人分饭',()=>{closeDialog();startNavigation('hall','mealTable');},'kitchen-to-table');
         }
         navButton('回到灶台',showCook,'kitchen-again');
-        navButton('收好碗勺，回庭院',()=>closeDialog(),'kitchen-leave');
+        navButton(state().scene==='serviceKitchen'?deskText('收好碗勺，回灶间','Put the ladle away'): '收好碗勺，回庭院',()=>closeDialog(),'kitchen-leave');
         $('choices').querySelector('button')?.focus({preventScroll:true});
       });
       if(!result.ok){busy=false;paint(kitchenObstacle(state()));caption.textContent=result.message;}
@@ -1395,6 +1396,7 @@ function npcStory(o,reply){
       navButton(deskText('收起对话，自己走','Close and walk on'),closeDialog,'father-walk');
       return;
     }
+    if(id==='father'&&f.firstShared&&window.NanlanHomeward)navButton(deskText('问父亲怎样认松动的板头','Ask Father how to spot a loose plank'),()=>{activity(deskText('父亲 · 看远头','Father · Watch the far end'),deskText('父亲把一根筷子横在碗沿上，按下近头。另一端应声抬起。「脚底下稳，眼睛还得看那一头。山上的木道也一样。」','Father balances a chopstick on the bowl and presses one end. The far tip rises. “Your foot may feel steady. Watch the other end on the mountain walkway.”'));dialogObject=o;},'homeward-father');
     if(id==='fatherHill'&&q==='M15')task('与父亲结伴，循原路返家','findFather',{});
     if(father&&id==='father'&&q==='M15'&&f.fatherFound&&!f.fatherHome){
       task('先说一句担心','fatherHome',{choice:'care'});
@@ -1456,6 +1458,7 @@ function npcStory(o,reply){
 }
 function showTide(board=null){
   const s=state(),t=N.tide(s);activity(board?'南澜海湾 · 潮线木牌':deskText('南澜海湾 · 今日潮汐','Nanlan Bay · Today’s tide'),(t.low?'现在是低潮，可以进入滩涂，约还有 ':'正在涨潮，下一轮低潮约在 ')+Math.ceil(t.remaining)+' 游戏分钟。\n\n潮汐每 8 分钟一轮，其中低潮 3 分钟。第一次到访有一次低潮教学窗口；离开再来不会反复重置。\n\n涨潮时不能拾取滩涂物资，但随时可以回海边。可先与沈晚渔交谈、回访村里或整理字纸。');
+  if(board&&s.flags.metYu&&window.NanlanHomeward)navButton(deskText('低头辨认石阶上的水痕','Read the water against the steps'),()=>NanlanHomeward.water(board),'homeward-read-steps');
   if(N.current(s)!=='M09'||s.flags.tideRead)return;
   if(board&&s.flags.metYu){
     actButton('辨认潮线，记住归路','readTide',{},()=>showTide(board));
@@ -1475,6 +1478,7 @@ function visibleObjects(scene=state().scene,includeCooling=false){
   const s=state(),f=s.flags,q=N.current(s);
   const childCamp=(scene==='village'||scene==='foothill')?N.children.camp(s):'';
   return world[scene].objects.filter(o=>{
+    if(o.when&&!window.NanlanHomeward?.visible(s,o,q))return false;
     if(NanlanNeighbors.residents[o.id]&&!NanlanNeighbors.present(s,o.id,childCamp))return false;
     if(o.action==='crateMove')return N.current(s)==='M14'||!!f.cratesRaised;
     if(o.action==='hallMove')return !window.NanlanEstate?.furnished?.(s)&&(N.current(s)==='M14'||!!f.hallwayCleared);
@@ -1559,6 +1563,8 @@ async function interactCore(o){
   if(!o||transitioning)return;
   if(o.type==='door'&&!nearObject(o)){approach(o);return;}
   if(!nearObject(o)){notice('先走近'+o.label+'。');return;}
+  if(window.NanlanHomewardRoad?.inspect(o))return;
+  if(window.NanlanHomeward?.offer(o)){dialogObject=o;return;}
   if(offerFamilyRequest(o))return;
   const waiting=N.pendingFamilyRequest(state());
   const idleWords=pendingObjectWords[waiting]?.[o.action||o.type];
@@ -1583,7 +1589,16 @@ async function interactCore(o){
     if(Object.hasOwn(NanlanNeighbors.residents,o.id)){window.NanlanStreetTalk.open(o);return;}
     npc(o);dialogObject=o;globalThis.NanlanTownUI?.family(o);return;
   }
-  if(o.type==='view'||o.type==='read'){activity(o.label,o.lines||'这里记着家中旧事。');dialogObject=o;return;}
+  if(o.type==='view'||o.type==='read'){
+    activity(o.label,o.lines||'这里记着家中旧事。');dialogObject=o;
+    if(window.NanlanHomeward&&['brookBench','brookRail'].includes(o.id)){
+      navButton(deskText('顺着桥栏望向对岸','Look across the brook'),()=>{
+        closeDialog(true);cameraOverviewUntil=performance.now()+3400;
+        notice(deskText('桥右那棵老榕树下，石头上搁着一只竹篓。','Under the old banyan to the right of the bridge, a basket rests on the stone.'));
+      },'homeward-look-across');
+    }
+    return;
+  }
   if(resourceTypes.includes(o.type)){
     if(o.type==='weed')await perform('clearWeed',{id:o.id});
     else await perform('collect',{id:o.id});return;
@@ -1647,6 +1662,7 @@ async function interactCore(o){
   else if(a==='table'){
     activity('正厅 · 一家人的饭桌',q==='M04'?'第一锅饭已经端来。家人先吃上热饭，这处落脚的房子便开始像个家。':'饭桌旁可以商量家事，来信、座次和一顿饭都会留下记录。');
     if(q==='M04'){actButton('先给家人盛饭','shareFirst',{choice:'family'},()=>showFamilyMeal(false),'share-family');actButton('分一碗留给陈伯，再与家人同食','shareFirst',{choice:'chen'},()=>showFamilyMeal(false),'share-chen');}
+    if(window.NanlanHomeward&&f.firstShared&&N.daylight(s).minute>=990)navButton(deskText('在灯下陪家人坐一会儿','Sit with the family by lamplight'),()=>NanlanHomeward.meal(false,false,true),'homeward-supper');
     if(s.children)globalThis.NanlanKids?.home(()=>interact(o));
     if(s.scholar?.recipe)globalThis.NanlanScholar?.table();
     if(f.firstShared)button('回看一家人围桌吃饭',()=>showFamilyMeal(!!f.feastShared,true),'meal-memory',true);
@@ -1659,6 +1675,7 @@ async function interactCore(o){
   else if(a==='pantry')showPantry();
   else if(a==='bridge'){
     activity('山路 · 木道','把眼前松动的一段铺好，才好进入竹林。先借出竹料，阿岑会帮工；先做自家晾架，则一起补另一段桥面。');
+    if(window.NanlanHomeward&&(f.bambooChoice||f.bridgeReady))navButton(deskText('按一按木道的板头','Test the end of the plank'),()=>NanlanHomeward.plank(o),'homeward-plank');
     if(q==='M06'&&!f.bridgeReady){
       if(f.bambooChoice&&N.available(s,'wood')<1){
         const target=bridgeWoodTarget(s);
@@ -1689,7 +1706,8 @@ async function interactCore(o){
 }
 // A closer look is optional. The only saved action is the ordinary dryPage action.
 function showWindowPages(o){window.NanlanHands.paper(o);}
-function showFamilyMeal(feast=false,memory=false){
+function showFamilyMeal(feast=false,memory=false,wide=false){
+  if(window.NanlanHomeward&&!wide){NanlanHomeward.meal(feast,memory);return;}
   const s=state(),imageKey=s.gender==='male'?'familyMealMale':'familyMealFemale';
   activity(memory?'饭桌旧事 · 一家同食':feast?'岁末家宴 · 一家同席':'第一顿热饭 · 一家同食',
     feast?'灯火映着碗沿，祖父放下筷子，笑着听你说这一年的见闻。席间的热气，让远迁的日子终于有了家的模样。':
@@ -1985,6 +2003,7 @@ function update(dt){
   moving=travelled>.0001;
   if(moving){
     direction=gait.facing(s.player.x-startX,s.player.y-startY,direction);
+      window.NanlanHomewardRoad?.move(s,s.player.x-startX,s.player.y-startY,travelled,gait.stepLength*strideScale);
     walkFrame=((wasMoving?walkFrame:0)+travelled/(gait.stepLength*strideScale)*Math.PI)%(2*Math.PI);
   }
   if(manualLength)tryKeyboardExit(dx,dy,dt);
@@ -2184,7 +2203,7 @@ function drawGatheredResource(im,o,size){
 function isGatherable(o){return resourceTypes.includes(o.type)||o.action==='garden';}
 function storePickup(o){return state().scene==='store'?({tools:0,bucket:1,axe:2}[o.action]):undefined;}
 const adultHeights={grandfather:77,father:88,mother:80,chen:76,doctor:83,cen:82,yu:84,wan:79,qiu:87,lin:85,neighbor:81,boatman:89,xiaoman:78,tea:83,landlord:86,guard:91,children:62,cakeAunt:79,ferryPorter:91,netMender:73,youngWeaver:85,blueDyer:82,letterScribe:86,peddler:88};
-function npcHeight(role){return NanlanNeighbors.residents[role]?.height||adultHeights[role]||84;}
+function npcHeight(role){if(role==='auntDusk')return 57;if(role==='auntDawn')return 78;return NanlanNeighbors.residents[role]?.height||adultHeights[role]||84;}
 function personBounds(role,x,y){
   const im=images['npc_'+role],height=npcHeight(role)*actorScale(y),width=role==='playerMale'||role==='playerFemale'?68*actorScale(y):im?.naturalWidth?height*im.naturalWidth/im.naturalHeight:height*.76;
   return {x:x-width/2-6,y:y-height-8,w:width+12,h:height+18};
@@ -2239,6 +2258,7 @@ function render(){
   }
   if(s.scene==='banyanBrook')NanlanBrook.water(ctx,performance.now(),N.daylight(s).darkness);
   paintDifferenceLayers();
+  window.NanlanHomewardRoad?.ground(ctx,s,performance.now());
   const depth=NanlanDepth.frame(s.scene,painting||base,N.daylight(s),window.NanlanWeather?.current(s),base?.naturalWidth);
   NanlanDepth.air(ctx,depth,performance.now(),reduceCameraMotion.matches);
   hitTargets=[];
@@ -2257,6 +2277,7 @@ function render(){
   // Ground shadows cannot tint another figure's face, clothes or shoes.
   for(const figure of figures)drawActor(figure,true);
   const actors=figures.map(figure=>({y:figure.y,draw:()=>drawActor(figure,false)}));
+  window.NanlanHomeward?.props(ctx,s,actors);
   if(s.scene==='yard'&&window.NanlanEstate.gifted(s))actors.push({y:window.NanlanEstate.gift.y,draw:()=>window.NanlanEstateUI?.drawGift(ctx)});
 
   for(const o of visibleObjects()){
@@ -2386,6 +2407,7 @@ function render(){
   NanlanClimate.atmosphere(ctx,s.scene,s,time,W,H);
   window.NanlanWeather?.atmosphere(ctx,s.scene,s,time,W,H);
   paintWorldLight(s,depth.day);
+  window.NanlanHomeward?.lamplight(ctx,s,depth.day.minute);
   drawEntranceSigns();
 
   renderGardenWorkFx(time);window.NanlanFieldwork?.draw(time);
@@ -2524,6 +2546,10 @@ $('continueGame').onclick=async()=>{
     applyRestoredSnapshot(check.state,resumeRaw);
     if(window.NanlanFerrySample){
       NanlanHands.market();
+    }else if(window.NanlanHomewardSample==='veranda'){
+      notice(deskText('点花窗听屋里说话，或走到檐下的缸边点水。廊右的门通往正厅。','Listen at the lattice, or touch the rain jar beneath the eaves. The door on the right leads to the hall.'));
+    }else if(window.NanlanHomewardSample){
+      notice(deskText('榕树下，大娘正在收针。走近她，再顺巷子往西回家。','A woman is winding thread under the banyan. Visit her, then follow the lane west to your home.'));
     }else if(window.NanlanFarmSample){
       if(window.NanlanFarmSample==='seasons')notice(deskText('点右上角天气签，可从日历里换季试走。','Open the weather slip to try another season in this courtyard.'));
       else if(window.NanlanFarmSample==='pond')NanlanProduction.show(2);

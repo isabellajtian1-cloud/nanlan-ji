@@ -1,12 +1,13 @@
 /* The whole landscape remains visible, while names and details are written in as the player learns them. */
 const mapPositions={
   gate:[190,535],yard:[190,365],hall:[190,110],study:[65,235],bed:[325,235],store:[325,445],
+  ...(window.NanlanHomewardRoad?{homeLane:[345,495],reedLanding:[442,674],eavesGallery:[113,439],washingCourt:[70,551],serviceKitchen:[310,122],dryingLoft:[71,334]}:{}),
   banyanBrook:[670,418],village:[520,520],market:[570,735],county:[850,735],pharmacy:[820,575],generalStore:[1075,735],teahouse:[1070,585],
   foothill:[535,340],mountain:[710,225],bambooGrove:[710,70],mountainside:[935,195],summit:[1080,70],
   coast:[855,450],tidalflat:[1090,410],wharf:[880,345],oldTrail:[425,156],workshop:[348,615],qingxi:[1040,275],anchorage:[1005,505],guild:[680,630],backHall:[71,87],qPier:[710,760],qFair:[940,665],qSalt:[1090,635],qBamboo:[775,675],qBeacon:[1010,570],qLodge:[1100,785],prefDock:[1110,147]
 };
-const mapGroups=[['宅院与房间',['gate','yard','hall','study','bed','store']],
-  ['村镇与县城',['village','market','county','pharmacy','generalStore','teahouse']],['南街新铺',[...globalThis.NanlanTown.rooms,'countyRoom']],['府城水路',globalThis.NanlanPrefecture.places],
+const mapGroups=[['宅院与房间',['gate','yard','hall','study','bed','store',...(window.NanlanHomewardRoad?['eavesGallery','washingCourt','serviceKitchen','dryingLoft']:[])]],
+  ['村镇与县城',['village','market','county','pharmacy','generalStore','teahouse',...(window.NanlanHomewardRoad?['homeLane','reedLanding']:[])]],['南街新铺',[...globalThis.NanlanTown.rooms,'countyRoom']],['府城水路',globalThis.NanlanPrefecture.places],
   ['青岚山',['banyanBrook','foothill','mountain','bambooGrove','mountainside','summit']],['南澜海湾',['coast','tidalflat']],['山海之间',['wharf','oldTrail','workshop','qingxi']],['海天帆影',['anchorage','guild','backHall']],['青屿远行',['qPier','qFair','qSalt','qBamboo','qBeacon','qLodge']]];
 const deferredPlaces=['county','pharmacy','generalStore','teahouse'];
 let selectedMapPlace='yard',selectedMapObject=null,navigationTarget=null,navigationObject=null,mapReturnFocus=null,mapZoom=1;

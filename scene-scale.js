@@ -16,6 +16,7 @@
   group('county market prefMarket village qingxi qFair', 645, .73, 1.06, 1.93);
   group('wharf anchorage prefDock qPier', 630, .77, 1.05, 1.92);
   group('foothill mountain mountainside summit bambooGrove coast tidalflat oldTrail qSalt qBamboo qBeacon', 645, .71, 1.03, 1.98);
+  group('homeLane reedLanding eavesGallery washingCourt serviceKitchen dryingLoft', 620, .84, 1.10, 2.04);
   group('banyanBrook', 600, .80, 1.07, 1.85);
 
   function actor(scene, y) {

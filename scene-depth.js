@@ -109,6 +109,15 @@ window.NanlanDepth = (() => {
   plate('anchorage','shore',aperture(565,460,260,173,-.18),[
     piece(352,'253,288 330,287 335,302 334,345 260,346')],
     [[530,298,51],[775,306,29],[380,288,35]]);
+  plate('homeLane','leaves',aperture(484,484,215,145,-.15),[piece(689,'0,448 37,487 108,528 166,563 204,610 288,649 329,673 301,685 160,674 0,629')]);
+  plate('reedLanding','shore',aperture(599,371,204,106,-.25),[],[[940,420,23],[905,435,17]]);
+  plate('washingCourt','leaves',aperture(590,490,195,172,.11),[]);
+  plate('serviceKitchen','window',aperture(538,426,163,156,.21),[]);
+  plate('dryingLoft','leaves',aperture(567,510,239,128,-.2),[]);
+  plate('eavesGallery','window',aperture(482,424,190,148,.22),[
+    piece(450,'278,86 310,83 315,422 325,434 324,450 271,450 270,435 278,422'),
+    piece(507,'757,73 797,70 798,461 810,478 811,506 749,506 749,479 761,460')
+  ]);
   plate('banyanBrook','leaves',aperture(485,315,179,103,-.2),[]);
   plate('yard','leaves',aperture(545,345,133,95,-.32),[]);
 

@@ -24,6 +24,7 @@
     const item = s.choices.ferryFirstGood;
     if (!N.products.includes(item)) return null;
     const figure = illustration('reunion');
+    if(s.choices.ferryWideHandle){figure.src='homeward-mended.webp';figure.alt=L('改宽提梁的旧篓','Her worn hamper with its new handle');}
     figure.classList.add('ferry-reunion');
     $('panelExtra').prepend(figure);
     const copy = $('panelExtra').querySelector('.shop-story-copy');
@@ -80,6 +81,7 @@
       }
       if (stage === 'arrive') {
         line.textContent = L('「昨儿船一晃，剪子差点滑进河里。」大娘拢住针线包。' + (sellingBasket ? '她看看借来比样的浅篮，又看看你编的带盖小篓。「容我拿这包试试？」' : '她来买' + goodsName(item) + '，把自己的浅篮和小篓搁在摊边。「劳你搭把手，这些东西搁哪只好？」'), '“The boat lurched yesterday. Nearly lost my scissors in the river.” She gathers her sewing bundle. ' + (sellingBasket ? 'She eyes the borrowed sample tray and the lidded hamper you wove. “Mind if I try them?”' : 'She has come for your ' + goodsName(item) + ' and brought two baskets. “Help me see how everything will travel?”'));
+        if(s.choices.ferryMorningSeen||s.choices.ferrySewingSeen)line.textContent=L('大娘冲你晃晃那包红布。「还记得么？就是差点从臂弯里滑下去的这包。」','She lifts her red bundle. “Remember this? The one that nearly slipped from my arm.”')+' '+line.textContent;
       } else if (stage === 'shallow') {
         line.textContent = L('她把布包往篮里一搁，手腕刚一斜，剪柄便蹭过竹沿。她伸指勾住：「哎，又是这么溜出去的。」', 'She sets down the bundle. A slight tilt sends the scissors scraping over the rim. She catches them with a finger. “There they go again.”');
       } else {

@@ -24,5 +24,20 @@ if(window.NanlanFarmSample){
     st.flags.dryRack=true;st.bag.herb=Math.max(2,st.bag.herb||0);st.bag.hotMeal=Math.max(1,st.bag.hotMeal||0);
     sample.move(548,347);
   }
+  if(window.NanlanFarmSample==='weather'){
+    const st=sample.state,requested=new URLSearchParams(location.search).get('sky')||'shower';
+    const sky=Object.hasOwn(NanlanWeather.TYPES,requested)?requested:'shower';
+    const firstDay=Math.floor(st.worldTick/1440);
+    // Pick a real forecast entry so the sky, calendar and rain-dependent work all agree.
+    let found=false;
+    for(let d=0;d<112&&!found;d++){
+      for(const minute of [465,700,910,1110]){
+        const at=(firstDay+d)*1440+minute;if(at<tick)continue;
+        st.worldTick=at;
+        if(NanlanWeather.current(st).id===sky){found=true;break;}
+      }
+    }
+    sample.move(548,347);
+  }
   localStorage.setItem(NanlanEngine.SAVE_KEY,JSON.stringify(sample.state));
 }

@@ -100,7 +100,7 @@
     const section=document.createElement('section'),board=document.createElement('div'),worldView=document.createElement('div'),paper=document.createElement('canvas');
     section.className='garden-inner';section.dataset.noLocalize='';
     board.className='field-beds garden-painting';board.setAttribute('role','group');board.setAttribute('aria-label',L('六畦菜药田','Six garden beds'));
-    worldView.className='garden-world';worldView.classList.toggle('garden-keys',usingKeys);paper.width=width;paper.height=height;paper.setAttribute('aria-hidden','true');worldView.append(paper);board.append(worldView);
+    worldView.className='garden-world';worldView.classList.toggle('garden-keys',usingKeys);paper.width=width;paper.height=height;paper.setAttribute('aria-hidden','true');worldView.append(paper);window.NanlanWeatherPaint?.attach(worldView,'gardenClose',720,480);board.append(worldView);
     const header=document.createElement('div'),water=document.createElement('span'),stock=document.createElement('span');
     const foot=document.createElement('div'),guide=document.createElement('div');
     header.className='garden-stock';header.append(water,stock);foot.className='garden-foot';

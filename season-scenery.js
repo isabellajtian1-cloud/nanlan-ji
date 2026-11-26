@@ -95,7 +95,7 @@
     const d=NanlanClimate.at(s),w=NanlanWeather.current(s),minute=N.clock(s).minute;
     const afterRain=d.key==='spring'&&w.index>0&&minute-w.start<45&&NanlanWeather.plan(s)[w.index-1]?.wet;
     ctx.save();ctx.scale(W/1536,H/1024);
-    if(d.key==='spring'&&(w.wet||afterRain)){
+    if(d.key==='spring'&&!reduced&&!w.wet&&afterRain){
       for(const [i,x] of [521,690,809].entries()){
         const f=reduced?.68:(t/1380+i*.31)%1;
         ctx.fillStyle='rgba(209,226,212,.74)';ctx.beginPath();ctx.ellipse(x,116+f*f*155,1.4,2.7,0,0,Math.PI*2);ctx.fill();
@@ -119,6 +119,16 @@
         autumn:s.flags.dryRack&&['dryRackVisual','去檐下看晒药竹匾','Visit the drying tray'],
         winter:s.flags.stoveClean&&['stove','回灶边暖一暖','Warm up by the hearth']})[key];
       if(route)navButton(deskText(route[1],route[2]),()=>{closeDialog(true);startNavigation('yard',route[0]);},'season-visit');
+    }
+    if(window.NanlanFarmSample==='weather'){
+      const nav=document.createElement('nav');nav.className='season-sample-links weather-sample-links';nav.dataset.noLocalize='';
+      nav.setAttribute('aria-label',deskText('选择试玩天气','Choose a weather sample'));
+      const current=NanlanWeather.current(s).id;
+      for(const [id,type] of Object.entries(NanlanWeather.TYPES)){
+        const a=document.createElement('a'),url=new URL(location.href);url.searchParams.set('sky',id);a.href=url.href;
+        a.textContent=deskText(type.zh,type.en);if(id===current)a.setAttribute('aria-current','true');nav.append(a);
+      }
+      $('panelExtra').prepend(nav);return;
     }
     if(window.NanlanFarmSample!=='seasons')return;
     const row=document.createElement('nav');row.className='season-sample-links';row.dataset.noLocalize='';

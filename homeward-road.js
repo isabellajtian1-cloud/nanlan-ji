@@ -163,7 +163,7 @@ window.NanlanHomewardRoad = (()=>{
         ring(ctx,...pt,k,pulse.kind==='galleryJar'?13:35);ring(ctx,...pt,k-.17,pulse.kind==='galleryJar'?10:27);
         if(k>1.2)pulse=null;
       }
-      if(s.scene==='eavesGallery'&&NanlanWeather.current(s).wet)ring(ctx,...jarWater,(t/1670)%1,12);
+
     }
     ctx.restore();
   }

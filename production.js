@@ -20,7 +20,7 @@ function show(i=selected){selected=i;const s=state(),p=s.production,z=M.status(s
  if(!s.flags.volume2Started){paragraph('第二卷开启后，母亲会备下桑苗、蚕种和鱼苗。');nav('回正厅读铺讯','hall','v2Family');return;}
  const board=document.createElement('div');board.className='production-board';for(let n=0;n<3;n++){const b=document.createElement('button');b.className='production-tile'+(selected===n?' selected':'');b.setAttribute('aria-label',labels[n]+'，'+statusText(n));b.setAttribute('aria-pressed',String(selected===n));b.innerHTML=art(n,stage(n))+'<strong>'+labels[n]+'</strong><small>'+statusText(n)+'</small>';if(n===2&&window.NanlanScenery){
    const frame=document.createElement('span'),artwork=b.querySelector('svg');
-   frame.className='pond-illustration';artwork.replaceWith(frame);frame.append(artwork,NanlanScenery.pondOverlay());
+   frame.className='pond-illustration';artwork.replaceWith(frame);frame.append(artwork,NanlanScenery.pondOverlay());window.NanlanWeatherPaint?.attach(frame,'pondClose',192,172);
  }b.onclick=async()=>{if(b.disabled)return;window.NanlanAudio?.play('click');selected=n;if(pending?.index===n){const task=pending;pending=null;b.disabled=true;await perform(task.action,{sequence:state().revision},()=>show(n));if(b.isConnected)b.disabled=false;}else{pending=null;show(n);}};board.append(b);}$('panelExtra').append(board);
  const L=(zh,en)=>window.NanlanI18n?.language==='en'?en:zh;
  const weather=N.rural.weather(s),tomorrow=N.rural.weather(s,N.rural.day(s)+1);

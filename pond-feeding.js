@@ -11,7 +11,7 @@
     pond.setAttribute('aria-label',L('鱼塘水面 · 撒','Pond surface · Scatter ')+names[food]);
     pond.innerHTML=NanlanProduction.art(2,0,'pond-painting');
     const layer=document.createElement('canvas');layer.width=640;layer.height=574;layer.setAttribute('aria-hidden','true');
-    pond.append(layer);
+    pond.append(layer);window.NanlanWeatherPaint?.attach(pond,'pondClose',480,430);
     const note=document.createElement('p');note.dataset.noLocalize='';note.className='pond-note';note.setAttribute('role','status');
     note.textContent=names[food]+' ×'+(food==='leaves'?2:1);
     $('panelExtra').append(pond,note);

@@ -2003,8 +2003,12 @@ function update(dt){
   moving=travelled>.0001;
   if(moving){
     direction=gait.facing(s.player.x-startX,s.player.y-startY,direction);
-      window.NanlanHomewardRoad?.move(s,s.player.x-startX,s.player.y-startY,travelled,gait.stepLength*strideScale);
-    walkFrame=((wasMoving?walkFrame:0)+travelled/(gait.stepLength*strideScale)*Math.PI)%(2*Math.PI);
+    window.NanlanHomewardRoad?.move(s,s.player.x-startX,s.player.y-startY,travelled,gait.stepLength*strideScale);
+    const previous=wasMoving?walkFrame:0;
+    walkFrame=(previous+travelled/(gait.stepLength*strideScale)*Math.PI)%(2*Math.PI);
+    if(!reduceCameraMotion.matches&&(previous<Math.PI)!==(walkFrame<Math.PI)){
+      window.NanlanWeatherPaint?.footstep(s,s.player.x-startX,s.player.y-startY,walkFrame<Math.PI?1:-1,performance.now());
+    }
   }
   if(manualLength)tryKeyboardExit(dx,dy,dt);
 }
@@ -2259,11 +2263,14 @@ function render(){
   if(s.scene==='banyanBrook')NanlanBrook.water(ctx,performance.now(),N.daylight(s).darkness);
   paintDifferenceLayers();
   window.NanlanHomewardRoad?.ground(ctx,s,performance.now());
-  const depth=NanlanDepth.frame(s.scene,painting||base,N.daylight(s),window.NanlanWeather?.current(s),base?.naturalWidth);
+  const weather=NanlanWeather.current(s),time=performance.now();
+  const depth=NanlanDepth.frame(s.scene,painting||base,N.daylight(s),weather,base?.naturalWidth);
   NanlanDepth.air(ctx,depth,performance.now(),reduceCameraMotion.matches);
   hitTargets=[];
   const left=Math.max(8,-camera.ox/camera.scale+8),right=Math.min(W-8,(camera.vw-camera.ox)/camera.scale-8);
-  const time=performance.now(),objective=localObjectiveObject(),destination=path[path.length-1]?.object;
+  if(window.NanlanWeatherPaint)NanlanWeatherPaint.draw(ctx,s.scene,weather.id,time,reduceCameraMotion.matches,1-depth.day.darkness,painting);
+  else NanlanWeather.atmosphere?.(ctx,s.scene,s,time,W,H);
+  const objective=localObjectiveObject(),destination=path[path.length-1]?.object;
   const people=visibleObjects().filter(o=>npcRole(o));
   const lighting=s.scene==='yard'?NanlanCourtyard.frame(base===images[baseKey]?baseKey:world.yard.asset,images.courtyardMattes,depth.day,window.NanlanWeather?.current(s)):null;
   const drawActor=({x,y,paint},groundPass)=>{
@@ -2404,8 +2411,8 @@ function render(){
   actors.sort((a,b)=>a.y-b.y).forEach(actor=>actor.draw());
   window.NanlanLandscape?.paint(ctx,painting,s.scene,camera,true,reduceCameraMotion.matches);
   if(s.scene==='yard')window.NanlanScenery?.yardAir(ctx,s,time,reduceCameraMotion.matches);
-  NanlanClimate.atmosphere(ctx,s.scene,s,time,W,H);
-  window.NanlanWeather?.atmosphere(ctx,s.scene,s,time,W,H);
+  NanlanClimate.atmosphere(ctx,s.scene,s,time,W,H,weather.wet);
+  window.NanlanWeatherPaint?.panel(s,weather.id,time,reduceCameraMotion.matches,1-depth.day.darkness);
   paintWorldLight(s,depth.day);
   window.NanlanHomeward?.lamplight(ctx,s,depth.day.minute);
   drawEntranceSigns();
@@ -2551,7 +2558,8 @@ $('continueGame').onclick=async()=>{
     }else if(window.NanlanHomewardSample){
       notice(deskText('榕树下，大娘正在收针。走近她，再顺巷子往西回家。','A woman is winding thread under the banyan. Visit her, then follow the lane west to your home.'));
     }else if(window.NanlanFarmSample){
-      if(window.NanlanFarmSample==='seasons')notice(deskText('点右上角天气签，可从日历里换季试走。','Open the weather slip to try another season in this courtyard.'));
+      if(window.NanlanFarmSample==='weather')notice(deskText('点右上角天气签，可换一种天气试走。','Open the weather slip to walk through a different sky.'));
+      else if(window.NanlanFarmSample==='seasons')notice(deskText('点右上角天气签，可从日历里换季试走。','Open the weather slip to try another season in this courtyard.'));
       else if(window.NanlanFarmSample==='pond')NanlanProduction.show(2);
       else if(window.NanlanGardenView){focusedObjectId='herbPlot';notice(deskText('点院子东边竹篱内的菜圃，或按空格进去看看。','Select the fenced garden to the east, or press Space to look inside.'));}
       else NanlanFieldwork.show();

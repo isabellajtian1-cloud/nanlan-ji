@@ -200,13 +200,14 @@ window.NanlanV2={
         };
         let voice=voices[window.NanlanSealsModel.patron(s,'v2Sell')];
         if(q==='V2_10'&&(!f.v2CustomerHeard||waiting===6)){
-          voice=f.v2CustomerHeard?
+          const ferryVoice=window.NanlanFerry?.reunion(s);
+          voice=ferryVoice||(f.v2CustomerHeard?
             ['旧客在空中比了比篮口。「村里有位阿婆，拎宽篮子过门得侧着身。你若做得窄些，我下回带她来试。今儿先看看架上的货。」','The old customer measures a basket mouth in the air. “An old neighbor has to turn sideways through her door with a wide basket. If you make a narrower one I’ll bring her to try it. Let me look at your shelf today.”']:
-            ['门边的人朝里探了探头。「可算找着你了。还记得镇集那张摊布么？那日赶着回家，我有句话没问完。」','Someone peers round the door. “Found you at last. Remember your cloth at the market? I hurried home that day before I could finish my question.”'];
+            ['门边的人朝里探了探头。「可算找着你了。还记得镇集那张摊布么？那日赶着回家，我有句话没问完。」','Someone peers round the door. “Found you at last. Remember your cloth at the market? I hurried home that day before I could finish my question.”']);
         }
         $('line').prepend(document.createTextNode(deskText(...voice)+'\n\n'));
       }
-      if(q==='V2_10'&&!f.v2CustomerHeard)action('听旧客问：改过的窄篮还在么？','v2HearCustomer');
+      if(q==='V2_10'&&!f.v2CustomerHeard)action(s.choices.ferryFirstGood?deskText('听大娘说说同行的阿婆','Hear about her neighbor on the ferry'):'听旧客问：改过的窄篮还在么？','v2HearCustomer');
       if(f.v2Opened&&!d?.closed&&f.v2CustomerHeard){for(const id of Object.keys(shop.stock).filter(id=>shop.stock[id]>0))action(deskText('成交 ','Sell ')+itemName(id)+' ×1 · '+N.shopPrice(s,id)+deskText('文',' coins'),'v2Sell',{item:id,quote:N.shopPrice(s,id)},N.shopCustomers(s)>0&&M.stockAvailable(s,id)>0,M.stockAvailable(s,id)===0?deskText('这件货已留出；自己的留货可在本页解除，顾客预订仍须保留。','This stock is held. Release your own holds here; customer reservations remain protected.'):'今日普通来客已散；可交已约订单或回家过夜。');action('这一位先不买，接待下一位','v2NextCustomer',{},N.shopCustomers(s)>0,'今日普通来客已散。');button('调整未成交货物价签',()=>window.NanlanV2.show('v2Pricing'),'v2-retail-pricing',true);}
       if(q==='V2_11'){const ready=M.stockAvailable(s,shop.featured)>0&&!d?.closed;action('只卖可售现货，保留旧承诺','v2Bulk',{choice:'cash'},ready,'主打暂无可售现货，请补货、解除自己的留货，或婉拒本单。');action('现货先交，另约一件分批补交','v2Bulk',{choice:'split'},ready,'需有主打现货且今日尚未闭账。');action('这次不接超出能力的大单','v2Bulk',{choice:'decline'});}
       if(t.orders.bulk&&t.orders.bulk.delivered<t.orders.bulk.quantity)action('按原报价交分批单 · '+itemName(t.orders.bulk.item),'v2DeliverBulk',{},M.stockAvailable(s,t.orders.bulk.item)>0&&!d?.closed,'需要可售现货，且今日尚未打烊。');

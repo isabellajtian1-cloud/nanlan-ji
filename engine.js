@@ -534,7 +534,18 @@
         if(name==='readTide'){quest('M09');requireScene(s,['coast','tidalflat']);requireThat(f.metYu,'先请沈晚渔讲清归路。');f.tideRead=true;return;}
         if(name==='bookStall'){requireScene(s,'market');requireThat(reached(s,'M10'),'先完成潮线教学。');requireThat(q==='M10'||(clock(s).minute>=540&&clock(s).minute<1020),'普通集市在 09:00—17:00 开放。可先做家中小事或休息，再来预约。');s.stallUntil=s.worldTick+360;f.stallBooked=true;return;}
         if(name==='displayProduct'){quest('M10');requireScene(s,'market');requireThat(s.stallUntil>s.worldTick,'试摊预约已结束，可重新预约，不收罚款。');requireThat(products.includes(p.product)&&available(s,p.product)>=1,'先在仓房做一件制品，再带来摆摊。');s.featured=p.product;f.productDisplayed=true;return;}
+        if(name==='tryFerryBasket'){
+          quest('M10');requireScene(s,'market');
+          requireThat(f.productDisplayed&&!f.firstSale&&s.stallUntil>s.worldTick,'先预约摊布，摆好主打货。');
+          requireThat(['shallow','lidded'].includes(p.basket),'请递上一件摊边的竹器。');
+          if(s.choices.ferryBasketTrial===p.basket)return false;
+          s.choices.ferryBasketTrial=p.basket;return;
+        }
         if(name==='sell'){requireScene(s,'market');requireThat(f.productDisplayed,'先预约并摆好主打商品。');requireThat(s.stallUntil>s.worldTick,'摊布已收起，可重新预约。');
+          if(p.ferryHandover){
+            requireThat(q==='M10'&&!f.firstSale&&s.choices.ferryBasketTrial==='lidded','客人还没把针线收稳。');
+            s.choices.ferryFirstGood=s.featured;
+          }
           requireThat(Number.isInteger(p.sequence)&&p.sequence===s.transactions.length,'这笔买卖已结算，请查看更新后的余货。');requireThat(saleAvailable(s,s.featured)>=1,'这件主打货需要留给小批单，请先交单或补做制品。');spend(s,{[s.featured]:1});
           s.coins+=prices[s.featured];log(s,'sale',prices[s.featured],'镇集售出 '+itemNames[s.featured],s.featured);give(s,{receipt:1});f.firstSale=true;return;}
         if(name==='sellExtra'){requireScene(s,['village','market','generalStore']);requireThat(reached(s,'M05'),'先安顿家人，再到村里出售余货。');requireThat(Object.hasOwn(prices,p.item),'这件物品不可出售。');requireThat(Number.isInteger(p.sequence)&&p.sequence===s.transactions.length,'这笔买卖已结算。');if(s.scene==='market')requireThat(s.stallUntil>s.worldTick,'请先预约摊布。');requireThat(saleAvailable(s,p.item,true)>=1,'这些物品要留给首次试卖或未完成的小批单，暂不能作为余货出售。');spend(s,{[p.item]:1});s.coins+=prices[p.item];log(s,'sale',prices[p.item],'余货售出 '+itemNames[p.item],p.item);give(s,{receipt:1});return;}

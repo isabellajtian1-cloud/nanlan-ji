@@ -368,7 +368,7 @@ async function perform(name,p={},rerender){
   if(result.ok){clearSceneNotice();clearDialogNotice();}
   if(nightCopy&&result.ok&&!result.duplicate){try{localStorage.setItem('nanlan_last_night',nightCopy);}catch{notice(deskText('已过夜，设备空间不足，未能保留睡前副本。','Morning has come, but the device could not keep a bedtime copy.'),true);}}
   if(!result.ok){window.NanlanAudio?.play('blocked');notice(result.message,true);$('saveState').textContent=result.message.startsWith('保存失败')?'本次动作尚未保存':'当前目标尚待完成';return result;}
-  if(!result.duplicate)window.NanlanAudio?.play(p.seal?(p.seal==='stone'?'sealStone':'sealWood'):name==='openGate'?'door':/water|Water/.test(name)?'water':/repair|Repair|patch|Patch|craft|Craft/.test(name)?'repair':/nap|sleep|townStay|townMeal/.test(name)?'rest':/collect|harvest|Harvest|gather/.test(name)?'gather':'success');
+  if(!result.duplicate&&name!=='tryFerryBasket')window.NanlanAudio?.play(p.seal?(p.seal==='stone'?'sealStone':'sealWood'):name==='openGate'?'door':/water|Water/.test(name)?'water':/repair|Repair|patch|Patch|craft|Craft/.test(name)?'repair':/nap|sleep|townStay|townMeal/.test(name)?'rest':/collect|harvest|Harvest|gather/.test(name)?'gather':'success');
   $('saveState').textContent=engine.memoryOnly?'仅本次试玩 · 关闭网页会丢失':'已保存';
   if(!result.duplicate){
     const memory=window.NanlanMemoryBook?.unlocked(previous,state());
@@ -2395,7 +2395,9 @@ $('continueGame').onclick=async()=>{
     if(!await loadSceneAssets(check.state.scene,check.state)){startLoadError(deskText('场景画面未能全部载入。请重试，原存档已保留。','Some scene artwork could not load. Retry; your save is safe.'),()=>$('continueGame').onclick());return;}
     if(localStorage.getItem(N.SAVE_KEY)!==resumeRaw){storedRaw=localStorage.getItem(N.SAVE_KEY);window.NanlanChapterMark?.refresh();startLoadError(deskText('另一页更新了进度，请核对时辰后再次继续。','Another page updated the save. Review the time and continue again.'),()=>$('continueGame').onclick());return;}
     applyRestoredSnapshot(check.state,resumeRaw);
-    if(window.NanlanFarmSample){
+    if(window.NanlanFerrySample){
+      NanlanHands.market();
+    }else if(window.NanlanFarmSample){
       if(window.NanlanFarmSample==='seasons')notice(deskText('点右上角天气签，可从日历里换季试走。','Open the weather slip to try another season in this courtyard.'));
       else if(window.NanlanFarmSample==='pond')NanlanProduction.show(2);
       else if(window.NanlanGardenView){focusedObjectId='herbPlot';notice(deskText('点院子东边竹篱内的菜圃，或按空格进去看看。','Select the fenced garden to the east, or press Space to look inside.'));}

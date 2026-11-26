@@ -30,6 +30,8 @@ function paper(o){
 let receipt=null;
 function market(mode='trade'){
  const s=state(),q=N.current(s),booked=s.stallUntil>s.worldTick,open=N.clock(s).minute>=540&&N.clock(s).minute<1020;
+ const ferryCustomer=!!window.NanlanFerry&&q==='M10'&&s.flags.productDisplayed&&!s.flags.firstSale;
+ if(ferryCustomer&&booked&&mode==='trade'){receipt=null;NanlanFerry.show();return;}
  activity(L(mode==='book'?'镇集 · 留一张摊布':'镇集 · 亲手摆摊',mode==='book'?'Market · Reserve a Cloth':'Market · Your Own Stall'),L('留位、铺布、摆货，再把实货交到客人手里。','Reserve a place, spread the cloth, lay out your goods and hand them to a customer.'),'market-work');$('dialogPortraits').hidden=true;
  const box=plate('market-desk',L('木摊上展开的蓝布，旁边是留位竹签与收条竹盘','Blue cloth spread on a wooden stall, with a tally and receipt tray'));
  const tag=el('div','stall-tag',booked?L('已留位 · '+Math.ceil(s.stallUntil-s.worldTick)+' 分钟后收摊','Reserved · '+Math.ceil(s.stallUntil-s.worldTick)+' min left'):L('尚未留位','Not reserved'));box.append(tag);box.classList.toggle('not-booked',!booked);
@@ -49,7 +51,13 @@ function market(mode='trade'){
  }
  if(q==='M10'&&!s.flags.productDisplayed)N.products.forEach(item=>offer(item,'displayProduct',{product:item},N.available(s,item),true));
  else{
-  if(s.flags.productDisplayed){offer(s.featured,'sell',{sequence:s.transactions.length},N.saleAvailable(s,s.featured));const goods=el('div','cloth-goods');goods.innerHTML=(N.saleAvailable(s,s.featured)>0?inventoryArt(s.featured):'')+'<small>'+clean(N.itemNames[s.featured])+' · '+L('可售','For sale')+' ×'+N.saleAvailable(s,s.featured)+'</small>';box.append(goods);}
+  if(s.flags.productDisplayed){
+   if(ferryCustomer){
+    seen.add(s.featured);
+    navButton(L('回到渡口大娘的摊边','Return to the woman from the ferry'),()=>market(),'ferry-return');
+   }else offer(s.featured,'sell',{sequence:s.transactions.length},N.saleAvailable(s,s.featured));
+   const goods=el('div','cloth-goods');goods.innerHTML=(N.saleAvailable(s,s.featured)>0?inventoryArt(s.featured):'')+'<small>'+clean(N.itemNames[s.featured])+' · '+L('可售','For sale')+' ×'+N.saleAvailable(s,s.featured)+'</small>';box.append(goods);
+  }
   for(const item of Object.keys(N.prices)){if(seen.has(item))continue;const count=N.saleAvailable(s,item,true);if(count>0)offer(item,'sellExtra',{item,sequence:s.transactions.length},count);}
  }
  live.textContent=L('货物按真实可用库存显示。订单留货不在可售数内。点一件货，再在摊面确认。','Goods show actual available stock, excluding order reservations. Select a good, then confirm on the cloth.');

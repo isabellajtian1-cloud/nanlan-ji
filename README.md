@@ -1,4 +1,10 @@
-# 南澜记 V6.10.18 · 入篱见青
+# 南澜记 V6.10.19 · 一院四时
+
+[完整六卷与番外开发试玩](https://isabellajtian1-cloud.github.io/nanlan-ji/play-6.10.19.html?play=full) · [到庭院试走四季](https://isabellajtian1-cloud.github.io/nanlan-ji/play-6.10.19.html?season=summer#season-yard)
+
+解压后打开 `index.html`。在完整旅程中，庭院、桑塘与竹篱菜圃跟随存档日期换季。四季试走使用独立临时角色，点右上天气签可另选季节。春雨逐畦润土，夏日可采荷喂鱼，秋季可在檐下摊药并在傍晚收匾，寒日可在灶边吃热饭。
+
+## V6.10.18 · 入篱见青
 
 [打开六卷与番外开发试玩](https://isabellajtian1-cloud.github.io/nanlan-ji/play-6.10.18.html?play=full) · [从竹篱菜圃体验](https://isabellajtian1-cloud.github.io/nanlan-ji/play-6.10.18.html#farm-garden)
 

@@ -44,6 +44,7 @@
         const ease=1-(1-progress)**2, dx=dest[0]-start[0],dy=dest[1]-start[1];
         fish(start[0]+dx*ease,start[1]+dy*ease,Math.atan2(dy*h,dx*w),i,t);
       }
+      window.NanlanScenery?.pondPlants(ctx,state(),w,h);
       if(!fed){
         ctx.strokeStyle='#e6d5a5';ctx.lineWidth=2.4;ctx.beginPath();ctx.ellipse(aim[0]*w,aim[1]*h,13,6,0,0,Math.PI*2);ctx.stroke();
       }
@@ -59,6 +60,7 @@
         }
       }
     }
+    if(window.NanlanScenery)void loadImage('seasonLotus',{passive:true}).then(ok=>{if(ok&&!fed&&pond.isConnected)draw();});
     function aimAt(e){
       const r=pond.getBoundingClientRect();
       aim=water((e.clientX-r.left)/r.width,(e.clientY-r.top)/r.height);

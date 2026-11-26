@@ -62,6 +62,7 @@
     if(!ground?.naturalWidth||!plants?.naturalWidth)return false;
     ctx.save();ctx.scale(paper.width/width,paper.height/height);
     ctx.drawImage(ground,0,0,width,height);
+    if(window.NanlanScenery)NanlanScenery.environment(ctx,NanlanScenery.frame(s),true,width,height);
     for(let i=0;i<beds.length;i++){
       const k=status(i),g=N.gardenPlot(s,i),c=N.crop(s,i);
       if(k==='hard'||k==='locked'){
@@ -222,6 +223,7 @@
       else if(e.key===' '){e.preventDefault();e.stopPropagation();if(!held&&!e.repeat){held=true;begin(i);}}
     };
     board.onkeyup=e=>{if(held&&e.key===' '){e.preventDefault();e.stopPropagation();finish();}};
+    if(window.NanlanScenery)void NanlanScenery.ready(state()).then(()=>{if(live())paint(paper);});
     if(!sync()){
       const loader=document.createElement('div'),msg=document.createElement('span'),again=document.createElement('button');
       loader.className='garden-loading';msg.setAttribute('role','status');again.type='button';again.hidden=true;

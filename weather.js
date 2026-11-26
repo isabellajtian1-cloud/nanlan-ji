@@ -40,7 +40,7 @@ const patterns={
 const outdoor=new Set(['gate','yard','village','banyanBrook','market','county','foothill','mountain','mountainside','summit','bambooGrove','coast','tidalflat','wharf','oldTrail','qingxi','anchorage','qPier','qFair','qSalt','qBamboo','qBeacon']);
 function dayNumber(s){return Math.floor(Number(s.worldTick||0)/1440)+1;}
 function minute(s){const value=Math.floor(Number(s.worldTick||0)%1440);return value<0?value+1440:value;}
-function calendar(s){return globalThis.NanlanClimate?.at?.(s)||{index:1,key:'summer'};}
+function calendar(s){const calendar=globalThis.NanlanClimate||(typeof module==='object'&&module.exports?require('./climate.js'):null);return calendar?.at(s)||{index:1,key:'summer'};}
 function plan(s,offset=0){
  const cal=calendar(s),day=dayNumber(s)+offset,list=patterns[cal.key]||patterns.summer;
  const ids=list[((day*7+cal.index*11)%list.length+list.length)%list.length];

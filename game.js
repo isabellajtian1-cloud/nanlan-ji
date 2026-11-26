@@ -2,6 +2,7 @@
 const $=id=>document.getElementById(id);
 const N=NanlanEngine, DATA=window.NANLAN_DATA, world=DATA.world;
 NanlanNeighbors.install(DATA,window.NANLAN_EN);
+if(window.NanlanScenery)Object.assign(world.yard.objects.find(o=>o.id==='dryRackVisual'),{x:811,y:351});
 NanlanPhysical.configure(world);
 NanlanSceneScale.configure(world);
 // The painted garden extends slightly beyond the old walking limit; this lets the actor reach its edge without stepping on crops.
@@ -498,6 +499,7 @@ function showTime(){
   }
   const list=document.createElement('div');list.className='time-cards';
   entries.forEach(([title,text])=>{const card=document.createElement('div'),b=document.createElement('b'),p=document.createElement('p');b.textContent=title;p.textContent=text;card.append(b,p);list.append(card);});$('panelExtra').append(list);
+  window.NanlanScenery?.sampleLinks();
   if(N.voyage.get(s))navButton(window.NanlanI18n?.language==='en'?'Open the travel book and invitations':'查看旅途册与闲日邀约',()=>window.NanlanVoyageUI.ledger(),'clock-voyage');
   if(!c.story)navButton('年节簿',()=>window.NanlanFestivalUI.festivalCalendar(),'clock-festivals');
   button('在舆图上查看全部地点',()=>{closeDialog();showMap();},'time-map',true);
@@ -1116,7 +1118,7 @@ function showCook(){
   const spot=document.createElement('button');spot.type='button';spot.className='kitchen-action';
   const tag=document.createElement('span');spot.append(tag);
   const caption=document.createElement('p');caption.className='kitchen-caption';caption.setAttribute('aria-live','polite');
-  scene.append(art,spot);$('panelExtra').append(scene,caption);
+  scene.append(art,spot);$('panelExtra').append(scene,caption);window.NanlanScenery?.winterMeal();
   const supplies=document.createElement('details');supplies.className='kitchen-supplies';
   const summary=document.createElement('summary');summary.textContent='看看米缸与柴堆';
   const stock=document.createElement('p');stock.textContent='米粮 '+N.available(s,'rice')+' · 食材 '+N.available(s,'ingredient')+' · 菜蔬 '+N.available(s,'vegetable')+' · 枯枝 '+N.available(s,'wood')+' · 桶内水 '+(s.bucketWater||0);
@@ -1440,10 +1442,10 @@ async function interactCore(o){
   if(a==='seasonDisplay'){window.NanlanSeasons.ledger();dialogObject=o;return;}
   if(a==='crateMove'){window.NanlanStoreWork.show();dialogObject=o;return;}
   if(a==='hallMove'){window.NanlanHallWork.show();dialogObject=o;return;}
-  if(a==='dryRack'){activity('庭院 · 自家晾架','这就是当初留下的自家晾架。竹脚落在地面，药草与潮湿桑叶都在这里摊开通风。');window.NanlanVillage?.rack();dialogObject=o;return;}
+  if(a==='dryRack'){if(window.NanlanScenery?.trayPanel(o))return;activity('庭院 · 自家晾架','这就是当初留下的自家晾架。竹脚落在地面，药草与潮湿桑叶都在这里摊开通风。');window.NanlanVillage?.rack();dialogObject=o;return;}
   if(a==='fieldStroke'){window.NanlanFieldwork?.arrive(o);return;}
   if(a==='gardenDirect'){await handleGardenPlot(o);return;}
-  if(a==='silkProduction'){window.NanlanProduction.show();dialogObject=o;return;}
+  if(a==='silkProduction'){window.NanlanProduction.show(window.NanlanScenery&&o.id==='silkPond'?2:undefined);dialogObject=o;return;}
   if(a?.startsWith('seal')){window.NanlanSeals.gather(o);return;}
   if(a?.startsWith('v2')){window.NanlanV2.show(a,o);dialogObject=o;addConversation(o);window.NanlanSeals?.npc(o);window.NanlanProduction?.npc(o);window.NanlanVillage?.npc(o);window.NanlanBondUI?.npc(o);globalThis.NanlanTownUI?.family(o);return;}
   if(f.volume2Started&&o.id==='goodsCrates'){window.NanlanV2.show('v2Cargo',o);dialogObject=o;return;}
@@ -2096,7 +2098,7 @@ function render(){
     if(o.festival)hitTargets.push({o,rect:null,anchor:{x:o.x-36,y:o.y-70,w:72,h:75}});
     const locked=!!objectGate(o)||o.type==='locked'||o.type==='property',selected=o.id===focusedObjectId||o===destination,isObjective=o===objective;
     if(o.id==='dryRackVisual'){
-      // Preserve drying actions without a flat diagram over the painted background.
+      if(window.NanlanScenery)actors.push({y:o.y,draw:()=>NanlanScenery.drawTray(ctx,s,o)});
       hitTargets.push({o,rect:null,anchor:{x:o.x-42,y:o.y-72,w:84,h:76}});continue;
     }
     if(o.id==='seasonDisplay'){
@@ -2212,6 +2214,7 @@ function render(){
   }
   actors.sort((a,b)=>a.y-b.y).forEach(actor=>actor.draw());
   window.NanlanLandscape?.paint(ctx,painting,s.scene,camera,true,reduceCameraMotion.matches);
+  if(s.scene==='yard')window.NanlanScenery?.yardAir(ctx,s,time,reduceCameraMotion.matches);
   NanlanClimate.atmosphere(ctx,s.scene,s,time,W,H);
   window.NanlanWeather?.atmosphere(ctx,s.scene,s,time,W,H);
   paintWorldLight(s,depth.day);
@@ -2349,7 +2352,8 @@ $('continueGame').onclick=async()=>{
     if(localStorage.getItem(N.SAVE_KEY)!==resumeRaw){storedRaw=localStorage.getItem(N.SAVE_KEY);window.NanlanChapterMark?.refresh();startLoadError(deskText('另一页更新了进度，请核对时辰后再次继续。','Another page updated the save. Review the time and continue again.'),()=>$('continueGame').onclick());return;}
     applyRestoredSnapshot(check.state,resumeRaw);
     if(window.NanlanFarmSample){
-      if(window.NanlanFarmSample==='pond')NanlanProduction.show(2);
+      if(window.NanlanFarmSample==='seasons')notice(deskText('点右上角天气签，可从日历里换季试走。','Open the weather slip to try another season in this courtyard.'));
+      else if(window.NanlanFarmSample==='pond')NanlanProduction.show(2);
       else if(window.NanlanGardenView){focusedObjectId='herbPlot';notice(deskText('点院子东边竹篱内的菜圃，或按空格进去看看。','Select the fenced garden to the east, or press Space to look inside.'));}
       else NanlanFieldwork.show();
     }else if(window.NanlanWalkSample){

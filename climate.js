@@ -75,11 +75,13 @@ function detail(canvas,factor){
 function picture(image,scene,s){
  if(!image?.naturalWidth||typeof document==='undefined')return image;
  const factor=(resolution.get(scene)||1)===2&&image.naturalWidth*image.naturalHeight<=3200000?2:1;
- const season=at(s),key=image.src+'|'+scene+'|'+season.key+'|'+factor;
+ const season=at(s),foliage=scene==='yard'&&globalThis.NanlanScenery?NanlanScenery.frame(s):null;
+ const key=(foliage?foliage.key+'|':'')+image.src+'|'+scene+'|'+season.key+'|'+factor;
  if(cache.has(key)){const c=cache.get(key);cache.delete(key);cache.set(key,c);return c;}
  const canvas=document.createElement('canvas');canvas.width=image.naturalWidth;canvas.height=image.naturalHeight;
  const c=canvas.getContext('2d',{willReadFrequently:true});if(!c)return image;
  c.drawImage(image,0,0);
+ if(foliage)NanlanScenery.environment(c,foliage,false,canvas.width,canvas.height,image===images.estateOld);
  try{
   const data=c.getImageData(0,0,canvas.width,canvas.height),p=data.data;
   if(outdoor.has(scene)){
@@ -126,7 +128,7 @@ summer:['浓荫与骤雨，出门记住归路；果树与菜畦仍按原来的�
 autumn:['光线清透，适合晾晒与小集；一家出游也可以慢些走。','Clear light for drying goods and visiting the fair. A family walk can take its time.'],
 winter:['晨雾与清冷日光，草木仍留绿意；回家有热饭，不会因换季损失作物。','Morning mist and cool light, with green still in the trees. A hot meal waits at home; crops are not lost to the season.']
 };
-function note(s,en){return notes[at(s).key][en?1:0];}
+function note(s,en){return globalThis.NanlanScenery?.note(s,en)??notes[at(s).key][en?1:0];}
 function preview(img,scene,s){
  const src=img.dataset.seasonOriginal||img.getAttribute('src');if(!src)return;img.dataset.seasonOriginal=src;
  const request=src+'|'+scene+'|'+at(s).key;img.dataset.seasonRequest=request;

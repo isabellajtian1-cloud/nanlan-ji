@@ -18,5 +18,11 @@ if(window.NanlanFarmSample){
   const site=NANLAN_DATA.world.yard.objects.find(o=>o.id===(window.NanlanFarmSample==='pond'?'silkPond':'herbPlot'));
   const anchor=NanlanPhysical.anchors(site,sample.state)?.[0]||site;
   sample.move(anchor.x,anchor.y);
+  if(window.NanlanScenery&&window.NanlanFarmSample==='seasons'){
+    const names=['spring','summer','autumn','winter'],index=Math.max(0,names.indexOf(new URLSearchParams(location.search).get('season')));
+    const st=sample.state;st.calendar.ordinal=112+index*28+(index===3?7:10);st.calendar.anchorDay=Math.floor(st.worldTick/1440)+1;
+    st.flags.dryRack=true;st.bag.herb=Math.max(2,st.bag.herb||0);st.bag.hotMeal=Math.max(1,st.bag.hotMeal||0);
+    sample.move(548,347);
+  }
   localStorage.setItem(NanlanEngine.SAVE_KEY,JSON.stringify(sample.state));
 }

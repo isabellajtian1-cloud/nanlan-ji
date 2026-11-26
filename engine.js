@@ -109,6 +109,8 @@
   const voyage=typeof module==='object'&&module.exports?require('./voyage-model.js'):globalThis.NanlanVoyage;
   const town=typeof module==='object'&&module.exports?require('./town-model.js'):globalThis.NanlanTown;
   const festival=typeof module==='object'&&module.exports?require('./festival-model.js'):globalThis.NanlanFestival;
+  const seasonal=typeof module==='object'&&module.exports?require('./season-work.js'):globalThis.NanlanSeasonWork;
+  const localWeather=typeof module==='object'&&module.exports?require('./weather.js'):globalThis.NanlanWeather;
   const climate=typeof module==='object'&&module.exports?require('./climate.js'):globalThis.NanlanClimate;
   const prefecture=typeof module==='object'&&module.exports?require('./prefecture-model.js'):globalThis.NanlanPrefecture;
   const estate=typeof module==='object'&&module.exports?require('./estate-model.js'):globalThis.NanlanEstate;
@@ -295,6 +297,7 @@
     }
     recoverRecordedFinales(value);
     rural.normalise(value,requireThat);
+    seasonal?.normalise(value,requireThat);
     storyV2.normalise(value);
     seals.normalise(value,requireThat);
     production.normalise(value,requireThat);
@@ -344,7 +347,12 @@
     near(object) {return object&&Math.hypot(object.x-this.state.player.x,object.y-this.state.player.y)<=72;}
     move(x,y) {const b=this.world[this.state.scene].bounds;if(x>=b[0]&&x<=b[2]&&y>=b[1]&&y<=b[3]){this.state.player.x=x;this.state.player.y=y;}}
     tick(dt) {if(this.state.mode!=='daily')return;const s=this.state,c=clock(s);if(c.minute>=1320)return;
+      const previousTick=s.worldTick;
       s.worldTick+=Math.min(Math.max(dt,0),.1);if(clock(s).minute>=1320)s.worldTick=Math.floor(s.worldTick/1440)*1440+1320;
+      if(seasonal&&Math.floor(s.worldTick)!==Math.floor(previousTick)){
+        const hits=seasonal.soakedPlots(s,previousTick,climate,localWeather);
+        if(hits.length)this.commit('springRain',next=>seasonal.soak(next,hits));
+      }
       if(s.production?.clothesReadyAt!==null&&s.worldTick>=s.production.clothesReadyAt&&s.actorState.outfit==='old')this.commit('newClothes',()=>{});}
     enter(to) {
       const blocked=sceneGate(this.state,to);if(blocked)return {ok:false,message:blocked};
@@ -360,6 +368,9 @@
     commit(key,change) {
       const next=copy(this.state),previous=current(next);
       try{const changed=change(next);if(changed===false)return {ok:true,duplicate:true,message:'这件事已经办好了。'};
+        if(seasonal&&next.worldTick>this.state.worldTick&&this.state.flags.volume2Started===next.flags.volume2Started&&this.state.flags.season5Started===next.flags.season5Started&&this.state.flags.voyageStarted===next.flags.voyageStarted){
+          seasonal.soak(next,seasonal.soakedPlots(next,this.state.worldTick,climate,localWeather));
+        }
         reconcile(next);climate.sync(this.state,next);chronicle.record(this.state,next,key);next.revision++;this.write(next);this.state=next;
         return {ok:true,completed:previous!==current(next)?previous:null,message:next.lastNotice};}
       catch(e){return {ok:false,message:e.userMessage||'保存失败，本次动作未结算。原有进度与物品已保留，请重试。'};}
@@ -377,6 +388,7 @@
           s.quests[id].status='ACTIVE';
           if(name==='acceptFamilyRequest')return;
         }
+        if(seasonal&&name.startsWith('seasonTray'))return seasonal.tend(s,name,p,{need:requireThat,climate,weather:localWeather,spend,give,near:this.near(this.world.yard.objects.find(o=>o.id==='dryRackVisual'))});
         if(name.startsWith('food'))return foodFolio.act(s,name,p,{requireThat,requireScene,spend,give,available,done,clock,log});
         if(name.startsWith('hearth'))return hearth.act(s,name,p,{requireThat,requireScene,spend,give,done,clock});
         if(name==='streetTalk'){

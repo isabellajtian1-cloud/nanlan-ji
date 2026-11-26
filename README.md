@@ -1,4 +1,10 @@
-# 南澜记 V6.10.28 · 人景相称
+# 南澜记 V6.10.29 · 榕下众生
+
+[完整六卷与番外开发试玩](https://isabellajtian1-cloud.github.io/nanlan-ji/play-6.10.29.html?play=full) · [到村里看街坊](https://isabellajtian1-cloud.github.io/nanlan-ji/play-6.10.29.html#village-people) · [从正厅看家人](https://isabellajtian1-cloud.github.io/nanlan-ji/play-6.10.29.html#scale-walk)
+
+解压后打开 `index.html` 开始或继续旅程。村里与正厅的试走入口使用临时进度。
+
+## V6.10.28 · 人景相称
 
 [完整六卷与番外开发试玩](https://isabellajtian1-cloud.github.io/nanlan-ji/play-6.10.28.html?play=full) · [从正厅试走](https://isabellajtian1-cloud.github.io/nanlan-ji/play-6.10.28.html#scale-walk)
 

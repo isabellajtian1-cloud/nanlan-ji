@@ -43,5 +43,10 @@ if(window.NanlanFarmSample){
     ok(sample.enter('hall'));
     sample.move(560,450);
   }
+  if(window.NanlanFarmSample==='people'){
+    ok(sample.enter('village'));
+    sample.state.selected='hand';
+    sample.move(464,448);
+  }
   localStorage.setItem(NanlanEngine.SAVE_KEY,JSON.stringify(sample.state));
 }

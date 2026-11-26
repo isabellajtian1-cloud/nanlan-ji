@@ -22,7 +22,7 @@ window.NanlanCourtyard = (() => {
     c.fillRect(x + left, y + top, width, height);
     c.globalAlpha = 1;
   }
-  function drawPerson(target,x,y,lighting,paint,groundPass=false,depth){
+  function drawPerson(target,x,y,lighting,paint,groundPass=false,depth,contactWidth=1){
     const r=NanlanDepth.raster(target.getTransform(),x+left,y+top,width,height,groundPass,depth?.density);
     const {left:px,top:py}=r,w=r.w/r.res,h=r.h/r.res;
     const pool=pools[Number(groundPass)],body=pool.body ||= surface();
@@ -45,12 +45,13 @@ window.NanlanCourtyard = (() => {
       result.save();
       result.translate(x, y);
       result.scale(1, .28);
-      const contact = result.createRadialGradient(0, 0, 0, 0, 0, 10);
+      const radius=10*contactWidth;
+      const contact = result.createRadialGradient(0, 0, 0, 0, 0, radius);
       contact.addColorStop(0, 'rgba(50,39,35,.50)');
       contact.addColorStop(.48, 'rgba(60,46,42,.27)');
       contact.addColorStop(1, 'rgba(60,46,42,0)');
       result.fillStyle = contact;
-      result.fillRect(-10, -10, 20, 20);
+      result.fillRect(-radius,-radius,2*radius,2*radius);
       result.restore();
 
     }else{

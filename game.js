@@ -2211,33 +2211,39 @@ const figureMetrics={
   npc_kidChun:[2,2,187,382,77],
   npc_kidQiao:[2,2,148,382,72],
   npc_peddler:[4,3,315,449,169],
-  idle0:[50,10,363,498,207],
-  idle1:[89,4,300,512,214],
-  idle2:[57,22,320,501,174],
-  idle3:[47,13,305,504,135],
-  idle4:[25,1,384,499,182],
-  idle5:[0,0,384,502,220],
-  idle6:[0,11,305,495,177],
-  idle7:[56,3,315,498,144],
-  silk0:[14,14,555,987,308],
-  silk1:[0,17,469,988,276],
-  silk2:[0,66,468,988,234],
   walkMaleSilk:[64,8,369,512,229],
   walkFemaleSilk:[52,22,360,498,218]
 };
 const familyColumns=['grandfather','father','mother','cen'];
+// Sleeves, shoes and raised hands cross the old uniform cell boundaries.
+// Each pose pairs its own source rectangle with ink bounds local to that crop.
+const familyIdleFrames=[
+  [[48,8,317,492],[2,2,315,490,159]],[[471,2,215,506],[2,2,213,504,129]],
+  [[823,20,267,483],[2,2,265,481,119]],[[1197,11,262,495],[2,2,260,493,90]],
+  [[23,511,364,502],[2,2,362,500,159]],[[468,508,306,508],[2,2,304,506,136]],
+  [[823,521,252,488],[2,2,250,486,122]],[[1206,513,263,499],[2,2,261,497,90]]
+];
+const familySilkFrames=[
+  [[12,12,546,977],[2,2,544,975,296]],[[573,15,453,975],[2,2,451,973,258]],
+  [[1033,64,472,926],[2,2,470,924,236]]
+];
 function personSprite(role,talking=false){
   const col=familyColumns.indexOf(role),costume=window.NanlanProduction?.portrait(role);
   if(costume){
     const image=images[costume.asset];
-    if(image?.naturalWidth)return {image,rect:costume.rect,ink:figureMetrics[costume.asset==='familySilk'?'silk'+col:costume.asset]};
+    if(image?.naturalWidth){
+      if(costume.asset==='familySilk'){
+        const [rect,ink]=familySilkFrames[col];return {image,rect,ink};
+      }
+      return {image,rect:costume.rect,ink:figureMetrics[costume.asset]};
+    }
     loadImage(costume.asset,{passive:true});
   }
   if(col>=0){
     const image=images.npcIdle;
     if(image?.naturalWidth){
-      const w=image.naturalWidth/4,h=image.naturalHeight/2,row=Number(talking);
-      return {image,rect:[col*w,row*h,w,h],ink:figureMetrics['idle'+(col+4*row)]};
+      const [rect,ink]=familyIdleFrames[col+4*Number(talking)];
+      return {image,rect,ink};
     }
     loadImage('npcIdle',{passive:true});
   }
@@ -2245,17 +2251,17 @@ function personSprite(role,talking=false){
   if(!image?.naturalWidth){loadImage(key,{passive:true});return null;}
   return {image,rect:[0,0,image.naturalWidth,image.naturalHeight],ink:figureMetrics[key]||[0,0,image.naturalWidth,image.naturalHeight,image.naturalWidth/2]};
 }
-function personGeometry(sprite,height,flip){
-  const [left,top,right,sole,centre]=sprite.ink,k=height/(sole-top);
-  return {dx:-centre*k,dy:-sole*k,w:sprite.rect[2]*k,h:sprite.rect[3]*k,
-    hitX:(flip?centre-right:left-centre)*k,hitWidth:(right-left)*k};
+function personGeometry(sprite,height,flip,breadth=1){
+  const [left,top,right,sole,centre]=sprite.ink,ky=height/(sole-top),kx=ky*breadth;
+  return {dx:-centre*kx,dy:-sole*ky,w:sprite.rect[2]*kx,h:sprite.rect[3]*ky,
+    hitX:(flip?centre-right:left-centre)*kx,hitWidth:(right-left)*kx};
 }
-function drawFigure(brush,sprite,height,flip){
-  const box=personGeometry(sprite,height,flip);
+function drawFigure(brush,sprite,height,flip,breadth=1){
+  const box=personGeometry(sprite,height,flip,breadth);
   if(flip)brush.scale(-1,1);
   brush.drawImage(sprite.image,...sprite.rect,box.dx,box.dy,box.w,box.h);
 }
-function drawNaturalPerson(o,t,brush=ctx,inCourtyard=false){
+function drawNaturalPerson(o,t,brush=ctx,inCourtyard=false,body=npcBody(o)){
   const pose=npcPresentation(o,t),group=pose.role==='children';
   const sprite=personSprite(pose.role,pose.talking);
   if(!sprite)return;
@@ -2264,7 +2270,7 @@ function drawNaturalPerson(o,t,brush=ctx,inCourtyard=false){
   if(!group)brush.rotate(pose.lean);
   brush.scale(scale,scale*(group?1:pose.breath));
   if(!inCourtyard)brush.filter='brightness('+(1-N.daylight(state()).darkness*.28)+')';
-  drawFigure(brush,sprite,npcHeight(pose.role),!group&&pose.flip);
+  drawFigure(brush,sprite,body.height,!group&&pose.flip,body.breadth);
   brush.restore();
 }
 function drawPlayerFallback(role,x,y,height,flip,brush,inCourtyard){
@@ -2294,12 +2300,42 @@ function drawGatheredResource(im,o,size){
 }
 function isGatherable(o){return resourceTypes.includes(o.type)||o.action==='garden';}
 function storePickup(o){return state().scene==='store'?({tools:0,bucket:1,axe:2}[o.action]):undefined;}
-const adultHeights={grandfather:77,father:88,mother:80,chen:76,doctor:83,cen:82,yu:84,wan:79,qiu:87,lin:85,neighbor:81,boatman:89,xiaoman:78,tea:83,landlord:86,guard:91,children:62,cakeAunt:79,ferryPorter:91,netMender:73,youngWeaver:85,blueDyer:82,letterScribe:86,peddler:88};
-function npcHeight(role){if(role==='auntDusk')return 57;if(role==='auntDawn')return 78;return NanlanNeighbors.residents[role]?.height||adultHeights[role]||84;}
+// Height is measured from the sole to the crown on the same ground as the
+// 84-unit player. Breadth is a modest multiplier on the artist's silhouette.
+function build(height,breadth){return {height,breadth};}
+const defaultBody=build(84,1);
+const residentBodies={
+  grandfather:build(72,1.06),father:build(92,1.07),mother:build(80,.97),
+  chen:build(75,1.09),doctor:build(82,.94),cen:build(85,1.04),
+  yu:build(88,.94),wan:build(78,.95),qiu:build(87,1.09),lin:build(83,1.07),
+  tea:build(81,1.06),vendor:build(79,1.08),guard:build(95,1.07),
+  customer:build(81,.98),landlord:build(86,1.10),neighbor:build(85,.95),
+  xiaoman:build(77,.94),boatman:build(92,1.05),zhou:build(82,1.10),
+  fang:build(89,.96),liang:build(89,.93),seaMerchant:build(90,1.08),
+  visitor:build(82,.95),clothKeeper:build(78,1.02),bookKeeper:build(86,.94),
+  innKeeper:build(83,1.08),auntDawn:build(76,1.04),auntDusk:build(52,1.04),
+  cakeAunt:build(77,1.10),ferryPorter:build(94,1.11),netMender:build(70,1.04),
+  youngWeaver:build(84,.93),blueDyer:build(82,1.02),letterScribe:build(88,.94),
+  peddler:build(85,1.04),children:build(NanlanNeighbors.residents.kidRong.height,1)
+};
+// Several distinct townspeople use the same painting. Repeated appearances
+// of a named person use their role profile across maps and outfits.
+const sharedSpriteBodies={
+  villagePantry:build(75,1.03),v3Porter:build(90,1.10),prefStall:build(83,.96),
+  v2ObserveMorning:build(76,1.02),v2ObserveNoon:build(84,1.11),
+  v2ObserveAfternoon:build(91,.94),prefInnkeeper:build(86,1.08)
+};
+function npcBody(o){
+  const role=npcRole(o);
+  if(o.id==='v2Customer'&&N.current(state())==='V2_10'&&state().choices.ferryFirstGood)return residentBodies.auntDawn;
+  const body=sharedSpriteBodies[o.id]||residentBodies[role]||NanlanNeighbors.residents[role];
+  if(!body?.height)return defaultBody;
+  return body.breadth?body:build(body.height,1);
+}
 function personBounds(o,time){
-  const pose=npcPresentation(o,time),height=npcHeight(pose.role)*actorScale(o.y);
+  const pose=npcPresentation(o,time),body=npcBody(o),height=body.height*actorScale(o.y);
   const sprite=personSprite(pose.role,pose.talking);
-  const box=sprite&&personGeometry(sprite,height,pose.role!=='children'&&pose.flip);
+  const box=sprite&&personGeometry(sprite,height,pose.role!=='children'&&pose.flip,body.breadth);
   return {x:o.x+(box?.hitX??-height*.25)-5,y:o.y-height-5,
     w:(box?.hitWidth??height*.5)+10,h:height+12};
 }
@@ -2364,13 +2400,17 @@ function render(){
   const objective=localObjectiveObject(),destination=path[path.length-1]?.object;
   const people=visibleObjects().filter(o=>npcRole(o));
   const lighting=s.scene==='yard'?NanlanCourtyard.frame(base===images[baseKey]?baseKey:world.yard.asset,images.courtyardMattes,depth.day,window.NanlanWeather?.current(s)):null;
-  const drawActor=({x,y,paint},groundPass)=>{
-    if(lighting)NanlanCourtyard.drawPerson(ctx,x,y,lighting,paint,groundPass,depth);
+  const drawActor=({x,y,paint,contact=1},groundPass)=>{
+    if(lighting)NanlanCourtyard.drawPerson(ctx,x,y,lighting,paint,groundPass,depth,contact);
     else if(s.scene==='banyanBrook')NanlanBrook.actor(ctx,x,y,
-      () => NanlanDepth.actor(ctx,x,y,actorScale(y),depth,paint,groundPass));
-    else NanlanDepth.actor(ctx,x,y,actorScale(y),depth,paint,groundPass);
+      () => NanlanDepth.actor(ctx,x,y,actorScale(y),depth,paint,groundPass,contact));
+    else NanlanDepth.actor(ctx,x,y,actorScale(y),depth,paint,groundPass,contact);
   };
-  const figures=people.map(o=>({x:o.x,y:o.y,paint:(brush,local)=>drawNaturalPerson(o,time,brush,local)}));
+  const figures=people.map(o=>{
+    const body=npcBody(o),group=npcRole(o)==='children';
+    return {x:o.x,y:o.y,contact:(body.height/84)*body.breadth*(group?1.55:1),
+      paint:(brush,local)=>drawNaturalPerson(o,time,brush,local,body)};
+  });
   if(started)figures.push({x:s.player.x,y:s.player.y,paint:renderCharacter});
   // Ground shadows cannot tint another figure's face, clothes or shoes.
   for(const figure of figures)drawActor(figure,true);
@@ -2649,7 +2689,8 @@ $('continueGame').onclick=async()=>{
     }else if(window.NanlanHomewardSample){
       notice(deskText('榕树下，大娘正在收针。走近她，再顺巷子往西回家。','A woman is winding thread under the banyan. Visit her, then follow the lane west to your home.'));
     }else if(window.NanlanFarmSample){
-      if(window.NanlanFarmSample==='scale')notice(deskText('走到家人身旁看看，再沿门口去庭院或檐廊。','Walk beside your family, then head through a doorway into the courtyard or veranda.'));
+      if(window.NanlanFarmSample==='people')notice(deskText('榕下的孩子们正玩着。走近他们，再去和街坊说说话。','The children are playing under the banyan. Walk over, then visit the neighbours.'));
+      else if(window.NanlanFarmSample==='scale')notice(deskText('走到家人身旁看看，再沿门口去庭院或檐廊。','Walk beside your family, then head through a doorway into the courtyard or veranda.'));
       else if(window.NanlanFarmSample==='weather')notice(deskText('点右上角天气签，可换一种天气试走。','Open the weather slip to walk through a different sky.'));
       else if(window.NanlanFarmSample==='seasons')notice(deskText('点右上角天气签，可从日历里换季试走。','Open the weather slip to try another season in this courtyard.'));
       else if(window.NanlanFarmSample==='pond')NanlanProduction.show(2);

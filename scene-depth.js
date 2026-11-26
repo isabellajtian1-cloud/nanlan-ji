@@ -214,7 +214,7 @@ window.NanlanDepth = (() => {
     brush.fillRect(x-radius,y-height,2*radius,height+2);brush.restore();
   }
   let body,shade;
-  function actor(target,x,y,scale,f,paint,groundPass=false){
+  function actor(target,x,y,scale,f,paint,groundPass=false,contactWidth=1){
     const {p,sun}=f,view=target.getTransform();
     // Discard offscreen actors before doing the two small alpha composites.
     const half=76*scale,height=116*scale,size=2*half;
@@ -239,7 +239,7 @@ window.NanlanDepth = (() => {
       target.globalAlpha=.045+sun*(.05+.13*ground+.09*patch);
       target.drawImage(shade.canvas,0,0,r.w,r.h,left-x,top-y,w,h);target.restore();
       target.save();target.translate(x,y);target.scale(1,.26);
-      const radius=17*scale,contact=target.createRadialGradient(0,0,0,0,0,radius);
+      const radius=17*scale*contactWidth,contact=target.createRadialGradient(0,0,0,0,0,radius);
       contact.addColorStop(0,'rgba(41,34,28,.61)');contact.addColorStop(.35,'rgba(48,40,32,.32)');contact.addColorStop(1,'rgba(48,40,32,0)');
       target.fillStyle=contact;target.fillRect(-radius,-radius,2*radius,2*radius);target.restore();
       target.restore();

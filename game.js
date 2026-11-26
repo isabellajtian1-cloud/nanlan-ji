@@ -44,6 +44,7 @@ world.village.objects.find(o=>o.id==='villagePantry').label='乡邻余粮 · 种
 })();
 const canvas=$('game'),ctx=canvas.getContext('2d',{alpha:false}),W=1100,H=733;
 // Keep authored coordinates and old saves, while increasing world distances in actor-sized steps.
+function movementScale(y) { return (NanlanSceneScale.movement || NanlanSceneScale.actor)(state().scene,y); }
 function actorScale(y) { return NanlanSceneScale.actor(state().scene,y); }
 const storage={getItem:key=>localStorage.getItem(key),setItem:(key,value)=>localStorage.setItem(key,value)};
 const engine=new N.Engine(storage,world);
@@ -1785,7 +1786,7 @@ function objectFootprint(o){
   const fixed={familyLuggage:[48,28],mealTable:[88,42],bedRest:[66,31],workbench:[75,35],bookBox:[28,18],goodsCrates:[62,32],silkPond:[76,44],herbPlot:[67,36],waterJar:[24,14],stove:[42,25],shelter:[55,28],generalStoreKeeper:[62,27],v2Shelf:[48,25],villageLetter:[23,10]};
   if(fixed[o.id])return fixed[o.id];
   if(fruitTypes.includes(o.type))return [38,22];
-  if(npcRole(o)||o.type==='npc')return [18*actorScale(o.y),10*actorScale(o.y)];
+  if(npcRole(o)||o.type==='npc')return [18*movementScale(o.y),10*movementScale(o.y)];
   if(['activity','locked','property','view','read'].includes(o.type))return [27,18];
   return null;
 }
@@ -1932,7 +1933,7 @@ const touchWalk=installTouchWalk(canvas,$('walkPad'),canWalk,()=>{
 },pickWalkTarget,worldPoint,vector=>{
   // A quick tap between animation frames still takes one short, collision-checked step.
   const {x,y}=state().player;
-  moveAlong(vector.x,vector.y,5*actorScale(y),visibleObjects());
+  moveAlong(vector.x,vector.y,5*movementScale(y),visibleObjects());
   direction=NanlanLocomotion.facing(state().player.x-x,state().player.y-y,direction);
   tryKeyboardExit(vector.x,vector.y,0);
 });
@@ -1979,7 +1980,7 @@ function update(dt){
   const speed=gait.advanceSpeed(wasMoving?walkVelocity:0,pace,dt);
   walkVelocity=speed.speed;
   const strideScale=actorScale(s.player.y);
-  let budget=speed.distance*strideScale,travelled=0;
+  let budget=speed.distance*movementScale(s.player.y),travelled=0;
   const obstacles=visibleObjects();
   if(manualLength)travelled=moveAlong(dx,dy,budget,obstacles);
   else while(path.length&&budget>0){
@@ -2027,7 +2028,13 @@ function setupCamera(rect,now){
   const landscape=window.NanlanLandscape;
   const walkingView=landscape?.views[s.scene];
   const zoom=walkingView ? walkingView.zoom : NanlanSceneScale.zoom(s.scene)*entry.zoom;
-  const targetScale=whole?fullScale:portraitScale*zoom*(window.NanlanMobile?.compact() ? .89 : 1);
+  const requestedScale=portraitScale*zoom*(compact ? .89 : 1);
+  // A fixed limit for each painting keeps the whole figure and the furnishing
+  // in view. Zoom stays steady as the player approaches the foreground.
+  const foregroundHeight=(NanlanSceneScale.rulers?.[s.scene]?.nearHeight||84)*1.05;
+  const frameFloor=Math.min(vw/W,1.42*fullScale);
+  const walkScale=Math.min(requestedScale,Math.max(frameFloor,vh*.32/foregroundHeight));
+  const targetScale=whole?fullScale:walkScale;
   const mobile=window.NanlanMobile?.compact(),safe=!whole&&mobile?window.NanlanMobile.safeFrame?.():null;
   const resized=camera.vw!==vw||camera.vh!==vh||camera.scene!==s.scene||camera.whole!==whole;
   let targetX=whole?W/2:s.player.x;
@@ -2157,34 +2164,115 @@ function npcPresentation(o,t){
  const phase=t/1000*(.65+seed%5*.08)+seed;
  return {role,flip,talking,lean:reduced?0:Math.sin(phase)*.006,breath:reduced?1:1+Math.sin(phase*.85)*.003};
 }
-function drawNaturalPerson(o,t,brush=ctx,inCourtyard=false){
-  if(o.role==='children'){drawPerson('children',o.x,o.y,62,false,true,brush,inCourtyard);return;}
- const pose=npcPresentation(o,t),col=['grandfather','father','mother','cen'].indexOf(pose.role);
- const silk=window.NanlanProduction?.portrait(pose.role),sheet=images.npcIdle;
-  brush.save();brush.translate(o.x,o.y);brush.rotate(pose.lean);brush.scale(actorScale(o.y),actorScale(o.y)*pose.breath);brush.translate(-o.x,-o.y);
- if(col>=0&&!silk&&!sheet)loadImage('npcIdle',{passive:true});
- if(col>=0&&!silk&&sheet?.naturalWidth){
-  const cw=sheet.naturalWidth/4,ch=sheet.naturalHeight/2;
-  brush.save();brush.translate(o.x,o.y);if(pose.flip)brush.scale(-1,1);
-  if(!inCourtyard)brush.filter='brightness('+(1-N.daylight(state()).darkness*.28)+')';
-  const ratio=npcHeight(pose.role)/84;
-  brush.scale(ratio,ratio);brush.drawImage(sheet,col*cw,pose.talking?ch:0,cw,ch,-34,-87,68,91);brush.restore();
- }else drawPerson(pose.role,o.x,o.y,npcHeight(pose.role),pose.flip,false,brush,inCourtyard);
- brush.restore();
+// Visible ink bounds and sole centre, measured in each source frame's pixels.
+// The full source is drawn so fine transparent edges survive scaling.
+const figureMetrics={
+  npc_grandfather:[83,5,277,314,187],
+  npc_father:[104,6,246,313,182],
+  npc_mother:[69,8,221,313,136],
+  npc_chen:[77,8,231,314,165],
+  npc_doctor:[38,5,205,311,103],
+  npc_cen:[86,5,245,313,150],
+  npc_yu:[63,6,218,311,145],
+  npc_wan:[30,5,190,312,111],
+  npc_qiu:[79,3,234,314,145],
+  npc_lin:[95,0,248,312,141],
+  npc_tea:[87,4,226,314,160],
+  npc_vendor:[99,4,288,314,145],
+  npc_playerMale:[70,0,254,306,172],
+  npc_playerFemale:[64,0,241,299,175],
+  npc_guard:[82,0,236,306,161],
+  npc_customer:[73,0,217,306,126],
+  npc_landlord:[99,4,288,314,145],
+  npc_neighbor:[73,0,217,306,126],
+  npc_xiaoman:[92,8,327,676,203],
+  npc_boatman:[59,7,362,676,150],
+  npc_zhou:[57,8,363,676,203],
+  npc_fang:[64,8,356,677,209],
+  npc_liang:[60,9,360,679,195],
+  npc_children:[15,10,807,673,426],
+  npc_seaMerchant:[66,2,354,678,214],
+  npc_visitor:[80,6,338,675,217],
+  npc_clothKeeper:[70,14,225,403,137],
+  npc_bookKeeper:[76,16,198,396,135],
+  npc_innKeeper:[61,10,226,403,143],
+  npc_auntDawn:[0,0,205,320,71],
+  npc_auntDusk:[0,0,242,320,131],
+  npc_cakeAunt:[2,2,253,382,118],
+  npc_ferryPorter:[2,2,194,382,98],
+  npc_netMender:[2,2,189,382,91],
+  npc_youngWeaver:[2,2,163,382,81],
+  npc_blueDyer:[2,2,173,382,68],
+  npc_letterScribe:[2,2,167,382,78],
+  npc_kidRong:[2,2,157,382,65],
+  npc_kidYan:[2,2,134,382,64],
+  npc_kidDou:[3,2,141,382,77],
+  npc_kidLing:[2,3,251,382,111],
+  npc_kidChun:[2,2,187,382,77],
+  npc_kidQiao:[2,2,148,382,72],
+  npc_peddler:[4,3,315,449,169],
+  idle0:[50,10,363,498,207],
+  idle1:[89,4,300,512,214],
+  idle2:[57,22,320,501,174],
+  idle3:[47,13,305,504,135],
+  idle4:[25,1,384,499,182],
+  idle5:[0,0,384,502,220],
+  idle6:[0,11,305,495,177],
+  idle7:[56,3,315,498,144],
+  silk0:[14,14,555,987,308],
+  silk1:[0,17,469,988,276],
+  silk2:[0,66,468,988,234],
+  walkMaleSilk:[64,8,369,512,229],
+  walkFemaleSilk:[52,22,360,498,218]
+};
+const familyColumns=['grandfather','father','mother','cen'];
+function personSprite(role,talking=false){
+  const col=familyColumns.indexOf(role),costume=window.NanlanProduction?.portrait(role);
+  if(costume){
+    const image=images[costume.asset];
+    if(image?.naturalWidth)return {image,rect:costume.rect,ink:figureMetrics[costume.asset==='familySilk'?'silk'+col:costume.asset]};
+    loadImage(costume.asset,{passive:true});
+  }
+  if(col>=0){
+    const image=images.npcIdle;
+    if(image?.naturalWidth){
+      const w=image.naturalWidth/4,h=image.naturalHeight/2,row=Number(talking);
+      return {image,rect:[col*w,row*h,w,h],ink:figureMetrics['idle'+(col+4*row)]};
+    }
+    loadImage('npcIdle',{passive:true});
+  }
+  const key='npc_'+role,image=images[key];
+  if(!image?.naturalWidth){loadImage(key,{passive:true});return null;}
+  return {image,rect:[0,0,image.naturalWidth,image.naturalHeight],ink:figureMetrics[key]||[0,0,image.naturalWidth,image.naturalHeight,image.naturalWidth/2]};
 }
-function drawPerson(role,x,y,height=84,flip=false,scaleActor=true,brush=ctx,inCourtyard=false){
-  if(scaleActor)height*=actorScale(y);
-  const costume=window.NanlanProduction?.portrait(role);if(costume&&!images[costume.asset])loadImage(costume.asset,{passive:true});
-  const dressed=costume&&images[costume.asset]?.naturalWidth,im=dressed?images[costume.asset]:images['npc_'+role];if(!im?.naturalWidth){loadImage('npc_'+role,{passive:true});return;}
-  const width=height*(dressed?costume.rect[2]/costume.rect[3]:im.naturalWidth/im.naturalHeight);
-  // Soft contact shadow belongs to the actor, rather than a floating marker.
-  brush.save();
-  if(!inCourtyard){const shadow=brush.createRadialGradient(x,y-1,1,x,y-1,16);shadow.addColorStop(0,'#26332255');shadow.addColorStop(1,'#26332200');brush.fillStyle=shadow;brush.beginPath();brush.ellipse(x,y-1,17,5,0,0,Math.PI*2);brush.fill();}
-  brush.translate(x,y);if(flip)brush.scale(-1,1);
+function personGeometry(sprite,height,flip){
+  const [left,top,right,sole,centre]=sprite.ink,k=height/(sole-top);
+  return {dx:-centre*k,dy:-sole*k,w:sprite.rect[2]*k,h:sprite.rect[3]*k,
+    hitX:(flip?centre-right:left-centre)*k,hitWidth:(right-left)*k};
+}
+function drawFigure(brush,sprite,height,flip){
+  const box=personGeometry(sprite,height,flip);
+  if(flip)brush.scale(-1,1);
+  brush.drawImage(sprite.image,...sprite.rect,box.dx,box.dy,box.w,box.h);
+}
+function drawNaturalPerson(o,t,brush=ctx,inCourtyard=false){
+  const pose=npcPresentation(o,t),group=pose.role==='children';
+  const sprite=personSprite(pose.role,pose.talking);
+  if(!sprite)return;
+  const scale=actorScale(o.y);
+  brush.save();brush.translate(o.x,o.y);
+  if(!group)brush.rotate(pose.lean);
+  brush.scale(scale,scale*(group?1:pose.breath));
   if(!inCourtyard)brush.filter='brightness('+(1-N.daylight(state()).darkness*.28)+')';
-  if(dressed)brush.drawImage(im,...costume.rect,-width/2,-height,width,height);
-  else brush.drawImage(im,-width/2,-height,width,height);
+  drawFigure(brush,sprite,npcHeight(pose.role),!group&&pose.flip);
   brush.restore();
+}
+function drawPlayerFallback(role,x,y,height,flip,brush,inCourtyard){
+  const sprite=personSprite(role);
+  if(!sprite)return;
+  brush.save();brush.translate(x,y);
+  if(!inCourtyard)brush.filter='brightness('+(1-N.daylight(state()).darkness*.28)+')';
+  drawFigure(brush,sprite,height*actorScale(y),flip);brush.restore();
 }
 function renderCharacter(brush=ctx,inCourtyard=false){
   const s=state(),p=s.player,silk=s.actorState?.outfit==='nanlanSilk';
@@ -2192,7 +2280,7 @@ function renderCharacter(brush=ctx,inCourtyard=false){
   // Changing clothes in the current room can request a new sheet between scene loads.
   if(!images[pose.asset])loadImage(pose.asset,{passive:true});
   const im=images[pose.asset]||images[NanlanLocomotion.atlasKey(s.gender,!silk)];
-  if(!im?.naturalWidth){drawPerson(s.gender==='male'?'playerMale':'playerFemale',p.x,p.y,84,pose.flip,true,brush,inCourtyard);return;}
+  if(!im?.naturalWidth){drawPlayerFallback(s.gender==='male'?'playerMale':'playerFemale',p.x,p.y,pose.height,pose.flip,brush,inCourtyard);return;}
   brush.save();brush.translate(p.x,p.y);brush.scale(actorScale(p.y),actorScale(p.y));
   if(!inCourtyard){const shadow=brush.createRadialGradient(0,0,1,0,0,15);shadow.addColorStop(0,'#26332288');shadow.addColorStop(1,'#26332200');brush.fillStyle=shadow;brush.beginPath();brush.ellipse(0,0,15,3.8,0,0,Math.PI*2);brush.fill();}
   if(pose.flip)brush.scale(-1,1);
@@ -2208,9 +2296,12 @@ function isGatherable(o){return resourceTypes.includes(o.type)||o.action==='gard
 function storePickup(o){return state().scene==='store'?({tools:0,bucket:1,axe:2}[o.action]):undefined;}
 const adultHeights={grandfather:77,father:88,mother:80,chen:76,doctor:83,cen:82,yu:84,wan:79,qiu:87,lin:85,neighbor:81,boatman:89,xiaoman:78,tea:83,landlord:86,guard:91,children:62,cakeAunt:79,ferryPorter:91,netMender:73,youngWeaver:85,blueDyer:82,letterScribe:86,peddler:88};
 function npcHeight(role){if(role==='auntDusk')return 57;if(role==='auntDawn')return 78;return NanlanNeighbors.residents[role]?.height||adultHeights[role]||84;}
-function personBounds(role,x,y){
-  const im=images['npc_'+role],height=npcHeight(role)*actorScale(y),width=role==='playerMale'||role==='playerFemale'?68*actorScale(y):im?.naturalWidth?height*im.naturalWidth/im.naturalHeight:height*.76;
-  return {x:x-width/2-6,y:y-height-8,w:width+12,h:height+18};
+function personBounds(o,time){
+  const pose=npcPresentation(o,time),height=npcHeight(pose.role)*actorScale(o.y);
+  const sprite=personSprite(pose.role,pose.talking);
+  const box=sprite&&personGeometry(sprite,height,pose.role!=='children'&&pose.flip);
+  return {x:o.x+(box?.hitX??-height*.25)-5,y:o.y-height-5,
+    w:(box?.hitWidth??height*.5)+10,h:height+12};
 }
 let sceneGuides=true;
 try{sceneGuides=localStorage.getItem('nanlan_scene_guides')!=='0';}catch{}
@@ -2403,7 +2494,7 @@ function render(){
     if(o.scenic){hitTargets.push({o,rect:null,anchor:o.hit});continue;}
     if(fitting){hitTargets.push({o,rect:null,anchor:fitting.hit});continue;}
     // Keep the physical target clickable even when there is no safe space for its label.
-    const target={o,rect:null,anchor:npcRole(o)?personBounds(npcRole(o),o.x,o.y):{x:o.x-26,y:o.y-42,w:52,h:48}};
+    const target={o,rect:null,anchor:npcRole(o)?personBounds(o,time):{x:o.x-26,y:o.y-42,w:52,h:48}};
     hitTargets.push(target);
     // The scene keeps physical hit areas; task instructions stay in the left quest panel.
 
@@ -2558,7 +2649,8 @@ $('continueGame').onclick=async()=>{
     }else if(window.NanlanHomewardSample){
       notice(deskText('榕树下，大娘正在收针。走近她，再顺巷子往西回家。','A woman is winding thread under the banyan. Visit her, then follow the lane west to your home.'));
     }else if(window.NanlanFarmSample){
-      if(window.NanlanFarmSample==='weather')notice(deskText('点右上角天气签，可换一种天气试走。','Open the weather slip to walk through a different sky.'));
+      if(window.NanlanFarmSample==='scale')notice(deskText('走到家人身旁看看，再沿门口去庭院或檐廊。','Walk beside your family, then head through a doorway into the courtyard or veranda.'));
+      else if(window.NanlanFarmSample==='weather')notice(deskText('点右上角天气签，可换一种天气试走。','Open the weather slip to walk through a different sky.'));
       else if(window.NanlanFarmSample==='seasons')notice(deskText('点右上角天气签，可从日历里换季试走。','Open the weather slip to try another season in this courtyard.'));
       else if(window.NanlanFarmSample==='pond')NanlanProduction.show(2);
       else if(window.NanlanGardenView){focusedObjectId='herbPlot';notice(deskText('点院子东边竹篱内的菜圃，或按空格进去看看。','Select the fenced garden to the east, or press Space to look inside.'));}

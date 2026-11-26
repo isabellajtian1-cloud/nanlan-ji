@@ -39,5 +39,9 @@ if(window.NanlanFarmSample){
     }
     sample.move(548,347);
   }
+  if(window.NanlanFarmSample==='scale'){
+    ok(sample.enter('hall'));
+    sample.move(560,450);
+  }
   localStorage.setItem(NanlanEngine.SAVE_KEY,JSON.stringify(sample.state));
 }

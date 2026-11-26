@@ -19,12 +19,70 @@
   group('homeLane reedLanding eavesGallery washingCourt serviceKitchen dryingLoft', 620, .84, 1.10, 2.04);
   group('banyanBrook', 600, .80, 1.07, 1.85);
 
-  function actor(scene, y) {
+  // Navigation was authored against these footprints and distances.
+  function movement(scene, y) {
     const p = profiles[scene];
     if (!p) return 1;
     const farY = scene === 'yard' ? 200 : 260;
     const depth = Math.min(1, Math.max(0, (y - farY) / (p.nearY - farY)));
     return p.farScale + (p.nearScale - p.farScale) * depth;
+  }
+  // [far floor y, standing adult height, near floor y, standing adult height]
+  // in painting pixels. Locations using the same plate share its ruler.
+  const rulers = {};
+  function ruler(names, farY, farHeight, nearY, nearHeight) {
+    for (const name of names.split(' ')) rulers[name] = {farY, farHeight, nearY, nearHeight};
+  }
+  // The courtyard is seen above the roofs. Indoors the table, bed canopy
+  // and interior door jambs are much closer to the painter.
+  ruler('yard', 200, 46, 455, 78);
+  ruler('gate', 325, 126, 700, 181);
+  ruler('hall', 270, 145, 675, 199);
+  ruler('study', 280, 137, 675, 190);
+  ruler('bed', 275, 144, 675, 196);
+  ruler('store', 270, 145, 675, 202);
+  ruler('homeLane', 180, 68, 725, 172);
+  ruler('reedLanding', 200, 91, 725, 187);
+  ruler('eavesGallery', 305, 153, 725, 214);
+  ruler('washingCourt', 280, 120, 725, 186);
+  ruler('serviceKitchen', 270, 193, 725, 248);
+  ruler('dryingLoft', 270, 123, 725, 185);
+  ruler('village', 245, 47, 670, 114);
+  ruler('market', 285, 59, 680, 119);
+  ruler('county', 275, 72, 680, 140);
+  ruler('pharmacy', 300, 148, 630, 199);
+  ruler('generalStore', 300, 135, 630, 185);
+  ruler('teahouse', 285, 130, 630, 185);
+  ruler('clothShop', 285, 138, 680, 199);
+  ruler('bookShop', 285, 130, 680, 187);
+  ruler('countyInn', 290, 134, 680, 195);
+  ruler('prefMarket', 275, 58, 660, 128);
+  ruler('prefDock', 290, 83, 635, 142);
+  ruler('prefInn', 285, 128, 680, 192);
+  ruler('prefRoom', 280, 131, 680, 193);
+  ruler('prefTea', 280, 126, 680, 183);
+  ruler('countyRoom', 275, 135, 680, 195);
+  ruler('wharf qPier', 270, 124, 610, 177);
+  ruler('workshop', 280, 131, 605, 184);
+  ruler('oldTrail', 285, 86, 605, 142);
+  ruler('qingxi qFair', 285, 116, 605, 171);
+  ruler('anchorage', 285, 102, 610, 163);
+  ruler('guild', 300, 162, 615, 211);
+  ruler('backHall qLodge', 275, 140, 615, 191);
+  ruler('foothill', 250, 60, 700, 111);
+  ruler('mountain', 295, 57, 615, 100);
+  ruler('mountainside', 280, 51, 615, 102);
+  ruler('summit qBeacon', 285, 58, 620, 111);
+  ruler('bambooGrove qBamboo', 275, 69, 620, 119);
+  ruler('coast qSalt', 280, 57, 620, 108);
+  ruler('tidalflat', 280, 49, 620, 101);
+  ruler('banyanBrook', 210, 59, 410, 96);
+
+  function actor(scene, y) {
+    const r = rulers[scene];
+    if (!r) return movement(scene, y);
+    const t = Math.min(1,Math.max(0,(y-r.farY)/(r.nearY-r.farY)));
+    return (r.farHeight+(r.nearHeight-r.farHeight)*t)/84;
   }
   function zoom(scene) { return profiles[scene]?.zoom || 1.65; }
 
@@ -125,5 +183,5 @@
     workbench:{width:167,height:112,foot:[-66,-53,132,55]},
     bookBox:{width:39,height:33,foot:[-17,-16,34,18]}
   };
-  return {profiles,actor,zoom,configure,outside,onEastLane,laneMouth,laneRoute,solids,furnishing,furniture,props};
+  return {profiles,rulers,actor,movement,zoom,configure,outside,onEastLane,laneMouth,laneRoute,solids,furnishing,furniture,props};
 });

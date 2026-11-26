@@ -1,4 +1,10 @@
-# 南澜记 V6.10.19 · 一院四时
+# 南澜记 V6.10.28 · 人景相称
+
+[完整六卷与番外开发试玩](https://isabellajtian1-cloud.github.io/nanlan-ji/play-6.10.28.html?play=full) · [从正厅试走](https://isabellajtian1-cloud.github.io/nanlan-ji/play-6.10.28.html#scale-walk)
+
+解压后打开 `index.html` 开始或继续旅程。正厅试走使用临时进度。走到家人身旁，再从正厅前往庭院和檐廊，即可沿途观察不同距离下的人物、家具和建筑。
+
+## V6.10.19 · 一院四时
 
 [完整六卷与番外开发试玩](https://isabellajtian1-cloud.github.io/nanlan-ji/play-6.10.19.html?play=full) · [到庭院试走四季](https://isabellajtian1-cloud.github.io/nanlan-ji/play-6.10.19.html?season=summer#season-yard)
 

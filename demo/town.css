@@ -1,0 +1,6 @@
+#choices button[data-cloth] { border-left: .7rem solid var(--swatch); }
+#choices button[data-cloth="indigo"] { --swatch: #4b6470; }
+#choices button[data-cloth="tea"] { --swatch: #806346; }
+#choices button[data-cloth="persimmon"] { --swatch: #aa6850; }
+.town-note { color: #675538; }
+.town-swatch-art { display:inline-block;width:2.35rem;height:1.8rem;border-radius:.16rem;transform:rotate(-7deg);border:1px solid #80654b;background:repeating-linear-gradient(80deg,#50677750 0 1px,transparent 1px 3px),linear-gradient(#aa6850 0 28%,#806346 28% 61%,#4b6470 61%);box-shadow:1px 2px 2px #59493950; }

@@ -1,0 +1,65 @@
+/* The close view uses the game's dialog for input and save handling, but fills it with the garden. */
+#dialog:has(.garden-inner):not([hidden]) {align-items:center;justify-content:center;padding:8px;background:rgba(15,26,17,.76)}
+#dialog:has(.garden-inner) .sheet {position:relative;box-sizing:border-box;width:min(1120px,100%,calc((100dvh - 78px)*1.5));max-width:none;max-height:calc(100dvh - 16px);overflow:auto;padding:0;color:#efe5c5;background:#29382b;border:1px solid #806e49;border-radius:7px;box-shadow:0 10px 52px #071008a6;isolation:isolate;animation:garden-arrive .32s ease-out}
+#dialog:has(.garden-inner) .dialog-top {position:absolute;z-index:4;inset:6px 8px auto auto;display:block;background:transparent;padding:0;margin:0}
+#dialog:has(.garden-inner) #skip {position:static;display:block;margin:0;padding:6px 12px;min-height:42px;color:#fff2d3;background:#243326df;border:1px solid #c9b887a3;border-radius:4px;font:inherit;cursor:pointer}
+#dialog:has(.garden-inner) #speaker {position:absolute;z-index:2;top:10px;left:16px;margin:0;color:#fff3d5;text-shadow:0 1px 6px #0c1508;font:600 clamp(18px,2vw,27px)/1.35 Georgia,"Songti SC","SimSun",serif;letter-spacing:.08em;pointer-events:none}
+#dialog:has(.garden-inner) #dialogKicker,#dialog:has(.garden-inner) #line,#dialog:has(.garden-inner) #choices:empty {display:none}
+#dialog:has(.garden-inner) #panelExtra {margin:0;padding:0}
+#dialog:has(.garden-inner) #choices:not(:empty) {display:flex;justify-content:center;flex-wrap:wrap;gap:6px;margin:0;padding:6px}
+#dialog:has(.garden-inner) #choices button {width:auto;min-height:36px;padding:4px 12px}
+.garden-inner {margin:0;position:relative;color:#ede3be}
+.field-beds.garden-painting {position:relative;display:block;width:100%;aspect-ratio:1.5;overflow:hidden;isolation:isolate;background:#554e32;touch-action:none}
+.garden-world {position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:100%;aspect-ratio:1.5}
+.garden-world>canvas {position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.garden-painting::after {content:"";position:absolute;inset:0 0 auto;height:15%;background:linear-gradient(#14201494,transparent);pointer-events:none}
+.field-beds .garden-world>button {position:absolute;display:block;min-height:0;max-width:none;margin:0;padding:0;border:none;background:transparent;border-radius:0;box-shadow:none;cursor:pointer;touch-action:none;overflow:hidden;outline:none}
+.field-beds .garden-world>button:focus-visible {outline:none}
+.garden-world.garden-keys>button:focus-visible {background:#f6e9bb22;box-shadow:inset 0 0 0 2px #fff2c6}
+.field-beds .garden-world .garden-pin {position:absolute;inset:auto 5% 4% auto;display:inline-flex;gap:4px;align-items:center;justify-content:center;box-sizing:border-box;width:auto;min-width:23px;height:23px;max-width:92%;padding:2px 4px;line-height:1;color:#faf0d2;background:#41553fe8;border:1px solid #ece0bcba;border-radius:13px;box-shadow:0 1px 4px #281d166e;pointer-events:none}
+.garden-world [data-state=dry] .garden-pin {background:#31595ced}
+.garden-world [data-state=ripe] .garden-pin {color:#382c14;background:#f4d58dee;border-color:#674b25}
+.garden-world [data-state=growing] .garden-pin,.garden-world [data-state=empty] .garden-pin,.garden-world [data-state=hard] .garden-pin,.garden-world [data-state=locked] .garden-pin {opacity:.82}
+.field-beds .garden-world .garden-pin svg,.garden-guide svg {display:inline-block;width:16px;height:16px;aspect-ratio:1;fill:none;stroke:currentColor;stroke-width:1.65;stroke-linecap:round;stroke-linejoin:round}
+.garden-pin b {display:none;font:600 12px/1.1 Georgia,"Songti SC","SimSun",serif;white-space:nowrap}
+.garden-world.garden-keys button:focus-visible .garden-pin {box-shadow:0 0 0 2px #fff2cd,0 0 0 4px #383e28;opacity:1}
+.garden-world.garden-keys button:focus-visible .garden-pin b {display:block}
+@media (hover:hover){.garden-world button:hover .garden-pin b {display:block}.garden-world button:hover .garden-pin{opacity:1}}
+.garden-foot {box-sizing:border-box;display:flex;align-items:center;gap:14px;min-height:48px;padding:7px 14px;color:#f1e8ce;background:#29382b;font:500 14px/1.35 Georgia,"Songti SC","SimSun",serif}
+.garden-guide,.garden-stock,.garden-guide span {display:flex;align-items:center;gap:7px}
+.garden-guide,.garden-stock {flex-shrink:0;gap:13px;white-space:nowrap}
+.garden-guide span:first-child svg {color:#b1dce0}.garden-guide span:last-child svg {color:#f2d08c}
+.garden-stock {margin-left:auto;color:#eee0b5}
+#dialog .garden-note {margin:0;color:#fff2cd;text-align:center;font:inherit;flex:1}
+.garden-options:not(:empty) {display:flex;justify-content:center;flex-wrap:wrap;gap:6px;padding:3px 8px 8px}
+.garden-options button,.garden-loading button {min-height:38px;padding:5px 12px;border:1px solid #b6a076;border-radius:4px;background:#f4e6c5;color:#35462e;font:inherit;cursor:pointer}
+.garden-options button:disabled {opacity:.6}
+.garden-loading {position:absolute;z-index:3;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:#42503a;color:#f5e8c4}
+.garden-world .field-done::after {content:"";position:absolute;pointer-events:none;left:47%;top:58%;width:18%;aspect-ratio:2;border:2px solid #bbebed;border-radius:50%;opacity:0;animation:garden-water .55s ease-out}
+.garden-world .field-done[data-work=ripe]::after {width:9%;aspect-ratio:.75;border:none;border-radius:80% 8%;background:#b4c77a;animation:garden-pick .5s ease-out}
+@keyframes garden-water {from{opacity:1;transform:translate(-50%,-50%) scale(.4)}to{opacity:0;transform:translate(-50%,-50%) scale(1.8)}}
+@keyframes garden-pick {from{opacity:1;transform:translateY(0) rotate(-30deg)}to{opacity:0;transform:translate(8px,-26px) rotate(20deg)}}
+@keyframes garden-arrive {from{opacity:.55;transform:scale(.97)}to{opacity:1;transform:none}}
+@media(max-width:640px) and (orientation:portrait){
+  #dialog:has(.garden-inner):not([hidden]){padding:4px}
+  #dialog:has(.garden-inner) .sheet{width:100%;border-radius:6px}
+  .field-beds.garden-painting{aspect-ratio:1.08}
+  .garden-world{width:138.8889%}
+  #dialog:has(.garden-inner) #speaker{left:10px;top:12px}
+  .garden-foot{display:grid;grid-template-columns:auto 1fr;gap:4px 8px;padding:9px 10px;font-size:13px}
+  .garden-stock{grid-column:2;grid-row:1;gap:8px}
+  #dialog .garden-note{grid-column:1/-1;min-height:1.4em;text-align:left}
+  .field-beds .garden-world .garden-pin{right:12%;min-width:21px;height:21px}
+  .field-beds .garden-world>button:nth-of-type(even) .garden-pin{right:24%}
+}
+@media(max-height:500px) and (orientation:landscape){
+  #dialog:has(.garden-inner):not([hidden]){padding:2px}
+  #dialog:has(.garden-inner) .sheet{width:min(100%,calc((100dvh - 40px)*1.68));max-height:calc(100dvh - 4px)}
+  .field-beds.garden-painting{aspect-ratio:1.68}
+  #dialog:has(.garden-inner) #speaker{top:5px;left:9px;font-size:18px}
+  #dialog:has(.garden-inner) .dialog-top{top:2px;right:3px}
+  #dialog:has(.garden-inner) #skip{min-height:34px;padding:2px 8px}
+  .garden-foot{min-height:34px;padding:3px 8px;gap:6px;font-size:12px}
+  .field-beds .garden-world .garden-pin{min-width:19px;height:19px}
+}
+@media(prefers-reduced-motion:reduce){#dialog:has(.garden-inner) .sheet,.garden-world .field-done::after{animation:none}}

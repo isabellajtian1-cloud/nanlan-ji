@@ -1,0 +1,9 @@
+.peddler-tray,.ware-closeup,.ware-mini{background-image:url('peddler-wares-v6923.webp');background-repeat:no-repeat}
+.peddler-tray{width:min(100%,600px,72vh);aspect-ratio:3/2;margin:.6rem auto;background-color:#baa474;background-size:100% 100%;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(2,1fr);border-radius:.55rem;overflow:hidden}
+.peddler-tray button{display:flex;align-items:flex-end;justify-content:center;min-height:44px;min-width:0;padding:.15rem;border:0;background:transparent;color:#33271d;font:inherit;cursor:pointer}
+.peddler-tray button span{border-radius:.25rem;padding:.1rem .35rem;background:#fbf0d9ed;font-size:clamp(12px,1.45vw,17px);line-height:1.35}
+.peddler-tray button:is(:focus-visible,:hover){outline:3px solid #e6bf70;outline-offset:-3px}
+.ware-closeup,.ware-mini{background-size:300% 200%;border-radius:.35rem}
+.ware-closeup{width:min(195px,42vw,30vh);aspect-ratio:1/1;margin:.5rem auto}
+.ware-mini{display:inline-block;width:48px;height:48px;flex:none}
+@media(max-height:520px) and (orientation:landscape){.peddler-tray{width:min(100%,63vh);min-width:172px}.peddler-tray button span{font-size:12px}}

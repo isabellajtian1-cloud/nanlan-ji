@@ -1,0 +1,34 @@
+#startChapterShelf, #chaptersOpen, #volume2Entry {display:none!important}
+#start.lingnan-title .start-buttons {display:flex;flex-direction:column;align-items:stretch;max-width:330px}
+#start.lingnan-title #demoMarket {background:#f4e7cc;color:#3e513e;border:1px solid #887453}
+#start.lingnan-title .start-buttons #openingReplay {order:3}
+#start.lingnan-title .start-buttons #continueGame {order:-1}
+#demoSheet {box-sizing:border-box;width:min(910px,94vw);max-height:92vh;max-height:92dvh;padding:0;border:1px solid #866f4b;background:#f6ecd8;color:#2b362e;box-shadow:0 14px 65px #16231bd1;font-family:NanlanSerif,Georgia,serif;overflow:auto}
+#demoSheet::backdrop {background:#17261be3}
+.demo-leaf {display:grid;grid-template-columns:minmax(0,1.13fr) minmax(0,1fr);align-items:center}
+.demo-leaf figure {align-self:stretch;display:grid;align-content:center;margin:0;padding:12px;background:#ddceb2}
+.demo-leaf img {display:block;width:100%;max-height:70vh;object-fit:contain}
+.demo-prose {padding:clamp(18px,3.2vw,38px)}
+#demoChapter {font-size:.83rem;color:#80523e;letter-spacing:.08em}
+#demoHeading {font-size:clamp(1.55rem,3vw,2.25rem);line-height:1.2;margin:.65rem 0 1rem;font-weight:500}
+#demoHeading:focus {outline:none}
+#demoPassage {font-size:1rem;line-height:1.65;white-space:pre-line}
+#demoNote {font-size:.88rem;color:#684d35;border-top:1px solid #b9a47f;padding-top:.8rem}
+#demoActions {display:grid;gap:8px;margin-top:18px}
+#demoActions button {min-height:44px;padding:8px 13px;color:#fff8e8;background:#364d3c;border:1px solid #4b604c;border-radius:3px;font:inherit;cursor:pointer}
+#demoActions button.quiet {color:#354839;background:#f2e7d0;border-color:#9b8a6c}
+#demoActions button:focus-visible {outline:3px solid #a75530;outline-offset:2px}
+@media (max-width:650px) and (orientation:portrait) {
+  .demo-leaf {grid-template-columns:1fr}
+  .demo-leaf figure {padding:7px}
+  .demo-leaf img {max-height:30dvh}
+  .demo-prose {padding:16px 18px}
+  #demoHeading {margin:.4rem 0 .65rem}
+  #demoPassage {line-height:1.45}
+}
+@media (max-height:520px) and (orientation:landscape) {
+  .demo-prose {padding:12px 16px}
+  .demo-leaf img {max-height:78dvh}
+  #demoActions {gap:5px;margin-top:10px}
+  #demoHeading {margin:.4rem 0}
+}

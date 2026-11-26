@@ -1,0 +1,3 @@
+.record-note{font-size:14px;line-height:1.8;overflow-wrap:anywhere}.record-day{border-bottom:1px solid #a88b5866;padding:8px 0}.record-day>.record-note{font-weight:bold;color:#475a3e}.record-tabs{display:flex;flex-wrap:wrap;gap:6px}.record-tabs button{min-height:44px}.paper-record>summary{min-height:44px;cursor:pointer;display:list-item;padding:10px 2px}.record-facts dd{overflow-wrap:anywhere}.dialog-page-status{font-size:12px;color:#786347;margin:10px 0}.mobile-tools-sheet .record-note{font-size:13px}
+
+.loading-actions{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;margin-top:16px}.loading-actions button{min-height:44px;padding:10px 14px;font:inherit;border:1px solid #8c7856;border-radius:8px;background:#f0e2be;color:#304b3a}

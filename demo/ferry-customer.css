@@ -1,0 +1,35 @@
+.ferry-counter {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(185px, 1fr);
+  align-items: center;
+  gap: clamp(12px, 2.6vw, 28px);
+  max-width: 790px;
+  margin: 10px auto 16px;
+  text-align: left;
+}
+.ferry-picture { overflow: hidden; border-radius: 4px; background: #c2ab87; }
+.ferry-illustration { display: block; width: 100%; height: auto; aspect-ratio: 3 / 2; object-fit: cover; }
+.ferry-picture[data-scene="shallow"] img { animation: ferry-tip .65s ease-in-out 1; }
+.ferry-picture[data-scene="lidded"] img { animation: ferry-shake .34s ease-in-out 2; }
+.ferry-voice { margin: 0 0 13px; color: #493823; font-family: Georgia, "Songti SC", "SimSun", serif; line-height: 1.7; }
+.ferry-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.ferry-actions button {
+  min-height: 44px; padding: 8px 13px; cursor: pointer;
+  border: 1px solid #a88a5d; border-radius: 4px; color: #473920;
+  background: #f4e4c1; font: inherit; line-height: 1.35;
+}
+.ferry-actions button:hover { background: #ebd6ad; }
+.ferry-actions [data-ferry="sell"], .ferry-actions [data-ferry="done"] {
+  background: #38554c; border-color: #38554c; color: #fff4d9;
+}
+.ferry-actions button:focus-visible { outline: 3px solid #8b4c2e; outline-offset: 2px; }
+.ferry-reunion { max-width: 420px; margin: 12px auto; border-radius: 4px; }
+@keyframes ferry-tip { 0%,100% { transform: scale(1.045); } 55% { transform: scale(1.045) rotate(1.6deg); } }
+@keyframes ferry-shake { 0%,100% { transform: scale(1.025); } 50% { transform: scale(1.025) translateY(2px); } }
+@media(max-width: 620px) {
+  .ferry-counter { grid-template-columns: 1fr; gap: 10px; }
+  .ferry-picture { width: min(100%, 370px); justify-self: center; }
+}
+@media(prefers-reduced-motion: reduce) {
+  .ferry-picture img { animation: none !important; }
+}

@@ -1,0 +1,49 @@
+/* Desktop controls keep menu history in memory, never in the game save. */
+(function(){
+let returnView=null,bagSession=false,dialogueProgress=null,resumeDialogue=false;
+const parts=['speaker','line','panelExtra','dialogNotice','choices','dialogPortraits','dialogKicker'];
+function capture(){return {dialog:!$('dialog').hidden,counterLayout:$('choices').nextElementSibling===$('panelExtra'),dialogClass:$('dialog').className,map:!$('worldMap').hidden,gallery:!$('gallery').hidden,kind:dialogKind,object:dialogObject,focus:document.activeElement,previous:previousFocus,scroll:$('dialog').scrollTop,paperScroll:$('dialog').querySelector('.sheet').scrollTop,customSpeaker:$('speaker').hasAttribute('data-no-localize'),parts:parts.map(id=>({id,nodes:[...$(id).childNodes],hidden:$(id).hidden,className:$(id).className})),next:{hidden:$('next').hidden,text:$('next').textContent,onclick:$('next').onclick}};}
+function restore(){if(!bagSession)return false;const v=returnView;bagSession=false;returnView=null;
+ $('dialog').hidden=true;$('worldMap').hidden=!v.map;$('gallery').hidden=!v.gallery;
+ if(v.dialog){for(const p of v.parts){$(p.id).replaceChildren(...p.nodes);$(p.id).hidden=p.hidden;$(p.id).className=p.className;}$('dialog').className=v.dialogClass;NanlanPortraitStage.place();$('speaker').toggleAttribute('data-no-localize',v.customSpeaker);dialogKind=v.kind;dialogObject=v.object;previousFocus=v.previous;$('next').hidden=v.next.hidden;$('next').textContent=v.next.text;$('next').onclick=v.next.onclick;$('dialog').hidden=false;$('dialog').scrollTop=v.scroll;$('dialog').querySelector('.sheet').scrollTop=v.paperScroll;}
+ else{dialogKind=null;dialogObject=null;}
+ if(v.dialog){if(v.counterLayout)$('panelExtra').before($('choices'));else $('dialogNotice').after($('choices'));}
+ active=started&&!v.dialog&&!v.map&&!v.gallery&&!transitioning&&!document.hidden;keys={};path=[];moving=false;window.NanlanAudio?.setDialogue(v.dialog&&!$('dialogPortraits').hidden);if(v.kind==='silk-reel')v.parts.find(p=>p.id==='panelExtra')?.nodes.find(n=>n.classList?.contains('silk-reel-board'))?.dispatchEvent(new Event('reelresume'));if(v.focus?.isConnected)v.focus.focus({preventScroll:true});return true;}
+function toggleBag(){if(bagSession){restore();return;}if(!started||transitioning)return;
+ if(document.querySelector('[data-busy="true"]'))return;
+ showBag();}
+function enterBag(){if(bagSession)return;returnView=capture();bagSession=true;$('worldMap').hidden=true;$('gallery').hidden=true;dialogObject=null;}
+function dialogue(title,text){const resume=resumeDialogue;resumeDialogue=false;$('choices').hidden=false;if(!dialogueCast(title).length)return;
+ const paragraphs=String(text).split(/\n+/).filter(Boolean),pages=[];
+ for(const paragraph of paragraphs){const sentences=paragraph.match(/[^。！？.!?]+[。！？.!?]?[”」]?/g)||[paragraph];let page='';for(const sentence of sentences){if(page.length+sentence.length>200&&page){pages.push(page);page='';}page+=sentence;}if(page)pages.push(page);}
+ if(!pages.length)return;const key=title;let cursor=resume&&dialogueProgress?.key===key?(dialogueProgress.atEnd?pages.length-1:Math.min(dialogueProgress.cursor,pages.length-1)):0;const paint=()=>{dialogueProgress={key,cursor,atEnd:cursor===pages.length-1};clearDialogNotice();$('line').textContent=pages[cursor];$('choices').hidden=cursor<pages.length-1;$('next').hidden=false;$('next').textContent=$('dialog').classList.contains('talk-scene') ? (cursor<pages.length-1?deskText('继续　▸','Continue　▸'):deskText('结束交谈　▸','Finish　▸')) : (cursor<pages.length-1?'继续 · 空格':'继续 / 选择 · 空格');};paint();
+ $('next').onclick=()=>{if(cursor<pages.length-1){cursor++;paint();return;}const choices=[...$('choices').querySelectorAll('button:not(:disabled)')];if(choices.length){$('next').hidden=true;choices[0].focus();}else closeDialog();};
+}
+window.NanlanDesktop={restore,discard(){bagSession=false;returnView=null;resumeDialogue=false;dialogueProgress=null;},resumeNextDialogue(){resumeDialogue=true;},toggleBag,enterBag,dialogue};
+$('bagOpen').onclick=toggleBag;
+$('line').addEventListener('click',()=>{
+ const next=$('next');
+ if($('dialog').classList.contains('talk-scene') && !next.hidden && next.getClientRects().length && !window.getSelection()?.toString())next.click();
+});
+window.addEventListener('keydown',e=>{
+ if(e.ctrlKey||e.metaKey||e.altKey||e.isComposing||e.target?.isContentEditable||['INPUT','TEXTAREA','SELECT'].includes(e.target?.tagName))return;
+ const k=e.key.toLowerCase();if(e.target?.closest('.pond-stage,.field-beds')&&[' ','arrowleft','arrowright','arrowup','arrowdown','enter'].includes(k))return;if(dialogKind==='scholar-hearth'&&k===' '&&e.target?.closest('.scholar-pot'))return;if(dialogKind==='silk-reel'&&k===' '&&e.target?.closest('.silk-reel-board'))return;const stop=()=>{e.preventDefault();e.stopImmediatePropagation();};
+ if(!$('audioPanel').hidden||window.NanlanSettings?.isOpen())return;
+ if(k==='b'&&started){stop();if(!e.repeat)toggleBag();return;}
+ if(k==='escape'&&bagSession){stop();if(!e.repeat)restore();return;}
+ if(!$('dialog').hidden&&(k===' '||k==='arrowdown'||k==='arrowup')){
+  stop();if(e.repeat)return;
+  const focused=e.target?.closest('#choices button,#panelExtra button,#panelExtra summary,#next,#dialogQuestNavigate');
+  if(k===' '&&focused&&!focused.disabled&&focused.getClientRects().length){focused.click();return;}
+  if(k===' '&&dialogKind==='arrival'){const choice=e.target?.closest('#choices button:not(:disabled)');if(choice)choice.click();else $('choices').querySelector('button:not(:disabled)')?.focus();return;}
+  if(k===' '){if(!$('next').hidden&&$('next').getClientRects().length)$('next').click();else{const choices=[...$('choices').querySelectorAll('button:not(:disabled)')];if(!choices.length)closeDialog();else {choices[0].focus();notice('方向键选择，Enter 确认，Esc 返回。');}}return;}
+  const options=[...$('dialog').querySelectorAll('#panelExtra button:not(:disabled),#panelExtra summary,#choices button:not(:disabled),#next:not([hidden])')].filter(el=>el.getClientRects().length);
+  if(!options.length)return;
+  const selected=options.indexOf(document.activeElement);
+  const i=selected<0?(k==='arrowdown'?0:options.length-1):(selected+(k==='arrowdown'?1:-1)+options.length)%options.length;
+  options[i].focus();return;
+ }
+ if(k===' '&&active){stop();if(e.repeat)return;const near=nearbyInteractionObject();if(near)interact(near);else notice('靠近人物或物件，按空格或 E 互动。');}
+},true);
+
+})();
